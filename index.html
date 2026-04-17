@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Canvas Tron — React</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  :root{
+    --bg:#030612; --bg-2:#050a1a;
+    --cyan:#00f0ff; --orange:#ff9d00;
+    --white:#e9fbff; --muted:#6b8aa0; --danger:#ff3b5c;
+  }
+  *{box-sizing:border-box}
+  html,body,#root{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:"Segoe UI",Inter,system-ui,sans-serif;user-select:none}
+
+  /* ===== background grid ===== */
+  .bg{
+    position:fixed;inset:0;z-index:0;
+    background:
+      radial-gradient(ellipse at 30% 20%,rgba(0,240,255,.08),transparent 60%),
+      radial-gradient(ellipse at 80% 90%,rgba(255,157,0,.06),transparent 60%),
+      linear-gradient(var(--bg),var(--bg-2));
+  }
+  .bg::before{
+    content:"";position:absolute;inset:0;
+    background-image:
+      linear-gradient(rgba(0,240,255,.06) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(0,240,255,.06) 1px,transparent 1px);
+    background-size:40px 40px;
+    -webkit-mask-image:radial-gradient(ellipse at center,black 40%,transparent 85%);
+    mask-image:radial-gradient(ellipse at center,black 40%,transparent 85%);
+  }
+
+  /* ===== toolbar ===== */
+  .toolbar{
+    position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10;
+    display:flex;gap:8px;padding:8px 12px;
+    background:rgba(5,12,24,.85);
+    border:1px solid rgba(0,240,255,.35);
+    border-radius:10px;
+    backdrop-filter:blur(8px);
+    box-shadow:0 0 30px rgba(0,240,255,.15),inset 0 0 20px rgba(0,240,255,.05);
+  }
+  .tool{
+    display:flex;align-items:center;gap:6px;padding:8px 12px;
+    background:transparent;color:var(--white);
+    border:1px solid rgba(0,240,255,.25);border-radius:6px;
+    font-size:12px;font-weight:600;letter-spacing:.5px;
+    cursor:pointer;text-transform:uppercase;transition:all .15s ease;
+  }
+  .tool:hover{background:rgba(0,240,255,.08);border-color:var(--cyan);box-shadow:0 0 12px rgba(0,240,255,.4);color:var(--cyan)}
+  .tool.active{background:rgba(0,240,255,.15);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 14px rgba(0,240,255,.5)}
+  .tool.danger:hover{background:rgba(255,59,92,.1);border-color:var(--danger);color:var(--danger);box-shadow:0 0 12px rgba(255,59,92,.4)}
+  .sep{width:1px;background:rgba(0,240,255,.2);margin:4px 2px}
+
+  .hint{
+    position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:10;
+    color:var(--muted);font-size:11px;letter-spacing:.5px;
+    background:rgba(5,12,24,.7);border:1px solid rgba(0,240,255,.2);
+    padding:6px 14px;border-radius:20px;
+  }
+  .hint b{color:var(--cyan)}
+
+  /* ===== drawing toolbar ===== */
+  .drawbar{
+    position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:10;
+    display:flex;gap:10px;align-items:center;
+    padding:8px 12px;
+    background:rgba(5,12,24,.92);
+    border:1px solid rgba(0,240,255,.35);
+    border-radius:10px;
+    backdrop-filter:blur(8px);
+    box-shadow:0 0 22px rgba(0,240,255,.15);
+    animation:fadein .15s ease;
+  }
+  .drawbar .lbl{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+  .drawbar .group{display:flex;gap:4px;align-items:center}
+  .drawbar .vsep{width:1px;align-self:stretch;background:rgba(0,240,255,.2);margin:0 2px}
+  .shape-btn{
+    width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+    background:transparent;color:var(--white);
+    border:1px solid rgba(0,240,255,.25);border-radius:6px;
+    cursor:pointer;transition:all .12s ease;
+    padding:0;
+  }
+  .shape-btn svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .shape-btn:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 10px rgba(0,240,255,.3)}
+  .shape-btn.active{background:rgba(0,240,255,.15);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 12px rgba(0,240,255,.45)}
+  .shape-btn.eraser.active{background:rgba(255,59,92,.15);border-color:var(--danger);color:var(--danger);box-shadow:0 0 12px rgba(255,59,92,.45)}
+  .width-btn{
+    width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+    background:transparent;border:1px solid rgba(0,240,255,.25);border-radius:6px;
+    cursor:pointer;transition:all .12s ease;
+  }
+  .width-btn:hover{border-color:var(--cyan)}
+  .width-btn.active{border-color:var(--cyan);background:rgba(0,240,255,.1);box-shadow:0 0 10px rgba(0,240,255,.3)}
+  .width-btn .dot{background:currentColor;border-radius:50%;box-shadow:0 0 6px currentColor}
+
+  /* ===== format bar (rich text editor) ===== */
+  .fmt-btn{
+    width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+    background:transparent;color:var(--white);
+    border:1px solid rgba(0,240,255,.25);border-radius:6px;
+    cursor:pointer;transition:all .12s ease;
+    padding:0;font-size:14px;
+  }
+  .fmt-btn:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 10px rgba(0,240,255,.3)}
+  .fmt-btn.b{font-weight:800}
+  .fmt-btn.i{font-style:italic;font-family:Georgia,serif}
+  .fmt-btn.u{text-decoration:underline}
+
+  /* ===== color palette ===== */
+  .palette{
+    position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:10;
+    display:flex;gap:6px;align-items:center;
+    padding:8px 12px;
+    background:rgba(5,12,24,.9);
+    border:1px solid rgba(0,240,255,.35);
+    border-radius:10px;
+    backdrop-filter:blur(8px);
+    box-shadow:0 0 20px rgba(0,240,255,.15);
+    animation:fadein .15s ease;
+  }
+  @keyframes fadein{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
+  .palette .lbl{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
+  .swatch{
+    width:22px;height:22px;border-radius:50%;
+    border:2px solid rgba(255,255,255,.15);
+    cursor:pointer;transition:all .12s ease;
+    box-shadow:0 0 8px currentColor;
+  }
+  .swatch:hover{transform:scale(1.15);border-color:#fff}
+  .swatch.custom{
+    background:conic-gradient(#ff3b5c,#ffdd00,#00ff88,#00f0ff,#9d4bff,#ff3b9a,#ff3b5c);
+    box-shadow:0 0 8px rgba(255,255,255,.3);
+    position:relative;overflow:hidden;
+  }
+  .swatch.custom input{
+    position:absolute;inset:0;opacity:0;cursor:pointer;
+  }
+  .zoom{
+    position:fixed;bottom:14px;right:14px;z-index:10;
+    color:var(--cyan);font-size:11px;
+    background:rgba(5,12,24,.7);border:1px solid rgba(0,240,255,.2);
+    padding:6px 12px;border-radius:4px;letter-spacing:.5px;
+  }
+
+  /* ===== workspace ===== */
+  .workspace{position:fixed;inset:0;z-index:1;cursor:default}
+  .workspace.tool-block{cursor:crosshair}
+  .workspace.tool-note{cursor:text}
+  .workspace.tool-draw{cursor:crosshair}
+  .workspace.tool-eraser{cursor:not-allowed}
+  .workspace.tool-eraser .stroke-hit{cursor:not-allowed !important}
+  .workspace.panning{cursor:grabbing}
+
+  /* ===== strokes (freehand drawings) ===== */
+  .strokes{position:absolute;top:0;left:0;width:8000px;height:8000px;pointer-events:none;overflow:visible}
+  .strokes .stroke-hit{fill:none;stroke:transparent;stroke-width:18;pointer-events:stroke;cursor:move}
+  .strokes .stroke-line{
+    fill:none;
+    stroke-linecap:round;stroke-linejoin:round;
+    pointer-events:none;
+    filter:drop-shadow(0 0 3px currentColor);
+    transition:filter .15s ease;
+  }
+  .strokes g.selected .stroke-line{filter:drop-shadow(0 0 6px currentColor) drop-shadow(0 0 12px currentColor)}
+  .strokes g.selected .stroke-hit{stroke:rgba(255,255,255,.08)}
+  .world{position:absolute;top:0;left:0;transform-origin:0 0;width:0;height:0}
+  .edges{position:absolute;top:0;left:0;width:8000px;height:8000px;pointer-events:none;overflow:visible}
+  .edges path{
+    fill:none;stroke-width:2.2;
+    pointer-events:none;
+    transition:opacity .28s ease;
+  }
+  .edges path.gone{opacity:0}
+  .edges path.stub{stroke-width:2.6}
+  .edges path.preview{stroke:var(--orange);stroke-dasharray:6 4;filter:drop-shadow(0 0 4px rgba(255,157,0,.7));pointer-events:none}
+
+  /* ===== collapse badge ===== */
+  .collapse-badge{
+    position:absolute;
+    min-width:30px;height:24px;padding:0 9px;
+    display:flex;align-items:center;justify-content:center;gap:3px;
+    background:rgba(5,12,24,.95);
+    border:1.5px solid currentColor;
+    border-radius:14px;
+    font-size:11px;font-weight:700;
+    cursor:pointer;
+    box-shadow:0 0 12px currentColor,inset 0 0 8px rgba(255,255,255,.06);
+    z-index:4;
+    user-select:none;
+    animation:badge-pop .32s cubic-bezier(.34,1.56,.64,1) both;
+    transition:box-shadow .15s ease;
+  }
+  .collapse-badge:hover{box-shadow:0 0 18px currentColor,inset 0 0 10px rgba(255,255,255,.1)}
+  .collapse-badge .icon{font-size:14px;line-height:1;margin-top:-1px}
+  @keyframes badge-pop{
+    0%  {opacity:0;transform:translate(-50%,-50%) scale(0) rotate(-90deg)}
+    60% {opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(10deg)}
+    100%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)}
+  }
+  /* Hover on the whole badge expands slightly — uses wrapper because animation holds transform */
+  .collapse-badge-wrap{
+    position:absolute;transform:translate(-50%,-50%);
+    transition:transform .12s ease;
+  }
+  .collapse-badge-wrap:hover{transform:translate(-50%,-50%) scale(1.15)}
+
+  /* ===== blocks ===== */
+  .block{
+    --bc:#00f0ff;
+    --bc-rgb:0,240,255;
+    position:absolute;
+    padding:14px 16px;
+    background:rgba(5,14,28,.9);
+    border:1px solid var(--bc);border-radius:6px;
+    color:var(--white);font-size:13px;line-height:1.45;
+    box-shadow:0 0 14px rgba(var(--bc-rgb),.35),inset 0 0 20px rgba(var(--bc-rgb),.06);
+    cursor:move;
+    transform-origin:center;
+    display:flex;flex-direction:column;justify-content:center;
+    transition:
+      opacity .32s cubic-bezier(.4,0,.2,1),
+      transform .32s cubic-bezier(.4,0,.2,1),
+      filter .32s ease,
+      box-shadow .2s ease;
+  }
+  .block.hidden{
+    opacity:0;
+    transform:scale(.45);
+    pointer-events:none;
+    filter:blur(2px);
+  }
+  .block.selected{
+    box-shadow:
+      0 0 0 2px rgba(var(--bc-rgb),.9),
+      0 0 24px rgba(var(--bc-rgb),.7),
+      inset 0 0 22px rgba(var(--bc-rgb),.12);
+  }
+  .block .title{
+    font-weight:700;letter-spacing:.5px;color:var(--bc);
+    text-transform:uppercase;font-size:11px;margin-bottom:6px;
+    text-shadow:0 0 8px rgba(var(--bc-rgb),.7);outline:none;
+    text-align:center;
+  }
+  .block .body{color:#dcefff;outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;text-align:center}
+  .block [contenteditable="true"]{background:rgba(var(--bc-rgb),.06);border-radius:3px;padding:2px 4px;margin:-2px -4px;cursor:text}
+  .block [data-placeholder]:empty::before{
+    content:attr(data-placeholder);
+    opacity:.35;font-style:italic;pointer-events:none;
+  }
+
+  .port{
+    position:absolute;width:12px;height:12px;
+    background:var(--bg);border:2px solid var(--bc,var(--cyan));border-radius:50%;
+    cursor:crosshair;transition:all .12s ease;z-index:2;
+  }
+  .port:hover,.port.hot{background:var(--bc,var(--cyan));box-shadow:0 0 12px var(--bc,var(--cyan)),0 0 20px rgba(var(--bc-rgb,0,240,255),.6);transform:scale(1.4)}
+  .port.top{top:-7px;left:50%;transform:translateX(-50%)}
+  .port.bottom{bottom:-7px;left:50%;transform:translateX(-50%)}
+  .port.left{left:-7px;top:50%;transform:translateY(-50%)}
+  .port.right{right:-7px;top:50%;transform:translateY(-50%)}
+  .port.top:hover,.port.top.hot{transform:translateX(-50%) scale(1.4)}
+  .port.bottom:hover,.port.bottom.hot{transform:translateX(-50%) scale(1.4)}
+  .port.left:hover,.port.left.hot{transform:translateY(-50%) scale(1.4)}
+  .port.right:hover,.port.right.hot{transform:translateY(-50%) scale(1.4)}
+
+  .del{
+    position:absolute;top:-10px;right:-10px;width:20px;height:20px;
+    background:var(--bg);border:1.5px solid var(--danger);border-radius:50%;
+    color:var(--danger);font-size:14px;line-height:16px;text-align:center;
+    cursor:pointer;display:none;font-weight:700;z-index:3;
+  }
+  .block.selected .del{display:block}
+  .del:hover{background:var(--danger);color:#fff;box-shadow:0 0 10px var(--danger)}
+
+  /* Resize handles on block corners (visible when selected) */
+  .resize{
+    position:absolute;width:10px;height:10px;
+    background:var(--bc);
+    border:1.5px solid var(--bg);
+    border-radius:2px;
+    display:none;z-index:4;
+    box-shadow:0 0 8px var(--bc);
+  }
+  .block.selected .resize{display:block}
+  .resize.tl{top:-6px;left:-6px;cursor:nwse-resize}
+  .resize.tr{top:-6px;right:-6px;cursor:nesw-resize}
+  .resize.bl{bottom:-6px;left:-6px;cursor:nesw-resize}
+  .resize.br{bottom:-6px;right:-6px;cursor:nwse-resize}
+  .resize:hover{transform:scale(1.3);box-shadow:0 0 12px var(--bc)}
+
+  /* ===== notes ===== */
+  .note{
+    --nc:#ff9d00;
+    position:absolute;min-width:80px;padding:6px 10px;
+    color:var(--nc);font-style:italic;font-weight:500;
+    background:transparent;border:1px dashed currentColor;
+    border-radius:4px;cursor:move;outline:none;
+    text-shadow:0 0 6px currentColor;white-space:pre-wrap;
+    opacity:.9;
+  }
+  .note.selected{border-style:solid;opacity:1;box-shadow:0 0 12px currentColor}
+  .note[contenteditable="true"]{cursor:text;border-style:solid;background:rgba(0,0,0,.3)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-type="module">
+const { useState, useRef, useEffect, useCallback, useMemo } = React;
+
+/* ================== ID + helpers ================== */
+let _nid = 1;
+const uid = () => "n" + (_nid++);
+
+const DEFAULT_COLOR = "#00f0ff";
+const PRESET_COLORS = [
+  "#00f0ff", // cyan
+  "#ff9d00", // orange
+  "#00ff88", // green
+  "#ff3b9a", // pink
+  "#9d4bff", // purple
+  "#ffdd00", // yellow
+  "#ff3b5c", // red
+  "#e9fbff", // white
+];
+const hexToRgb = (hex) => {
+  const h = hex.replace("#","");
+  const n = parseInt(h.length===3 ? h.split("").map(c=>c+c).join("") : h, 16);
+  return `${(n>>16)&255},${(n>>8)&255},${n&255}`;
+};
+
+const portWorldPos = (b, port) => {
+  const w = b.w ?? 240, h = b.h ?? 80;
+  switch (port) {
+    case "top":    return { x: b.x + w/2, y: b.y };
+    case "bottom": return { x: b.x + w/2, y: b.y + h };
+    case "left":   return { x: b.x,       y: b.y + h/2 };
+    case "right":  return { x: b.x + w,   y: b.y + h/2 };
+  }
+};
+const bezierPath = (a, b) => {
+  const dx = Math.abs(b.x - a.x) * 0.5 + 40;
+  return `M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`;
+};
+
+// Orthogonal (manhattan) routing with rounded corners
+const roundedPolyPath = (points, r = 12) => {
+  if (!points || points.length < 2) return "";
+  if (points.length === 2) return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i-1], cur = points[i], next = points[i+1];
+    const dx1 = cur.x - prev.x, dy1 = cur.y - prev.y;
+    const len1 = Math.hypot(dx1, dy1) || 1;
+    const dx2 = next.x - cur.x, dy2 = next.y - cur.y;
+    const len2 = Math.hypot(dx2, dy2) || 1;
+    const rr = Math.min(r, len1 / 2, len2 / 2);
+    const ax = cur.x - (dx1 / len1) * rr;
+    const ay = cur.y - (dy1 / len1) * rr;
+    const bx = cur.x + (dx2 / len2) * rr;
+    const by = cur.y + (dy2 / len2) * rr;
+    d += ` L ${ax} ${ay} Q ${cur.x} ${cur.y} ${bx} ${by}`;
+  }
+  const last = points[points.length - 1];
+  d += ` L ${last.x} ${last.y}`;
+  return d;
+};
+
+const orthogonalPath = (p1, dir1, p2, dir2) => {
+  const OFFSET = 32;
+  const s1 = { x: p1.x + dir1.x * OFFSET, y: p1.y + dir1.y * OFFSET };
+  const s2 = { x: p2.x + dir2.x * OFFSET, y: p2.y + dir2.y * OFFSET };
+  const h1 = dir1.x !== 0; // source port is horizontal (left/right)
+  const h2 = dir2.x !== 0; // target port is horizontal (left/right)
+  const pts = [p1, s1];
+  if (h1 && h2) {
+    // Both horizontal: bend twice at mid-x, so we always approach target port straight
+    const midX = (s1.x + s2.x) / 2;
+    pts.push({ x: midX, y: s1.y });
+    pts.push({ x: midX, y: s2.y });
+  } else if (!h1 && !h2) {
+    // Both vertical: bend twice at mid-y
+    const midY = (s1.y + s2.y) / 2;
+    pts.push({ x: s1.x, y: midY });
+    pts.push({ x: s2.x, y: midY });
+  } else if (h1 && !h2) {
+    // Source horizontal, target vertical: single corner
+    pts.push({ x: s2.x, y: s1.y });
+  } else {
+    // Source vertical, target horizontal: single corner
+    pts.push({ x: s1.x, y: s2.y });
+  }
+  pts.push(s2);
+  pts.push(p2);
+  return roundedPolyPath(pts, 14);
+};
+// Compute an SVG path string for any stroke shape
+const strokeToPath = (s) => {
+  if (!s) return "";
+  const t = s.type || "freehand";
+  if (t === "freehand") {
+    if (!s.points || s.points.length < 2) return "";
+    return "M " + s.points.map(p => `${p.x} ${p.y}`).join(" L ");
+  }
+  if (!s.p1 || !s.p2) return "";
+  const { p1, p2 } = s;
+  if (t === "line") {
+    return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
+  }
+  if (t === "rect") {
+    const x = Math.min(p1.x, p2.x), y = Math.min(p1.y, p2.y);
+    const w = Math.abs(p2.x - p1.x), h = Math.abs(p2.y - p1.y);
+    return `M ${x} ${y} h ${w} v ${h} h ${-w} z`;
+  }
+  if (t === "ellipse") {
+    const cx = (p1.x + p2.x) / 2;
+    const cy = (p1.y + p2.y) / 2;
+    const rx = Math.abs(p2.x - p1.x) / 2;
+    const ry = Math.abs(p2.y - p1.y) / 2;
+    if (rx < 0.5 || ry < 0.5) return "";
+    return `M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx - rx} ${cy}`;
+  }
+  if (t === "arrow") {
+    const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+    const head = Math.min(18, Math.hypot(p2.x - p1.x, p2.y - p1.y) * 0.4);
+    const spread = 0.5;
+    const ax = p2.x - head * Math.cos(ang - spread);
+    const ay = p2.y - head * Math.sin(ang - spread);
+    const bx = p2.x - head * Math.cos(ang + spread);
+    const by = p2.y - head * Math.sin(ang + spread);
+    return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} M ${ax} ${ay} L ${p2.x} ${p2.y} L ${bx} ${by}`;
+  }
+  return "";
+};
+
+// Approximate midpoint of the bezier used for edges
+const bezierMidpoint = (a, b) => {
+  const dx = Math.abs(b.x - a.x) * 0.5 + 40;
+  const c1x = a.x + dx, c1y = a.y;
+  const c2x = b.x - dx, c2y = b.y;
+  // de Casteljau at t=0.5
+  const t = 0.5, it = 1 - t;
+  const x = it*it*it*a.x + 3*it*it*t*c1x + 3*it*t*t*c2x + t*t*t*b.x;
+  const y = it*it*it*a.y + 3*it*it*t*c1y + 3*it*t*t*c2y + t*t*t*b.y;
+  return { x, y };
+};
+
+/* ================== Block ================== */
+function Block({ block, selected, hidden, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange }) {
+  const elRef = useRef(null);
+  const titleRef = useRef(null);
+  const bodyRef = useRef(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingBody, setEditingBody] = useState(false);
+
+  // Auto-enter edit mode on the title when the block was just created
+  useEffect(() => {
+    if (pendingEditRef && pendingEditRef.current === block.id) {
+      pendingEditRef.current = null;
+      setEditingTitle(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Notify parent when body/title editing starts/stops, so it can show the format bar
+  useEffect(() => {
+    onEditingBodyChange?.(block.id, editingBody);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingBody]);
+  useEffect(() => {
+    onEditingTitleChange?.(block.id, editingTitle);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingTitle]);
+
+  // When entering body edit mode, imperatively set innerHTML and focus
+  useEffect(() => {
+    if (editingBody && bodyRef.current) {
+      bodyRef.current.innerHTML = block.body || "";
+      bodyRef.current.focus();
+      const range = document.createRange();
+      range.selectNodeContents(bodyRef.current);
+      range.collapse(false);
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingBody]);
+
+  // Same for title
+  useEffect(() => {
+    if (editingTitle && titleRef.current) {
+      titleRef.current.innerHTML = block.title || "";
+      titleRef.current.focus();
+      const range = document.createRange();
+      range.selectNodeContents(titleRef.current);
+      range.collapse(false);
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingTitle]);
+
+  useEffect(() => {
+    if (editingTitle && titleRef.current) {
+      const t = titleRef.current; t.focus();
+      const r = document.createRange(); r.selectNodeContents(t);
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    }
+  }, [editingTitle]);
+  useEffect(() => {
+    if (editingBody && bodyRef.current) {
+      const t = bodyRef.current; t.focus();
+      const r = document.createRange(); r.selectNodeContents(t);
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    }
+  }, [editingBody]);
+
+  const color = block.color || DEFAULT_COLOR;
+  return (
+    <div
+      ref={elRef}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""}`}
+      style={{
+        left: block.x, top: block.y,
+        width: (block.w || 240) + "px",
+        minHeight: (block.h || 80) + "px",
+        "--bc": color, "--bc-rgb": hexToRgb(color),
+      }}
+      onMouseDown={(e) => {
+        if (e.target.classList.contains("port")) return;
+        if (e.target.classList.contains("del")) return;
+        if (e.target.isContentEditable) return;
+        e.stopPropagation();
+        onSelect(block.id, e.shiftKey);
+        onStartDrag(e);
+      }}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        // Use closest() so clicking on inner spans (from bold/italic/color formatting)
+        // still correctly resolves to the parent title or body element
+        if (e.target.closest(".title")) setEditingTitle(true);
+        else setEditingBody(true);
+      }}
+    >
+      {editingTitle ? (
+        <div
+          ref={titleRef}
+          className="title"
+          data-placeholder="TÍTULO"
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={(e) => {
+            setEditingTitle(false);
+            const html = e.currentTarget.innerHTML;
+            const plain = e.currentTarget.textContent.trim();
+            onChange(block.id, { title: plain ? html : "" });
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              const html = e.currentTarget.innerHTML;
+              const plain = e.currentTarget.textContent.trim();
+              onChange(block.id, { title: plain ? html : "" });
+              setEditingTitle(false);
+              setTimeout(() => setEditingBody(true), 0);
+            }
+          }}
+        />
+      ) : (
+        <div
+          ref={titleRef}
+          className="title"
+          data-placeholder="TÍTULO"
+          dangerouslySetInnerHTML={{ __html: block.title || "" }}
+        />
+      )}
+      {(editingBody || (block.body && block.body.replace(/<[^>]*>/g, "").trim() !== "")) && (
+        editingBody ? (
+          <div
+            ref={bodyRef}
+            className="body"
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => {
+              setEditingBody(false);
+              const html = e.currentTarget.innerHTML;
+              const plain = e.currentTarget.textContent.trim();
+              onChange(block.id, { body: plain ? html : "" });
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
+            }}
+          />
+        ) : (
+          <div
+            ref={bodyRef}
+            className="body"
+            dangerouslySetInnerHTML={{ __html: block.body || "" }}
+          />
+        )
+      )}
+      <div className="del" onMouseDown={(e) => { e.stopPropagation(); onDelete(block.id); }}>×</div>
+      {["top","right","bottom","left"].map(p => (
+        <div key={p} className={`port ${p}`} data-port={p}
+          onMouseDown={(e) => { e.stopPropagation(); onStartConnection(block.id, p, e); }} />
+      ))}
+      {["tl","tr","bl","br"].map(c => (
+        <div key={c} className={`resize ${c}`}
+          onMouseDown={(e) => { e.stopPropagation(); onSelect(block.id, false); onStartResize(block.id, c, e); }} />
+      ))}
+    </div>
+  );
+}
+
+/* ================== Note ================== */
+function Note({ note, selected, onSelect, onStartDrag, onChange, onEraser }) {
+  const ref = useRef(null);
+  const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    if (editing && ref.current) {
+      ref.current.focus();
+      const r = document.createRange(); r.selectNodeContents(ref.current);
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    }
+  }, [editing]);
+  const color = note.color || "#ff9d00";
+  return (
+    <div
+      ref={ref}
+      className={`note ${selected ? "selected" : ""}`}
+      style={{
+        left: note.x, top: note.y,
+        "--nc": color,
+        fontSize: (note.fontSize || 14) + "px",
+      }}
+      contentEditable={editing}
+      suppressContentEditableWarning
+      onMouseDown={(e) => {
+        if (e.currentTarget.isContentEditable) return;
+        e.stopPropagation();
+        if (onEraser && onEraser(note.id)) return;
+        onSelect(note.id, e.shiftKey);
+        onStartDrag(e);
+      }}
+      onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
+      onBlur={(e) => {
+        setEditing(false);
+        onChange(note.id, { text: e.currentTarget.textContent });
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
+      }}
+    >{note.text}</div>
+  );
+}
+
+/* ================== App ================== */
+function App() {
+  const [tool, setTool] = useState("select");
+  const [blocks, setBlocks] = useState(() => ([
+    { id:"b1", x:200, y:240, w:240, h:80, color:"#00f0ff", title:"O QUE NÃO É A TRADE DE ABERTURA", body:"Teste de validação, volume alto" },
+    { id:"b2", x:520, y:160, w:260, h:120, color:"#ff9d00", title:"NÃO É O 1 MINUTO DE ENTRADA", body:"O saldo acumulado antes do mercado abrir. O 1 minuto de abertura é para se aferir o funcionamento." },
+    { id:"b3", x:880, y:180, w:260, h:120, color:"#00ff88", title:"NÃO É ENTRAR NO DIA INTEIRO", body:"O cenário depois dos primeiros minutos. Parece simples, mas requer mais abertura." },
+    { id:"b4", x:560, y:460, w:260, h:120, color:"#ff3b9a", title:"NÃO É COMPRAR O DIA INTEIRO", body:"O setup de trazer a ponta definida define a direção dos próximos minutos — não do dia inteiro." },
+  ]));
+  const [notes, setNotes] = useState([]);
+  const [strokes, setStrokes] = useState([]);
+  // Currently drawing stroke (not yet committed)
+  const [drawing, setDrawing] = useState(null);
+  // Which block (if any) is currently editing its body/title — for the floating format bar
+  const [editingBodyId, setEditingBodyId] = useState(null);
+  const [editingTitleId, setEditingTitleId] = useState(null);
+  // Drawing tool settings
+  const [drawColor, setDrawColor] = useState("#ff9d00");
+  const [drawWidth, setDrawWidth] = useState(3);
+  const [drawFontSize, setDrawFontSize] = useState(16);
+  const [drawShape, setDrawShape] = useState("text"); // text|freehand|line|rect|ellipse|arrow|eraser
+  const [edges, setEdges] = useState(() => ([
+    { id:"e1", from:{id:"b1",port:"right"}, to:{id:"b2",port:"left"} },
+    { id:"e2", from:{id:"b2",port:"right"}, to:{id:"b3",port:"left"} },
+    { id:"e3", from:{id:"b2",port:"bottom"}, to:{id:"b4",port:"top"} },
+  ]));
+  const [selection, setSelection] = useState(new Set());
+  const [selectedEdge, setSelectedEdge] = useState(null);
+  const [view, setView] = useState({ x: 20, y: 20, scale: 1 });
+  const [preview, setPreview] = useState(null); // {from:{x,y}, to:{x,y}}
+
+  // refs for imperative drag/connect state
+  const dragRef = useRef(null);
+  const connectRef = useRef(null);
+  const resizeRef = useRef(null);
+  const panRef = useRef(false);
+  const spaceRef = useRef(false);
+  const wsRef = useRef(null);
+  const fileRef = useRef(null);
+
+  const blocksById = useMemo(() => {
+    const m = new Map(); blocks.forEach(b => m.set(b.id, b)); return m;
+  }, [blocks]);
+
+  /* ----- hidden blocks (from collapsed edges) ----- */
+  // Subtree collapse: each collapsed edge literally hides the subtree on the
+  // "far" side of the clicked port (no multi-parent protection — if the user
+  // collapsed it, it goes away).
+  const addDescendants = useCallback((startId, out) => {
+    const q = [startId];
+    while (q.length) {
+      const cur = q.shift();
+      if (out.has(cur)) continue;
+      out.add(cur);
+      edges.forEach(e => { if (e.from.id === cur) q.push(e.to.id); });
+    }
+  }, [edges]);
+  const addAncestors = useCallback((startId, out) => {
+    const q = [startId];
+    while (q.length) {
+      const cur = q.shift();
+      if (out.has(cur)) continue;
+      out.add(cur);
+      edges.forEach(e => { if (e.to.id === cur) q.push(e.from.id); });
+    }
+  }, [edges]);
+
+  const hiddenBlockIds = useMemo(() => {
+    const hidden = new Set();
+    // "Near" blocks = the ones whose port was clicked; they must always stay visible.
+    const nearIds = new Set();
+    edges.forEach(e => {
+      if (!e.collapsed) return;
+      if (e.collapseDir === "backward") nearIds.add(e.to.id);
+      else nearIds.add(e.from.id);
+    });
+    edges.forEach(e => {
+      if (!e.collapsed) return;
+      if (e.collapseDir === "backward") addAncestors(e.from.id, hidden);
+      else addDescendants(e.to.id, hidden);
+    });
+    nearIds.forEach(id => hidden.delete(id));
+    return hidden;
+  }, [blocks, edges, addDescendants, addAncestors]);
+
+  /* ----- count of blocks hidden by a single collapsed edge ----- */
+  const collapsedCount = useCallback((e) => {
+    const out = new Set();
+    if (e.collapseDir === "backward") {
+      addAncestors(e.from.id, out);
+      out.delete(e.to.id);
+    } else {
+      addDescendants(e.to.id, out);
+      out.delete(e.from.id);
+    }
+    return out.size;
+  }, [addDescendants, addAncestors]);
+
+  const toggleEdgeCollapse = useCallback((edgeId) => {
+    setEdges(p => p.map(e => e.id === edgeId ? { ...e, collapsed: !e.collapsed } : e));
+  }, []);
+
+  /* ----- view helpers ----- */
+  const screenToWorld = useCallback((sx, sy) => ({
+    x: (sx - view.x) / view.scale,
+    y: (sy - view.y) / view.scale,
+  }), [view]);
+
+  /* ----- selection ----- */
+  const selectOne = useCallback((id, additive = false) => {
+    setSelection(prev => {
+      const next = additive ? new Set(prev) : new Set();
+      next.add(id);
+      return next;
+    });
+    setSelectedEdge(null);
+  }, []);
+  const clearSelection = useCallback(() => {
+    setSelection(new Set());
+    setSelectedEdge(null);
+  }, []);
+
+  /* ----- resize ----- */
+  const startResize = useCallback((blockId, corner, e) => {
+    const b = blocks.find(x => x.id === blockId);
+    if (!b) return;
+    resizeRef.current = {
+      id: blockId,
+      corner,
+      startMouse: { x: e.clientX, y: e.clientY },
+      startBlock: { x: b.x, y: b.y, w: b.w || 240, h: b.h || 80 },
+    };
+  }, [blocks]);
+
+  /* ----- create ----- */
+  const pendingEditRef = useRef(null);
+  const createBlock = useCallback((x, y) => {
+    const id = uid();
+    const b = { id, x: x - 100, y: y - 25, w: 240, h: 80, title: "", body: "", color: DEFAULT_COLOR };
+    pendingEditRef.current = id;
+    setBlocks(p => [...p, b]);
+    selectOne(id);
+    return b;
+  }, [selectOne]);
+
+  const setBlockColor = useCallback((color) => {
+    setBlocks(p => p.map(b => selection.has(b.id) ? { ...b, color } : b));
+    setStrokes(p => p.map(s => selection.has(s.id) ? { ...s, color } : s));
+    setNotes(p => p.map(n => selection.has(n.id) ? { ...n, color } : n));
+  }, [selection]);
+  const setSelectedStrokeWidth = useCallback((width) => {
+    setStrokes(p => p.map(s => selection.has(s.id) ? { ...s, width } : s));
+  }, [selection]);
+  const setSelectedFontSize = useCallback((fontSize) => {
+    setNotes(p => p.map(n => selection.has(n.id) ? { ...n, fontSize } : n));
+  }, [selection]);
+
+  /* ----- rich text formatting (for block body in edit mode) ----- */
+  const applyFormat = useCallback((cmd) => {
+    document.execCommand("styleWithCSS", false, true);
+    document.execCommand(cmd, false, null);
+  }, []);
+  const applyTextColor = useCallback((color) => {
+    document.execCommand("styleWithCSS", false, true);
+    document.execCommand("foreColor", false, color);
+  }, []);
+  const applyFontSize = useCallback((px) => {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    if (range.collapsed) return;
+    const span = document.createElement("span");
+    span.style.fontSize = px + "px";
+    try {
+      range.surroundContents(span);
+    } catch {
+      const contents = range.extractContents();
+      span.appendChild(contents);
+      range.insertNode(span);
+    }
+    sel.removeAllRanges();
+  }, []);
+
+  const createNote = useCallback((x, y, color, fontSize) => {
+    const n = {
+      id: uid(), x, y, text: "Anotação…",
+      color: color || "#ff9d00",
+      fontSize: fontSize || 14,
+    };
+    setNotes(p => [...p, n]);
+    selectOne(n.id);
+    return n;
+  }, [selectOne]);
+
+  const updateStroke = useCallback((id, patch) => {
+    setStrokes(p => p.map(s => s.id === id ? { ...s, ...patch } : s));
+  }, []);
+
+  /* ----- update ----- */
+  const updateBlock = useCallback((id, patch) => {
+    setBlocks(p => p.map(b => b.id === id ? { ...b, ...patch } : b));
+  }, []);
+  const updateNote = useCallback((id, patch) => {
+    setNotes(p => p.map(n => n.id === id ? { ...n, ...patch } : n));
+  }, []);
+
+  /* ----- delete ----- */
+  const deleteSelection = useCallback(() => {
+    if (selectedEdge) {
+      setEdges(p => p.filter(e => e.id !== selectedEdge));
+      setSelectedEdge(null);
+      return;
+    }
+    if (selection.size === 0) return;
+    setBlocks(p => p.filter(b => !selection.has(b.id)));
+    setNotes(p => p.filter(n => !selection.has(n.id)));
+    setStrokes(p => p.filter(s => !selection.has(s.id)));
+    setEdges(p => p.filter(e => !selection.has(e.from.id) && !selection.has(e.to.id)));
+    setSelection(new Set());
+  }, [selection, selectedEdge]);
+
+  const deleteBlock = useCallback((id) => {
+    setBlocks(p => p.filter(b => b.id !== id));
+    setEdges(p => p.filter(e => e.from.id !== id && e.to.id !== id));
+    setSelection(prev => { const n = new Set(prev); n.delete(id); return n; });
+  }, []);
+
+  /* ----- drag ----- */
+  const startDrag = useCallback((e, id) => {
+    // Build drag set from current selection (including the clicked id)
+    setSelection(prevSel => {
+      const sel = prevSel.has(id) ? prevSel : new Set([id]);
+      const items = [];
+      blocks.forEach(b => { if (sel.has(b.id)) items.push({ kind:"block", id:b.id, startX:b.x, startY:b.y }); });
+      notes.forEach(n => { if (sel.has(n.id)) items.push({ kind:"note",  id:n.id, startX:n.x, startY:n.y }); });
+      strokes.forEach(s => { if (sel.has(s.id)) items.push({ kind:"stroke", id:s.id, startX:s.x, startY:s.y }); });
+      dragRef.current = { startMouse:{ x:e.clientX, y:e.clientY }, items };
+      return sel;
+    });
+  }, [blocks, notes, strokes]);
+
+  /* ----- connection ----- */
+  const startConnection = useCallback((blockId, port, e) => {
+    const b = blocksById.get(blockId);
+    if (!b) return;
+    const from = portWorldPos(b, port);
+    connectRef.current = {
+      fromId: blockId,
+      fromPort: port,
+      from,
+      startScreen: { x: e.clientX, y: e.clientY },
+      moved: false,
+    };
+    // Don't show preview yet — wait until mouse actually moves
+  }, [blocksById]);
+
+  const togglePortCollapse = useCallback((blockId, port) => {
+    setEdges(p => p.map(e => {
+      // Clicked on the source port → hide what's downstream (forward)
+      if (e.from.id === blockId && e.from.port === port) {
+        return { ...e, collapsed: !e.collapsed, collapseDir: "forward" };
+      }
+      // Clicked on the target port → hide what's upstream (backward)
+      if (e.to.id === blockId && e.to.port === port) {
+        return { ...e, collapsed: !e.collapsed, collapseDir: "backward" };
+      }
+      return e;
+    }));
+  }, []);
+
+  /* ----- mouse / keyboard global ----- */
+  useEffect(() => {
+    const onMove = (e) => {
+      if (resizeRef.current) {
+        const r = resizeRef.current;
+        const dx = (e.clientX - r.startMouse.x) / view.scale;
+        const dy = (e.clientY - r.startMouse.y) / view.scale;
+        const MIN_W = 120, MIN_H = 60;
+        let { x, y, w, h } = r.startBlock;
+        if (r.corner.includes("r")) w = Math.max(MIN_W, r.startBlock.w + dx);
+        if (r.corner.includes("l")) {
+          const newW = Math.max(MIN_W, r.startBlock.w - dx);
+          x = r.startBlock.x + (r.startBlock.w - newW);
+          w = newW;
+        }
+        if (r.corner.includes("b")) h = Math.max(MIN_H, r.startBlock.h + dy);
+        if (r.corner.includes("t")) {
+          const newH = Math.max(MIN_H, r.startBlock.h - dy);
+          y = r.startBlock.y + (r.startBlock.h - newH);
+          h = newH;
+        }
+        setBlocks(prev => prev.map(bb => bb.id === r.id ? { ...bb, x, y, w, h } : bb));
+        return;
+      }
+      if (connectRef.current) {
+        const c = connectRef.current;
+        // Threshold: don't start the connection drag until the mouse has really moved.
+        // Below that, treat the interaction as a click-to-collapse.
+        if (!c.moved) {
+          const dx = e.clientX - c.startScreen.x;
+          const dy = e.clientY - c.startScreen.y;
+          if (dx*dx + dy*dy < 16) return; // < 4px movement
+          c.moved = true;
+          setPreview({ from: c.from, to: c.from });
+        }
+        const to = screenToWorld(e.clientX, e.clientY);
+        setPreview(p => p ? { ...p, to } : p);
+        document.querySelectorAll(".port.hot").forEach(p => p.classList.remove("hot"));
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        if (el && el.classList.contains("port")) el.classList.add("hot");
+        return;
+      }
+      if (dragRef.current) {
+        const d = dragRef.current;
+        const dx = (e.clientX - d.startMouse.x) / view.scale;
+        const dy = (e.clientY - d.startMouse.y) / view.scale;
+        // Apply movement
+        setBlocks(prev => prev.map(b => {
+          const it = d.items.find(i => i.kind === "block" && i.id === b.id);
+          return it ? { ...b, x: it.startX + dx, y: it.startY + dy } : b;
+        }));
+        setNotes(prev => prev.map(n => {
+          const it = d.items.find(i => i.kind === "note" && i.id === n.id);
+          return it ? { ...n, x: it.startX + dx, y: it.startY + dy } : n;
+        }));
+        setStrokes(prev => prev.map(s => {
+          const it = d.items.find(i => i.kind === "stroke" && i.id === s.id);
+          return it ? { ...s, x: it.startX + dx, y: it.startY + dy } : s;
+        }));
+        return;
+      }
+      if (panRef.current) {
+        setView(v => ({ ...v, x: v.x + e.movementX, y: v.y + e.movementY }));
+        return;
+      }
+      if (drawing) {
+        const wp = screenToWorld(e.clientX, e.clientY);
+        setDrawing(d => {
+          if (!d) return d;
+          if (d.type === "freehand") {
+            const last = d.points[d.points.length - 1];
+            const dx = wp.x - last.x, dy = wp.y - last.y;
+            if (dx*dx + dy*dy < 4) return d;
+            return { ...d, points: [...d.points, wp] };
+          }
+          // Shift-constrained (square/circle/straight line) when Shift is held
+          let p2 = wp;
+          if (e.shiftKey && (d.type === "rect" || d.type === "ellipse")) {
+            const dx = wp.x - d.p1.x, dy = wp.y - d.p1.y;
+            const m = Math.min(Math.abs(dx), Math.abs(dy));
+            p2 = { x: d.p1.x + Math.sign(dx) * m, y: d.p1.y + Math.sign(dy) * m };
+          } else if (e.shiftKey && (d.type === "line" || d.type === "arrow")) {
+            // Snap to 0/45/90 degrees
+            const dx = wp.x - d.p1.x, dy = wp.y - d.p1.y;
+            const ang = Math.round(Math.atan2(dy, dx) / (Math.PI/4)) * (Math.PI/4);
+            const len = Math.hypot(dx, dy);
+            p2 = { x: d.p1.x + Math.cos(ang)*len, y: d.p1.y + Math.sin(ang)*len };
+          }
+          return { ...d, p2 };
+        });
+      }
+    };
+    const onUp = (e) => {
+      if (connectRef.current) {
+        const c = connectRef.current;
+        // Click (no drag) → toggle collapse on all edges touching this port
+        if (!c.moved) {
+          togglePortCollapse(c.fromId, c.fromPort);
+          connectRef.current = null;
+          setPreview(null);
+          document.querySelectorAll(".port.hot").forEach(p => p.classList.remove("hot"));
+          return;
+        }
+        // Drag → resolve drop target and create an edge
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const portEl = (el && el.classList.contains("port")) ? el : null;
+        const { fromId, fromPort } = connectRef.current;
+        if (portEl) {
+          const blockEl = portEl.parentElement;
+          const all = Array.from(document.querySelectorAll(".block"));
+          const idx = all.indexOf(blockEl);
+          if (idx >= 0) {
+            const toBlock = blocks[idx];
+            const toPort = portEl.dataset.port;
+            if (toBlock && toBlock.id !== fromId && !hiddenBlockIds.has(toBlock.id)) {
+              setEdges(p => [...p, { id: uid(), from:{id:fromId,port:fromPort}, to:{id:toBlock.id,port:toPort} }]);
+            }
+          }
+        } else {
+          // Dropped on empty space — create a new block at that position and connect to it
+          const wp = screenToWorld(e.clientX, e.clientY);
+          // Map source port to opposite port on new block
+          const OPP = { top:"bottom", bottom:"top", left:"right", right:"left" };
+          const toPort = OPP[fromPort] || "left";
+          const W = 240, H = 80;
+          // Position new block so the receiving port lands roughly at the cursor
+          let nx = wp.x, ny = wp.y;
+          if (toPort === "left")   { nx = wp.x;          ny = wp.y - H/2; }
+          if (toPort === "right")  { nx = wp.x - W;      ny = wp.y - H/2; }
+          if (toPort === "top")    { nx = wp.x - W/2;    ny = wp.y;       }
+          if (toPort === "bottom") { nx = wp.x - W/2;    ny = wp.y - H;   }
+          // Inherit color from the source block so the new node visually belongs to the same flow
+          const sourceBlock = blocks.find(b => b.id === fromId);
+          const newId = uid();
+          const newBlock = {
+            id: newId, x: nx, y: ny, w: W, h: H,
+            title: "", body: "",
+            color: (sourceBlock && sourceBlock.color) || DEFAULT_COLOR,
+          };
+          pendingEditRef.current = newId;
+          setBlocks(p => [...p, newBlock]);
+          setEdges(p => [...p, { id: uid(), from:{id:fromId,port:fromPort}, to:{id:newId,port:toPort} }]);
+          // Select the new block so user can immediately edit it
+          setSelection(new Set([newId]));
+        }
+        setPreview(null);
+        connectRef.current = null;
+        document.querySelectorAll(".port.hot").forEach(p => p.classList.remove("hot"));
+      }
+      dragRef.current = null;
+      resizeRef.current = null;
+      panRef.current = false;
+      if (wsRef.current) wsRef.current.classList.remove("panning");
+      if (drawing) {
+        // Commit the stroke if it has enough data
+        let ok = false;
+        if (drawing.type === "freehand") {
+          ok = drawing.points && drawing.points.length >= 2;
+        } else {
+          const dx = drawing.p2.x - drawing.p1.x;
+          const dy = drawing.p2.y - drawing.p1.y;
+          ok = Math.hypot(dx, dy) > 3;
+        }
+        if (ok) setStrokes(p => [...p, drawing]);
+        setDrawing(null);
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [view.scale, blocks, hiddenBlockIds, togglePortCollapse, drawing, screenToWorld, drawShape]);
+
+  /* ----- keyboard ----- */
+  useEffect(() => {
+    const onKey = (e) => {
+      if (document.activeElement && document.activeElement.isContentEditable) return;
+      if (e.key === " ") { spaceRef.current = true; e.preventDefault(); }
+      if (e.key === "Delete" || e.key === "Backspace") deleteSelection();
+      if (e.key === "b" || e.key === "B") setTool("block");
+      if (e.key === "n" || e.key === "N") { setTool("draw"); setDrawShape("text"); }
+      if (e.key === "d" || e.key === "D") { setTool("draw"); setDrawShape("freehand"); }
+      if (e.key === "v" || e.key === "V") setTool("select");
+      if (e.key === "Escape") { clearSelection(); setTool("select"); }
+    };
+    const onKeyUp = (e) => { if (e.key === " ") spaceRef.current = false; };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [deleteSelection, clearSelection]);
+
+  /* ----- wheel zoom ----- */
+  const onWheel = useCallback((e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.max(0.2, Math.min(3, view.scale * delta));
+    const wp = screenToWorld(e.clientX, e.clientY);
+    setView({
+      scale: newScale,
+      x: e.clientX - wp.x * newScale,
+      y: e.clientY - wp.y * newScale,
+    });
+  }, [view, screenToWorld]);
+
+  /* ----- workspace click ----- */
+  const onWorkspaceDown = (e) => {
+    // Only react if clicking the workspace itself, not a child
+    if (e.target !== wsRef.current && !e.target.classList.contains("world") && e.target.tagName !== "svg") return;
+    // Blur any active editing so clicking outside always exits edit mode
+    if (document.activeElement && document.activeElement.isContentEditable) {
+      document.activeElement.blur();
+    }
+    const wp = screenToWorld(e.clientX, e.clientY);
+    if (tool === "block") { createBlock(wp.x, wp.y); setTool("select"); return; }
+    if (tool === "draw") {
+      clearSelection();
+      if (drawShape === "eraser") {
+        e.preventDefault();
+        return;
+      }
+      if (drawShape === "text") {
+        createNote(wp.x, wp.y, drawColor, drawFontSize);
+        e.preventDefault();
+        return;
+      }
+      // Start a new stroke
+      const base = { id: uid(), type: drawShape, x: 0, y: 0, color: drawColor, width: drawWidth };
+      if (drawShape === "freehand") {
+        setDrawing({ ...base, points: [{ x: wp.x, y: wp.y }] });
+      } else {
+        setDrawing({ ...base, p1: { x: wp.x, y: wp.y }, p2: { x: wp.x, y: wp.y } });
+      }
+      e.preventDefault();
+      return;
+    }
+    // Default: clicking empty workspace always pans the canvas
+    clearSelection();
+    panRef.current = true;
+    wsRef.current.classList.add("panning");
+    e.preventDefault();
+  };
+
+  /* ----- fit/reset/clear ----- */
+  const fitAll = () => {
+    const items = [...blocks.filter(b => !hiddenBlockIds.has(b.id)), ...notes];
+    // Include strokes' extents
+    const strokeBounds = strokes.flatMap(s =>
+      (s.points || []).map(p => ({ x: p.x + (s.x||0), y: p.y + (s.y||0), w: 0, h: 0 }))
+    );
+    const all = [...items, ...strokeBounds];
+    if (!all.length) { setView({ x:0, y:0, scale:1 }); return; }
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    all.forEach(o => {
+      const w = o.w ?? 0, h = o.h ?? 0;
+      minX = Math.min(minX, o.x); minY = Math.min(minY, o.y);
+      maxX = Math.max(maxX, o.x + w); maxY = Math.max(maxY, o.y + h);
+    });
+    const pad = 80;
+    const cw = window.innerWidth - 160, ch = window.innerHeight - 160;
+    const scale = Math.min(cw/(maxX-minX+pad*2), ch/(maxY-minY+pad*2), 1.5);
+    setView({
+      scale,
+      x: 80 - minX*scale + (cw-(maxX-minX)*scale)/2,
+      y: 80 - minY*scale + (ch-(maxY-minY)*scale)/2,
+    });
+  };
+
+  /* ----- export / import ----- */
+  const exportJSON = () => {
+    const data = { blocks, notes, strokes, edges, view };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "canvas-tron.json";
+    a.click();
+  };
+  const importJSON = (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(r.result);
+        setBlocks(data.blocks || []);
+        setNotes(data.notes || []);
+        setStrokes(data.strokes || []);
+        setEdges(data.edges || []);
+        if (data.view) setView(data.view);
+        // bump id counter
+        const ids = [...(data.blocks||[]),...(data.notes||[]),...(data.strokes||[])].map(o=>parseInt(String(o.id).replace(/\D/g,""),10));
+        _nid = Math.max(_nid, ...ids.filter(Number.isFinite)) + 1;
+      } catch { alert("Arquivo inválido"); }
+    };
+    r.readAsText(f);
+    e.target.value = "";
+  };
+  const clearAll = () => {
+    if (!confirm("Limpar todo o canvas?")) return;
+    setBlocks([]); setNotes([]); setStrokes([]); setEdges([]); clearSelection();
+  };
+
+  /* ----- edge paths ----- */
+  const STUB_LEN = 56;
+  const PORT_DIR = {
+    top:    { x: 0, y:-1 },
+    bottom: { x: 0, y: 1 },
+    left:   { x:-1, y: 0 },
+    right:  { x: 1, y: 0 },
+  };
+  const edgePaths = edges.map(e => {
+    const a = blocksById.get(e.from.id);
+    const b = blocksById.get(e.to.id);
+    if (!a || !b) return null;
+    const sourceHidden = hiddenBlockIds.has(a.id);
+    const targetHidden = hiddenBlockIds.has(b.id);
+
+    const dir1 = PORT_DIR[e.from.port] || { x: 1, y: 0 };
+    const dir2 = PORT_DIR[e.to.port]   || { x:-1, y: 0 };
+
+    if (e.collapsed) {
+      // Draw a stub sprouting from the CLICKED (near) port
+      const backward = e.collapseDir === "backward";
+      const nearBlock   = backward ? b : a;
+      const nearPort    = backward ? e.to.port : e.from.port;
+      const nearHidden  = backward ? targetHidden : sourceHidden;
+      if (nearHidden) return null;
+      const p1 = portWorldPos(a, e.from.port);
+      const p2 = portWorldPos(b, e.to.port);
+      const nearPos = backward ? p2 : p1;
+      const dir = PORT_DIR[nearPort] || { x: 1, y: 0 };
+      const stubEnd = { x: nearPos.x + dir.x * STUB_LEN, y: nearPos.y + dir.y * STUB_LEN };
+      return {
+        id: e.id,
+        curveD: orthogonalPath(p1, dir1, p2, dir2),
+        stubD: `M ${nearPos.x} ${nearPos.y} L ${stubEnd.x} ${stubEnd.y}`,
+        stubEnd,
+        color: nearBlock.color || DEFAULT_COLOR,
+        collapsed: true,
+        count: collapsedCount(e),
+      };
+    }
+
+    // Non-collapsed edge: hide entirely if either endpoint is in the hidden set
+    if (sourceHidden || targetHidden) return null;
+    const p1 = portWorldPos(a, e.from.port);
+    const p2 = portWorldPos(b, e.to.port);
+    return {
+      id: e.id,
+      curveD: orthogonalPath(p1, dir1, p2, dir2),
+      stubD: "",
+      stubEnd: { x: 0, y: 0 },
+      color: a.color || DEFAULT_COLOR,
+      fromColor: a.color || DEFAULT_COLOR,
+      toColor:   b.color || DEFAULT_COLOR,
+      p1, p2,
+      collapsed: false,
+      count: 0,
+    };
+  }).filter(Boolean);
+
+  /* ----- render ----- */
+  return (
+    <>
+      <div className="bg" />
+
+      <div className="toolbar">
+        <button className={`tool ${tool==="select"?"active":""}`} onClick={() => setTool("select")}>◉ SELECIONAR</button>
+        <button className={`tool ${tool==="block"?"active":""}`} onClick={() => setTool("block")}>▭ BLOCO</button>
+        <button className={`tool ${tool==="draw"?"active":""}`} onClick={() => setTool("draw")}>✎ ANOTAÇÃO</button>
+        <div className="sep"/>
+        <button className="tool" onClick={fitAll}>⊡ FIT</button>
+        <button className="tool" onClick={() => setView({x:0,y:0,scale:1})}>1:1</button>
+        <div className="sep"/>
+        <button className="tool" onClick={exportJSON}>⤓ SALVAR</button>
+        <button className="tool" onClick={() => fileRef.current.click()}>⤒ CARREGAR</button>
+        <div className="sep"/>
+        <button className="tool danger" onClick={clearAll}>✕ LIMPAR</button>
+      </div>
+
+      {(editingBodyId || editingTitleId) && (
+        <div className="drawbar" onMouseDown={(e) => e.preventDefault()}>
+          <div className="group">
+            <span className="lbl">Texto</span>
+            <button className="fmt-btn b" onMouseDown={(e) => { e.preventDefault(); applyFormat("bold"); }} title="Negrito (Ctrl+B)">B</button>
+            <button className="fmt-btn i" onMouseDown={(e) => { e.preventDefault(); applyFormat("italic"); }} title="Itálico (Ctrl+I)">I</button>
+            <button className="fmt-btn u" onMouseDown={(e) => { e.preventDefault(); applyFormat("underline"); }} title="Sublinhado (Ctrl+U)">U</button>
+          </div>
+          <div className="vsep"/>
+          <div className="group">
+            <span className="lbl">Tamanho</span>
+            {[11, 14, 18, 24].map(sz => (
+              <button
+                key={sz}
+                className="fmt-btn"
+                onMouseDown={(e) => { e.preventDefault(); applyFontSize(sz); }}
+                style={{ fontSize: Math.min(sz, 18) + "px", fontWeight: 700 }}
+                title={`${sz}px`}
+              >A</button>
+            ))}
+          </div>
+          <div className="vsep"/>
+          <div className="group">
+            <span className="lbl">Cor</span>
+            {PRESET_COLORS.map(c => (
+              <div
+                key={c}
+                className="swatch"
+                style={{ background: c, color: c, width: 20, height: 20 }}
+                onMouseDown={(e) => { e.preventDefault(); applyTextColor(c); }}
+                title={c}
+              />
+            ))}
+            <label className="swatch custom" style={{ width: 20, height: 20 }} title="Cor personalizada">
+              <input type="color" onMouseDown={(e) => e.preventDefault()} onChange={(e) => applyTextColor(e.target.value)} />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {!editingBodyId && !editingTitleId && tool === "draw" && selection.size === 0 && (
+        <div className="drawbar" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="group">
+            <span className="lbl">Forma</span>
+            <button className={`shape-btn ${drawShape==="text"?"active":""}`} onClick={() => setDrawShape("text")} title="Texto — clique no canvas para escrever">
+              <svg viewBox="0 0 24 24"><line x1="5" y1="5" x2="19" y2="5"/><line x1="12" y1="5" x2="12" y2="20"/></svg>
+            </button>
+            <button className={`shape-btn ${drawShape==="freehand"?"active":""}`} onClick={() => setDrawShape("freehand")} title="Pincel livre (mão livre)">
+              <svg viewBox="0 0 24 24"><path d="M3 17 Q 7 5, 12 12 T 21 9"/></svg>
+            </button>
+            <button className={`shape-btn ${drawShape==="line"?"active":""}`} onClick={() => setDrawShape("line")} title="Linha reta (Shift = 45°)">
+              <svg viewBox="0 0 24 24"><line x1="4" y1="20" x2="20" y2="4"/></svg>
+            </button>
+            <button className={`shape-btn ${drawShape==="arrow"?"active":""}`} onClick={() => setDrawShape("arrow")} title="Seta (Shift = 45°)">
+              <svg viewBox="0 0 24 24"><line x1="4" y1="20" x2="20" y2="4"/><polyline points="20,12 20,4 12,4"/></svg>
+            </button>
+            <button className={`shape-btn ${drawShape==="rect"?"active":""}`} onClick={() => setDrawShape("rect")} title="Retângulo (Shift = quadrado)">
+              <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
+            </button>
+            <button className={`shape-btn ${drawShape==="ellipse"?"active":""}`} onClick={() => setDrawShape("ellipse")} title="Elipse (Shift = círculo)">
+              <svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="9" ry="6"/></svg>
+            </button>
+            <button className={`shape-btn eraser ${drawShape==="eraser"?"active":""}`} onClick={() => setDrawShape("eraser")} title="Borracha (clique num traço para apagar)">
+              <svg viewBox="0 0 24 24"><path d="M15 3 L21 9 L11 19 L5 19 L5 13 Z"/><line x1="3" y1="22" x2="21" y2="22"/></svg>
+            </button>
+          </div>
+          <div className="vsep"/>
+          <div className="group">
+            <span className="lbl">{drawShape==="text" ? "Tamanho" : "Espessura"}</span>
+            {drawShape === "text" ? (
+              [12, 16, 22, 32].map(sz => (
+                <button
+                  key={sz}
+                  className={`width-btn ${drawFontSize===sz?"active":""}`}
+                  onClick={() => setDrawFontSize(sz)}
+                  style={{ color: drawColor, fontSize: Math.min(sz, 20)+"px", fontWeight: 700, fontStyle: "italic" }}
+                  title={`${sz}px`}
+                >T</button>
+              ))
+            ) : (
+              [2,4,7,11].map(w => (
+                <button
+                  key={w}
+                  className={`width-btn ${drawWidth===w?"active":""}`}
+                  onClick={() => setDrawWidth(w)}
+                  style={{ color: drawColor }}
+                  title={`${w}px`}
+                >
+                  <div className="dot" style={{ width: w+"px", height: w+"px" }} />
+                </button>
+              ))
+            )}
+          </div>
+          <div className="vsep"/>
+          <div className="group">
+            <span className="lbl">Cor</span>
+            {PRESET_COLORS.map(c => (
+              <div
+                key={c}
+                className="swatch"
+                style={{ background: c, color: c, width: 20, height: 20, boxShadow: drawColor === c ? `0 0 0 2px #fff, 0 0 10px ${c}` : `0 0 8px ${c}` }}
+                onClick={() => setDrawColor(c)}
+                title={c}
+              />
+            ))}
+            <label className="swatch custom" style={{ width: 20, height: 20 }} title="Cor personalizada">
+              <input type="color" value={drawColor} onChange={(e) => setDrawColor(e.target.value)} />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {(() => {
+        if (editingBodyId || editingTitleId) return null;
+        const hasStrokeSel = strokes.some(s => selection.has(s.id));
+        const hasNoteSel   = notes.some(n => selection.has(n.id));
+        const hasBlockSel  = blocks.some(b => selection.has(b.id));
+        const hasAny = hasStrokeSel || hasNoteSel || hasBlockSel;
+        if (!hasAny) return null;
+        // Build a representative color for swatch "active" ring
+        let activeColor = null;
+        if (hasBlockSel) activeColor = blocks.find(b => selection.has(b.id))?.color;
+        else if (hasNoteSel) activeColor = notes.find(n => selection.has(n.id))?.color;
+        else if (hasStrokeSel) activeColor = strokes.find(s => selection.has(s.id))?.color;
+        return (
+          <div className="drawbar" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="group">
+              <span className="lbl">Cor</span>
+              {PRESET_COLORS.map(c => (
+                <div
+                  key={c}
+                  className="swatch"
+                  style={{
+                    background: c, color: c, width: 20, height: 20,
+                    boxShadow: activeColor === c ? `0 0 0 2px #fff, 0 0 10px ${c}` : `0 0 8px ${c}`,
+                  }}
+                  title={c}
+                  onClick={() => setBlockColor(c)}
+                />
+              ))}
+              <label className="swatch custom" style={{ width: 20, height: 20 }} title="Cor personalizada">
+                <input type="color" onChange={(e) => setBlockColor(e.target.value)} />
+              </label>
+            </div>
+            {hasStrokeSel && (
+              <>
+                <div className="vsep"/>
+                <div className="group">
+                  <span className="lbl">Espessura</span>
+                  {[2,4,7,11].map(w => {
+                    const sel = strokes.find(s => selection.has(s.id));
+                    const active = sel && sel.width === w;
+                    return (
+                      <button
+                        key={w}
+                        className={`width-btn ${active?"active":""}`}
+                        onClick={() => setSelectedStrokeWidth(w)}
+                        style={{ color: activeColor || "#00f0ff" }}
+                        title={`${w}px`}
+                      >
+                        <div className="dot" style={{ width: w+"px", height: w+"px" }} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+            {hasNoteSel && (
+              <>
+                <div className="vsep"/>
+                <div className="group">
+                  <span className="lbl">Tamanho</span>
+                  {[12,16,22,32].map(sz => {
+                    const sel = notes.find(n => selection.has(n.id));
+                    const active = sel && sel.fontSize === sz;
+                    return (
+                      <button
+                        key={sz}
+                        className={`width-btn ${active?"active":""}`}
+                        onClick={() => setSelectedFontSize(sz)}
+                        style={{ color: activeColor || "#ff9d00", fontSize: Math.min(sz, 20)+"px", fontWeight: 700, fontStyle: "italic" }}
+                        title={`${sz}px`}
+                      >T</button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
+
+      <div
+        ref={wsRef}
+        className={`workspace ${tool === "block" ? "tool-block" : ""} ${tool === "note" ? "tool-note" : ""} ${tool === "draw" && drawShape !== "eraser" ? "tool-draw" : ""} ${tool === "draw" && drawShape === "eraser" ? "tool-eraser" : ""}`}
+        onMouseDown={onWorkspaceDown}
+        onDoubleClick={(e) => {
+          // Double-click on empty canvas creates a new block
+          if (tool !== "select") return;
+          if (e.target !== wsRef.current && !e.target.classList.contains("world") && e.target.tagName !== "svg") return;
+          const wp = screenToWorld(e.clientX, e.clientY);
+          createBlock(wp.x, wp.y);
+        }}
+        onWheel={onWheel}
+      >
+        <div className="world" style={{ transform:`translate(${view.x}px,${view.y}px) scale(${view.scale})` }}>
+          {/* freehand strokes + shapes (rendered beneath blocks) */}
+          <svg className="strokes" xmlns="http://www.w3.org/2000/svg">
+            {strokes.map(s => {
+              const d = strokeToPath(s);
+              if (!d) return null;
+              const isSel = selection.has(s.id);
+              return (
+                <g
+                  key={s.id}
+                  className={isSel ? "selected" : ""}
+                  transform={`translate(${s.x||0},${s.y||0})`}
+                  style={{ color: s.color || DEFAULT_COLOR }}
+                >
+                  <path
+                    d={d}
+                    className="stroke-hit"
+                    onMouseDown={(ev) => {
+                      ev.stopPropagation();
+                      if (tool === "draw" && drawShape === "eraser") {
+                        setStrokes(p => p.filter(x => x.id !== s.id));
+                        return;
+                      }
+                      selectOne(s.id, ev.shiftKey);
+                      startDrag(ev, s.id);
+                    }}
+                  />
+                  <path
+                    d={d}
+                    className="stroke-line"
+                    style={{ stroke: s.color || DEFAULT_COLOR, strokeWidth: s.width || 3 }}
+                  />
+                </g>
+              );
+            })}
+            {drawing && (() => {
+              const d = strokeToPath(drawing);
+              if (!d) return null;
+              return (
+                <path
+                  d={d}
+                  className="stroke-line"
+                  style={{ stroke: drawing.color, strokeWidth: drawing.width, color: drawing.color }}
+                />
+              );
+            })()}
+          </svg>
+
+          <svg className="edges" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              {edgePaths.filter(p => !p.collapsed && p.fromColor !== p.toColor).map(p => (
+                <linearGradient
+                  key={`g-${p.id}`}
+                  id={`edge-g-${p.id}`}
+                  gradientUnits="userSpaceOnUse"
+                  x1={p.p1.x} y1={p.p1.y}
+                  x2={p.p2.x} y2={p.p2.y}
+                >
+                  <stop offset="0%"   stopColor={p.fromColor} style={{ stopColor: p.fromColor }} />
+                  <stop offset="100%" stopColor={p.toColor}   style={{ stopColor: p.toColor   }} />
+                </linearGradient>
+              ))}
+            </defs>
+            {edgePaths.map(p => {
+              const useGradient = !p.collapsed && p.fromColor !== p.toColor;
+              const strokeVal = useGradient ? `url(#edge-g-${p.id})` : p.color;
+              const isSel = selectedEdge === p.id;
+              return (
+                <g key={p.id}>
+                  {/* Full curve — visible when not collapsed */}
+                  <path
+                    d={p.curveD}
+                    className={p.collapsed ? "gone" : ""}
+                    stroke={strokeVal}
+                    strokeWidth={isSel ? 4 : 2.2}
+                    style={{
+                      filter: isSel
+                        ? `drop-shadow(0 0 8px #fff) drop-shadow(0 0 6px ${p.toColor || p.color})`
+                        : `drop-shadow(0 0 4px ${p.fromColor || p.color}) drop-shadow(0 0 4px ${p.toColor || p.color})`,
+                    }}
+                  />
+                  {/* Short stub — visible when collapsed */}
+                  <path
+                    d={p.stubD}
+                    className={"stub " + (p.collapsed ? "" : "gone")}
+                    stroke={p.color}
+                    style={{ filter: `drop-shadow(0 0 6px ${p.color})` }}
+                  />
+                  {/* Invisible thick hit area — captures clicks on the line */}
+                  <path
+                    d={p.collapsed ? p.stubD : p.curveD}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth={18}
+                    style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                    onMouseDown={(ev) => { ev.stopPropagation(); clearSelection(); setSelectedEdge(p.id); }}
+                  />
+                </g>
+              );
+            })}
+            {preview && <path d={bezierPath(preview.from, preview.to)} className="preview" />}
+          </svg>
+
+          {/* collapse badges — positioned at the stub's outer end */}
+          {edgePaths.filter(p => p.collapsed).map(p => (
+            <div
+              key={"badge-"+p.id}
+              className="collapse-badge-wrap"
+              style={{ left: p.stubEnd.x, top: p.stubEnd.y, color: p.color }}
+              onMouseDown={(e) => { e.stopPropagation(); toggleEdgeCollapse(p.id); }}
+              title="Expandir"
+            >
+              <div className="collapse-badge" style={{ color: p.color }}>
+                <span className="icon">+</span>{p.count}
+              </div>
+            </div>
+          ))}
+
+          {blocks.map(b => (
+            <Block
+              key={b.id}
+              block={b}
+              selected={selection.has(b.id)}
+              hidden={hiddenBlockIds.has(b.id)}
+              pendingEditRef={pendingEditRef}
+              onSelect={selectOne}
+              onStartDrag={(e) => startDrag(e, b.id)}
+              onStartConnection={startConnection}
+              onStartResize={startResize}
+              onDelete={deleteBlock}
+              onChange={updateBlock}
+              onEditingBodyChange={(id, on) => {
+                if (on) setEditingBodyId(id);
+                else setEditingBodyId(curr => curr === id ? null : curr);
+              }}
+              onEditingTitleChange={(id, on) => {
+                if (on) setEditingTitleId(id);
+                else setEditingTitleId(curr => curr === id ? null : curr);
+              }}
+            />
+          ))}
+          {notes.map(n => (
+            <Note
+              key={n.id}
+              note={n}
+              selected={selection.has(n.id)}
+              onSelect={selectOne}
+              onStartDrag={(e) => startDrag(e, n.id)}
+              onChange={updateNote}
+              onEraser={(id) => {
+                if (tool === "draw" && drawShape === "eraser") {
+                  setNotes(p => p.filter(x => x.id !== id));
+                  return true;
+                }
+                return false;
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="zoom">{Math.round(view.scale*100)}%</div>
+      <div className="hint">
+        <b>B</b> bloco • <b>N</b> texto • <b>D</b> desenho • <b>duplo-clique</b> editar • <b>porta→porta</b> conectar • <b>clique na porta</b> recolher • <b>Del</b> apagar
+      </div>
+
+      <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON} />
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
