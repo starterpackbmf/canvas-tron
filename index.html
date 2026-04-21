@@ -701,6 +701,7 @@ function App() {
   const spaceRef = useRef(false);
   const wsRef = useRef(null);
   const fileRef = useRef(null);
+  const mdRef = useRef(null);
 
   const blocksById = useMemo(() => {
     const m = new Map(); blocks.forEach(b => m.set(b.id, b)); return m;
@@ -1237,6 +1238,135 @@ function App() {
     setBlocks([]); setNotes([]); setStrokes([]); setEdges([]); clearSelection();
   };
 
+  /* ----- Markdown → mind map ----- */
+  const mdInlineToHtml = (text) => {
+    // Very light inline markdown support; escape first to avoid injection
+    const esc = text
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    return esc
+      .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+      .replace(/__(.+?)__/g,     "<b>$1</b>")
+      .replace(/(^|[^*])\*([^*]+)\*/g, "$1<i>$2</i>")
+      .replace(/(^|[^_])_([^_]+)_/g,   "$1<i>$2</i>")
+      .replace(/`(.+?)`/g, "<code>$1</code>")
+      .replace(/\n/g, "<br>");
+  };
+
+  const parseMarkdownTree = (text) => {
+    const lines = text.split(/\r?\n/);
+    const rootNode = { level: 0, title: "Mapa Mental", body: "", children: [] };
+    const stack = [rootNode];
+    let pending = [];
+    const flush = () => {
+      if (!pending.length) return;
+      const cur = stack[stack.length - 1];
+      const extra = pending.join("\n").trim();
+      if (extra) cur.body = (cur.body ? cur.body + "\n" : "") + extra;
+      pending = [];
+    };
+    for (const line of lines) {
+      const m = line.match(/^(#{1,6})\s+(.+?)\s*$/);
+      if (m) {
+        flush();
+        const level = m[1].length;
+        const title = m[2];
+        while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop();
+        const parent = stack[stack.length - 1];
+        const node = { level, title, body: "", children: [] };
+        parent.children.push(node);
+        stack.push(node);
+      } else {
+        pending.push(line);
+      }
+    }
+    flush();
+    // If there's a single top-level heading, promote it to be the actual root
+    if (rootNode.children.length === 1) return rootNode.children[0];
+    return rootNode;
+  };
+
+  const buildMindMapFromTree = (root, originX, originY) => {
+    const newBlocks = [];
+    const newEdges = [];
+    const COL_W = 360;
+    const ROW_H = 140;
+    const B_W = 260;
+    const B_H = 90;
+
+    // Row assignment via in-order traversal (leaves consume sequential rows;
+    // parents center themselves between their first and last child rows)
+    let rowCursor = 0;
+    const assignLayout = (node, depth, color) => {
+      node._depth = depth;
+      node._color = color;
+      if (!node.children || node.children.length === 0) {
+        node._row = rowCursor++;
+      } else {
+        const firstRow = rowCursor;
+        node.children.forEach((child, i) => {
+          // Top-level children of synthetic root pick a distinct preset;
+          // everyone else inherits parent color
+          const childColor = (depth === 0 && root.level === 0)
+            ? PRESET_COLORS[i % PRESET_COLORS.length]
+            : (depth === 0 ? color : color);
+          assignLayout(child, depth + 1, childColor);
+        });
+        const lastRow = rowCursor - 1;
+        node._row = (firstRow + lastRow) / 2;
+      }
+    };
+    assignLayout(root, 0, "#00f0ff");
+
+    const idMap = new Map();
+    const addBlocks = (node) => {
+      const id = uid();
+      idMap.set(node, id);
+      newBlocks.push({
+        id,
+        x: originX + node._depth * COL_W,
+        y: originY + node._row   * ROW_H,
+        w: B_W, h: B_H,
+        color: node._color,
+        title: node.title,
+        body: node.body ? mdInlineToHtml(node.body) : "",
+      });
+      if (node.children) {
+        node.children.forEach(child => {
+          addBlocks(child);
+          newEdges.push({
+            id: uid(),
+            from: { id: idMap.get(node),  port: "right" },
+            to:   { id: idMap.get(child), port: "left"  },
+          });
+        });
+      }
+    };
+    addBlocks(root);
+    return { newBlocks, newEdges };
+  };
+
+  const importMarkdown = (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const tree = parseMarkdownTree(r.result);
+        // Place at current view center so the user sees it immediately
+        const cx = (-view.x + window.innerWidth  / 2) / view.scale;
+        const cy = (-view.y + window.innerHeight / 2) / view.scale;
+        const { newBlocks, newEdges } = buildMindMapFromTree(tree, cx - 200, cy - 200);
+        if (!newBlocks.length) { alert("Nenhum título encontrado no arquivo Markdown."); return; }
+        setBlocks(prev => [...prev, ...newBlocks]);
+        setEdges(prev => [...prev, ...newEdges]);
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao importar: " + err.message);
+      }
+    };
+    r.readAsText(f);
+    e.target.value = "";
+  };
+
   /* ----- edge paths ----- */
   const STUB_LEN = 56;
   const PORT_DIR = {
@@ -1311,6 +1441,7 @@ function App() {
         <div className="sep"/>
         <button className="tool" onClick={exportJSON}>⤓ SALVAR</button>
         <button className="tool" onClick={() => fileRef.current.click()}>⤒ CARREGAR</button>
+        <button className="tool" onClick={() => mdRef.current.click()} title="Importar Markdown (.md) — cria blocos a partir dos títulos #/##/###">📥 IMPORTAR MD</button>
         <div className="sep"/>
         <button className="tool danger" onClick={clearAll}>✕ LIMPAR</button>
       </div>
@@ -1687,6 +1818,7 @@ function App() {
       </div>
 
       <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON} />
+      <input ref={mdRef} type="file" accept=".md,.markdown,.txt" style={{display:"none"}} onChange={importMarkdown} />
     </>
   );
 }
