@@ -888,6 +888,7 @@ function App() {
   const wsRef = useRef(null);
   const fileRef = useRef(null);
   const mdRef = useRef(null);
+  const lastDrawShapeRef = useRef("freehand"); // remembers the last drawing shape so "DESENHO" returns to it
 
   // undo/redo history (snapshot stacks) + restore guard
   const histRef = useRef({ past: [], future: [] });
@@ -902,6 +903,7 @@ function App() {
   const presentOrderRef = useRef([]);
   useEffect(() => { viewRef.current = view; });
   useEffect(() => { focusIdxRef.current = focusIdx; }, [focusIdx]);
+  useEffect(() => { if (drawShape !== "text") lastDrawShapeRef.current = drawShape; }, [drawShape]);
 
   const blocksById = useMemo(() => {
     const m = new Map(); blocks.forEach(b => m.set(b.id, b)); return m;
@@ -1933,7 +1935,8 @@ function App() {
       <div className="toolbar">
         <button className={`tool ${tool==="select"?"active":""}`} onClick={() => setTool("select")}>◉ SELECIONAR</button>
         <button className={`tool ${tool==="block"?"active":""}`} onClick={() => setTool("block")}>▭ BLOCO</button>
-        <button className={`tool ${tool==="draw"?"active":""}`} onClick={() => setTool("draw")}>✎ ANOTAÇÃO</button>
+        <button className={`tool ${tool==="draw" && drawShape==="text" ? "active":""}`} onClick={() => { setTool("draw"); setDrawShape("text"); }} title="Texto / anotação (N)">✎ ANOTAÇÃO</button>
+        <button className={`tool ${tool==="draw" && drawShape!=="text" ? "active":""}`} onClick={() => { setTool("draw"); if (drawShape==="text") setDrawShape(lastDrawShapeRef.current); }} title="Pincel, formas e borracha (D)">✐ DESENHO</button>
         <div className="sep"/>
         <button className="tool" onClick={undo} title="Desfazer (Ctrl+Z)">↶</button>
         <button className="tool" onClick={redo} title="Refazer (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
@@ -2002,13 +2005,41 @@ function App() {
         </div>
       )}
 
-      {!editingBodyId && !editingTitleId && !editingNoteId && tool === "draw" && selection.size === 0 && (
+      {/* ANOTAÇÃO bar — text only: size + color */}
+      {!editingBodyId && !editingTitleId && !editingNoteId && tool === "draw" && drawShape === "text" && selection.size === 0 && (
+        <div className="drawbar" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="group">
+            <span className="lbl">Tamanho</span>
+            {[12, 16, 22, 32].map(sz => (
+              <button
+                key={sz}
+                className={`width-btn ${drawFontSize===sz?"active":""}`}
+                onClick={() => setDrawFontSize(sz)}
+                style={{ color: drawColor, fontSize: Math.min(sz, 20)+"px", fontWeight: 700, fontStyle: "italic" }}
+                title={`${sz}px`}
+              >T</button>
+            ))}
+          </div>
+          <div className="vsep"/>
+          <div className="group">
+            <span className="lbl">Cor</span>
+            {PRESET_COLORS.map(c => (
+              <div key={c} className="swatch"
+                style={{ background: c, color: c, width: 20, height: 20, boxShadow: drawColor === c ? `0 0 0 2px #fff, 0 0 10px ${c}` : `0 0 8px ${c}` }}
+                onClick={() => setDrawColor(c)} title={c} />
+            ))}
+            <label className="swatch custom" style={{ width: 20, height: 20 }} title="Cor personalizada">
+              <input type="color" value={drawColor} onChange={(e) => setDrawColor(e.target.value)} />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* DESENHO bar — shapes (no text) + thickness + color */}
+      {!editingBodyId && !editingTitleId && !editingNoteId && tool === "draw" && drawShape !== "text" && selection.size === 0 && (
         <div className="drawbar" onMouseDown={(e) => e.stopPropagation()}>
           <div className="group">
             <span className="lbl">Forma</span>
-            <button className={`shape-btn ${drawShape==="text"?"active":""}`} onClick={() => setDrawShape("text")} title="Texto — clique no canvas para escrever">
-              <svg viewBox="0 0 24 24"><line x1="5" y1="5" x2="19" y2="5"/><line x1="12" y1="5" x2="12" y2="20"/></svg>
-            </button>
             <button className={`shape-btn ${drawShape==="freehand"?"active":""}`} onClick={() => setDrawShape("freehand")} title="Pincel livre (mão livre)">
               <svg viewBox="0 0 24 24"><path d="M3 17 Q 7 5, 12 12 T 21 9"/></svg>
             </button>
@@ -2030,42 +2061,20 @@ function App() {
           </div>
           <div className="vsep"/>
           <div className="group">
-            <span className="lbl">{drawShape==="text" ? "Tamanho" : "Espessura"}</span>
-            {drawShape === "text" ? (
-              [12, 16, 22, 32].map(sz => (
-                <button
-                  key={sz}
-                  className={`width-btn ${drawFontSize===sz?"active":""}`}
-                  onClick={() => setDrawFontSize(sz)}
-                  style={{ color: drawColor, fontSize: Math.min(sz, 20)+"px", fontWeight: 700, fontStyle: "italic" }}
-                  title={`${sz}px`}
-                >T</button>
-              ))
-            ) : (
-              [2,4,7,11].map(w => (
-                <button
-                  key={w}
-                  className={`width-btn ${drawWidth===w?"active":""}`}
-                  onClick={() => setDrawWidth(w)}
-                  style={{ color: drawColor }}
-                  title={`${w}px`}
-                >
-                  <div className="dot" style={{ width: w+"px", height: w+"px" }} />
-                </button>
-              ))
-            )}
+            <span className="lbl">Espessura</span>
+            {[2,4,7,11].map(w => (
+              <button key={w} className={`width-btn ${drawWidth===w?"active":""}`} onClick={() => setDrawWidth(w)} style={{ color: drawColor }} title={`${w}px`}>
+                <div className="dot" style={{ width: w+"px", height: w+"px" }} />
+              </button>
+            ))}
           </div>
           <div className="vsep"/>
           <div className="group">
             <span className="lbl">Cor</span>
             {PRESET_COLORS.map(c => (
-              <div
-                key={c}
-                className="swatch"
+              <div key={c} className="swatch"
                 style={{ background: c, color: c, width: 20, height: 20, boxShadow: drawColor === c ? `0 0 0 2px #fff, 0 0 10px ${c}` : `0 0 8px ${c}` }}
-                onClick={() => setDrawColor(c)}
-                title={c}
-              />
+                onClick={() => setDrawColor(c)} title={c} />
             ))}
             <label className="swatch custom" style={{ width: 20, height: 20 }} title="Cor personalizada">
               <input type="color" value={drawColor} onChange={(e) => setDrawColor(e.target.value)} />
