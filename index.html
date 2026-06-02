@@ -318,12 +318,13 @@
   /* ===== energy flow (animated pulse running along edges) ===== */
   .edges path.flow{
     fill:none;
-    stroke-width:3;
+    stroke-width:3.4;
     stroke-linecap:round;
     stroke-dasharray:0.6 13;
     opacity:.95;
     pointer-events:none;
-    filter:drop-shadow(0 0 6px currentColor) drop-shadow(0 0 3px currentColor);
+    /* lighter glow so the gradient color of each dot stays visible */
+    filter:drop-shadow(0 0 3px currentColor);
     animation:edge-flow 1.15s linear infinite;
   }
   @keyframes edge-flow{ from{stroke-dashoffset:0} to{stroke-dashoffset:-13.6} }
@@ -2065,12 +2066,15 @@ function App() {
                         : `drop-shadow(0 0 4px ${p.fromColor || p.color}) drop-shadow(0 0 4px ${p.toColor || p.color})`,
                     }}
                   />
-                  {/* Energy pulse running from source → target */}
+                  {/* Energy pulse running from source → target.
+                      Uses the SAME gradient as the edge so the dots fade
+                      origin→destination color instead of being one flat color. */}
                   {flow && !p.collapsed && (
                     <path
                       d={p.curveD}
                       className="flow"
-                      style={{ stroke: p.toColor || p.color, color: p.toColor || p.color }}
+                      stroke={useGradient ? `url(#edge-g-${p.id})` : p.color}
+                      style={{ color: p.toColor || p.color }}
                     />
                   )}
                   {/* Short stub — visible when collapsed */}
