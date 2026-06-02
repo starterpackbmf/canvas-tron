@@ -397,6 +397,21 @@
     box-shadow:0 0 12px rgba(0,0,0,.5);
   }
   .edge-style-btn:hover{box-shadow:0 0 12px currentColor}
+
+  /* opacity slider for shape fill */
+  .opacity-range{
+    -webkit-appearance:none;appearance:none;width:80px;height:4px;border-radius:3px;
+    background:rgba(0,240,255,.2);outline:none;cursor:pointer;margin:0 4px;
+  }
+  .opacity-range::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;
+    background:currentColor;box-shadow:0 0 8px currentColor;cursor:pointer;
+  }
+  .opacity-range::-moz-range-thumb{
+    width:13px;height:13px;border:none;border-radius:50%;
+    background:currentColor;box-shadow:0 0 8px currentColor;cursor:pointer;
+  }
+  .pct{color:var(--cyan);font-size:10px;font-weight:700;min-width:30px;text-align:right}
 </style>
 </head>
 <body>
@@ -866,6 +881,10 @@ function App() {
   const [drawFontSize, setDrawFontSize] = useState(16);
   const [drawShape, setDrawShape] = useState("text"); // text|freehand|line|rect|ellipse|arrow|eraser
   const [noteFrame, setNoteFrame] = useState(true); // default: novas anotações têm moldura
+  // fill settings for new rect/ellipse shapes
+  const [fillOn, setFillOn] = useState(false);
+  const [fillColor, setFillColor] = useState("#00f0ff");
+  const [fillOpacity, setFillOpacity] = useState(0.25);
   const [edges, setEdges] = useState(() => saved?.edges ?? ([
     { id:"e1", from:{id:"b1",port:"right"}, to:{id:"b2",port:"left"} },
     { id:"e2", from:{id:"b2",port:"right"}, to:{id:"b3",port:"left"} },
@@ -1022,6 +1041,10 @@ function App() {
   }, [selection]);
   const setSelectedStrokeWidth = useCallback((width) => {
     setStrokes(p => p.map(s => selection.has(s.id) ? { ...s, width } : s));
+  }, [selection]);
+  // patch fill props on selected strokes (used by the fill controls)
+  const patchSelectedStrokes = useCallback((patch) => {
+    setStrokes(p => p.map(s => selection.has(s.id) ? { ...s, ...patch } : s));
   }, [selection]);
   const setSelectedFontSize = useCallback((fontSize) => {
     setNotes(p => p.map(n => selection.has(n.id) ? { ...n, fontSize } : n));
@@ -1637,6 +1660,11 @@ function App() {
       }
       // Start a new stroke
       const base = { id: uid(), type: drawShape, x: 0, y: 0, color: drawColor, width: drawWidth };
+      // rect/ellipse can carry a fill (color + opacity)
+      if ((drawShape === "rect" || drawShape === "ellipse") && fillOn) {
+        base.fill = fillColor;
+        base.fillOpacity = fillOpacity;
+      }
       if (drawShape === "freehand") {
         setDrawing({ ...base, points: [{ x: wp.x, y: wp.y }] });
       } else {
@@ -2097,6 +2125,31 @@ function App() {
               <input type="color" value={drawColor} onChange={(e) => setDrawColor(e.target.value)} />
             </label>
           </div>
+          {(drawShape === "rect" || drawShape === "ellipse") && (
+            <>
+              <div className="vsep"/>
+              <div className="group">
+                <span className="lbl">Preench.</span>
+                <button className={`shape-btn ${fillOn?"active":""}`} onClick={() => setFillOn(v => !v)} title="Liga/desliga o preenchimento">
+                  <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1" fill="currentColor" stroke="none"/></svg>
+                </button>
+                {fillOn && PRESET_COLORS.map(c => (
+                  <div key={c} className="swatch" style={{ background:c, color:c, width:18, height:18, boxShadow: fillColor===c?`0 0 0 2px #fff,0 0 8px ${c}`:`0 0 6px ${c}` }} onClick={() => setFillColor(c)} title={c} />
+                ))}
+                {fillOn && (
+                  <label className="swatch custom" style={{ width:18, height:18 }} title="Cor de preenchimento personalizada">
+                    <input type="color" value={fillColor} onChange={(e) => setFillColor(e.target.value)} />
+                  </label>
+                )}
+                {fillOn && (
+                  <span style={{ display:"flex", alignItems:"center", color: fillColor }}>
+                    <input type="range" className="opacity-range" min="0" max="100" value={Math.round(fillOpacity*100)} onChange={(e) => setFillOpacity(Number(e.target.value)/100)} title="Opacidade do preenchimento" />
+                    <span className="pct">{Math.round(fillOpacity*100)}%</span>
+                  </span>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -2153,6 +2206,38 @@ function App() {
                     );
                   })}
                 </div>
+                {(() => {
+                  const sel = strokes.find(s => selection.has(s.id));
+                  if (!sel || (sel.type !== "rect" && sel.type !== "ellipse")) return null;
+                  const hasFill = !!sel.fill;
+                  const fc = sel.fill || "#00f0ff";
+                  const op = sel.fillOpacity ?? 0.25;
+                  return (
+                    <>
+                      <div className="vsep"/>
+                      <div className="group">
+                        <span className="lbl">Preench.</span>
+                        <button className={`shape-btn ${hasFill?"active":""}`} onClick={() => patchSelectedStrokes(hasFill ? { fill: null } : { fill: fc, fillOpacity: op })} title="Liga/desliga o preenchimento">
+                          <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1" fill="currentColor" stroke="none"/></svg>
+                        </button>
+                        {hasFill && PRESET_COLORS.map(c => (
+                          <div key={c} className="swatch" style={{ background:c, color:c, width:18, height:18, boxShadow: fc===c?`0 0 0 2px #fff,0 0 8px ${c}`:`0 0 6px ${c}` }} onClick={() => patchSelectedStrokes({ fill: c })} title={c} />
+                        ))}
+                        {hasFill && (
+                          <label className="swatch custom" style={{ width:18, height:18 }} title="Cor de preenchimento personalizada">
+                            <input type="color" value={fc} onChange={(e) => patchSelectedStrokes({ fill: e.target.value })} />
+                          </label>
+                        )}
+                        {hasFill && (
+                          <span style={{ display:"flex", alignItems:"center", color: fc }}>
+                            <input type="range" className="opacity-range" min="0" max="100" value={Math.round(op*100)} onChange={(e) => patchSelectedStrokes({ fillOpacity: Number(e.target.value)/100 })} title="Opacidade do preenchimento" />
+                            <span className="pct">{Math.round(op*100)}%</span>
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </>
             )}
             {hasNoteSel && (
@@ -2223,6 +2308,7 @@ function App() {
                   <path
                     d={d}
                     className="stroke-hit"
+                    style={s.fill ? { fill: "transparent", pointerEvents: "all" } : undefined}
                     onMouseDown={(ev) => {
                       ev.stopPropagation();
                       if (tool === "draw" && drawShape === "eraser") {
@@ -2236,7 +2322,10 @@ function App() {
                   <path
                     d={d}
                     className="stroke-line"
-                    style={{ stroke: s.color || DEFAULT_COLOR, strokeWidth: s.width || 3 }}
+                    style={{
+                      stroke: s.color || DEFAULT_COLOR, strokeWidth: s.width || 3,
+                      fill: s.fill || "none", fillOpacity: s.fill ? (s.fillOpacity ?? 1) : undefined,
+                    }}
                   />
                 </g>
               );
@@ -2248,7 +2337,10 @@ function App() {
                 <path
                   d={d}
                   className="stroke-line"
-                  style={{ stroke: drawing.color, strokeWidth: drawing.width, color: drawing.color }}
+                  style={{
+                    stroke: drawing.color, strokeWidth: drawing.width, color: drawing.color,
+                    fill: drawing.fill || "none", fillOpacity: drawing.fill ? (drawing.fillOpacity ?? 1) : undefined,
+                  }}
                 />
               );
             })()}
