@@ -6,6 +6,7 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   :root{
     --bg:#030612; --bg-2:#050a1a;
@@ -243,7 +244,9 @@
   .block .title{
     font-weight:700;letter-spacing:.5px;color:var(--bc);
     text-transform:uppercase;font-size:11px;margin-bottom:6px;
-    text-shadow:0 0 8px rgba(var(--bc-rgb),.7);outline:none;
+    /* currentColor (not the block base --bc) so a recolored word's glow
+       follows its own color instead of keeping the old block color */
+    text-shadow:0 0 7px currentColor;outline:none;
     text-align:center;
   }
   .block .body{color:#dcefff;outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;text-align:center}
@@ -296,15 +299,100 @@
   /* ===== notes ===== */
   .note{
     --nc:#ff9d00;
-    position:absolute;min-width:80px;padding:6px 10px;
-    color:var(--nc);font-style:italic;font-weight:500;
-    background:transparent;border:1px dashed currentColor;
-    border-radius:4px;cursor:move;outline:none;
-    text-shadow:0 0 6px currentColor;white-space:pre-wrap;
-    opacity:.9;
+    position:absolute;
+    /* width:max-content lets the note size to its text even though .world is 0px wide;
+       max-width caps it so long notes wrap into a readable column instead of 1 word/line */
+    min-width:80px;max-width:340px;width:max-content;
+    padding:7px 11px;
+    color:var(--nc);font-weight:600;
+    background:rgba(5,12,24,.5);
+    border:1px dashed currentColor;
+    border-radius:5px;cursor:move;outline:none;
+    line-height:1.45;white-space:pre-wrap;word-wrap:break-word;
+    /* dark drop anchors the letters for legibility; faint colored halo keeps the Tron glow */
+    text-shadow:0 1px 2px rgba(0,0,0,.85),0 0 7px currentColor;
+    box-shadow:0 0 14px rgba(0,0,0,.35);
+    opacity:.96;
   }
-  .note.selected{border-style:solid;opacity:1;box-shadow:0 0 12px currentColor}
-  .note[contenteditable="true"]{cursor:text;border-style:solid;background:rgba(0,0,0,.3)}
+  .note.selected{border-style:solid;opacity:1;box-shadow:0 0 12px currentColor,0 0 14px rgba(0,0,0,.35)}
+  .note[contenteditable="true"]{cursor:text;border-style:solid;background:rgba(0,0,0,.6)}
+
+  /* ===== energy flow (animated pulse running along edges) ===== */
+  /* long lit segment + tiny gap: over the steady gradient edge below, this
+     reads as a continuous beam with a bright band flowing along it.
+     keyframe offset MUST equal -(dash+gap) for a seamless loop */
+  /* flow-glow: continuous blurred gradient halo — uniform glow that follows
+     the degradê, no periodic notches. */
+  .edges path.flow-glow{
+    fill:none;stroke-width:6;stroke-linecap:round;
+    opacity:.22;filter:blur(2.5px);pointer-events:none;
+  }
+  /* flow: SOLID continuous gradient beam — no dash means it can never show a
+     notch. This is the body of the beam. */
+  .edges path.flow{
+    fill:none;stroke-width:3.2;stroke-linecap:round;
+    opacity:.95;pointer-events:none;
+  }
+  /* flow-spark: a single bright band sweeping along (big gaps) in SCREEN blend.
+     Over the solid beam it only ADDS light, so it reads as a surge of energy
+     flowing — never a dashed line. */
+  .edges path.flow-spark{
+    fill:none;stroke-width:3.4;stroke-linecap:round;
+    stroke-dasharray:18 64;opacity:.6;
+    mix-blend-mode:screen;pointer-events:none;
+    animation:edge-flow 1.7s linear infinite;
+  }
+  @keyframes edge-flow{ from{stroke-dashoffset:0} to{stroke-dashoffset:-82} }
+  @media (prefers-reduced-motion: reduce){ .edges path.flow{animation:none} }
+
+  /* ===== presentation / focus mode ===== */
+  .presentbar{
+    position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:20;
+    display:flex;gap:8px;align-items:center;padding:8px 12px;
+    background:rgba(5,12,24,.92);
+    border:1px solid rgba(0,240,255,.45);
+    border-radius:10px;
+    backdrop-filter:blur(8px);
+    box-shadow:0 0 32px rgba(0,240,255,.3);
+    animation:fadein .18s ease;
+  }
+  .presentbar .pcount{
+    color:var(--cyan);font-size:13px;font-weight:700;letter-spacing:1px;
+    min-width:56px;text-align:center;text-shadow:0 0 8px rgba(0,240,255,.6);
+  }
+  .world.present .block{
+    transition:opacity .4s cubic-bezier(.4,0,.2,1),filter .4s ease,
+               box-shadow .3s ease,transform .32s cubic-bezier(.4,0,.2,1);
+  }
+  .world.present .block:not(.focused){opacity:.12;filter:blur(1.5px) saturate(.5)}
+  .world.present .block.hidden{opacity:0}
+  .world.present .note{opacity:.12;transition:opacity .4s ease}
+  .world.present .edges,.world.present .strokes{opacity:.22;transition:opacity .4s ease}
+  .block.focused{
+    box-shadow:
+      0 0 0 2px rgba(var(--bc-rgb),1),
+      0 0 44px rgba(var(--bc-rgb),.95),
+      0 0 100px rgba(var(--bc-rgb),.5),
+      inset 0 0 28px rgba(var(--bc-rgb),.18);
+    z-index:5;
+  }
+
+  /* ===== connection edit handles ===== */
+  .edge-handle{
+    position:absolute;width:13px;height:13px;
+    background:var(--bg);border:2px solid currentColor;border-radius:50%;
+    box-shadow:0 0 8px currentColor;cursor:grab;z-index:6;
+  }
+  .edge-handle.endpoint{border-radius:3px} /* squared = an endpoint you can re-attach */
+  .edge-handle:hover{box-shadow:0 0 14px currentColor;background:color-mix(in srgb,currentColor 25%,var(--bg))}
+  .edge-style-btn{
+    position:absolute;z-index:6;cursor:pointer;user-select:none;white-space:nowrap;
+    padding:3px 8px;border-radius:12px;
+    background:rgba(5,12,24,.95);border:1.5px solid currentColor;color:currentColor;
+    font-size:10px;font-weight:700;letter-spacing:.5px;
+    box-shadow:0 0 12px rgba(0,0,0,.5);
+  }
+  .edge-style-btn:hover{box-shadow:0 0 12px currentColor}
 </style>
 </head>
 <body>
@@ -316,6 +404,27 @@ const { useState, useRef, useEffect, useCallback, useMemo } = React;
 /* ================== ID + helpers ================== */
 let _nid = 1;
 const uid = () => "n" + (_nid++);
+
+/* ---- persistence (autosave) ---- */
+const LS_KEY = "canvas-tron:autosave";
+const loadSaved = () => {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!d || !Array.isArray(d.blocks)) return null;
+    return d;
+  } catch { return null; }
+};
+// Push the global id counter past any numeric ids found in loaded data,
+// so freshly created nodes never collide with restored ones.
+const bumpNidFromData = (d) => {
+  if (!d) return;
+  const ids = [...(d.blocks||[]),...(d.notes||[]),...(d.strokes||[]),...(d.edges||[])]
+    .map(o => parseInt(String(o.id).replace(/\D/g,""),10))
+    .filter(Number.isFinite);
+  if (ids.length) _nid = Math.max(_nid, ...ids) + 1;
+};
 
 const DEFAULT_COLOR = "#00f0ff";
 const PRESET_COLORS = [
@@ -399,6 +508,47 @@ const orthogonalPath = (p1, dir1, p2, dir2) => {
   pts.push(p2);
   return roundedPolyPath(pts, 14);
 };
+
+// Cubic bezier that leaves p1 along dir1 and arrives at p2 along dir2 (smooth "curva" style)
+const dirBezier = (p1, dir1, p2, dir2) => {
+  const k = Math.max(60, Math.hypot(p2.x - p1.x, p2.y - p1.y) * 0.4);
+  const c1 = { x: p1.x + dir1.x * k, y: p1.y + dir1.y * k };
+  const c2 = { x: p2.x + dir2.x * k, y: p2.y + dir2.y * k };
+  return `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
+};
+
+// Smooth Catmull-Rom spline through an arbitrary list of points (free "curva" through waypoints)
+const catmullRomPath = (pts) => {
+  if (!pts || pts.length < 2) return "";
+  if (pts.length === 2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i-1] || pts[i], p1 = pts[i], p2 = pts[i+1], p3 = pts[i+2] || pts[i+1];
+    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+};
+
+// Distance from point p to segment a-b, and the index of the closest segment in a polyline
+const distToSeg = (p, a, b) => {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len2 = dx*dx + dy*dy || 1;
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const cx = a.x + t*dx, cy = a.y + t*dy;
+  return Math.hypot(p.x - cx, p.y - cy);
+};
+const nearestSegmentIndex = (pts, p) => {
+  let best = 0, bestD = Infinity;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const d = distToSeg(p, pts[i], pts[i+1]);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+};
+
 // Compute an SVG path string for any stroke shape
 const strokeToPath = (s) => {
   if (!s) return "";
@@ -451,7 +601,7 @@ const bezierMidpoint = (a, b) => {
 };
 
 /* ================== Block ================== */
-function Block({ block, selected, hidden, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange }) {
+function Block({ block, selected, hidden, focused, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange }) {
   const elRef = useRef(null);
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
@@ -526,7 +676,7 @@ function Block({ block, selected, hidden, pendingEditRef, onSelect, onStartDrag,
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
@@ -621,87 +771,137 @@ function Block({ block, selected, hidden, pendingEditRef, onSelect, onStartDrag,
 }
 
 /* ================== Note ================== */
-function Note({ note, selected, onSelect, onStartDrag, onChange, onEraser }) {
+function Note({ note, selected, onSelect, onStartDrag, onChange, onEraser, onEditingChange }) {
   const ref = useRef(null);
   const [editing, setEditing] = useState(false);
+
+  // Tell the parent when this note enters/leaves edit mode, so it can show the
+  // rich-text format bar (bold/italic/underline/size/color) — same bar the blocks use.
+  useEffect(() => {
+    onEditingChange?.(note.id, editing);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing]);
+
+  // On entering edit mode, load the stored HTML imperatively and select it all
+  // so the user can immediately retype or apply formatting to the whole note.
   useEffect(() => {
     if (editing && ref.current) {
+      ref.current.innerHTML = note.text || "";
       ref.current.focus();
       const r = document.createRange(); r.selectNodeContents(ref.current);
       const s = getSelection(); s.removeAllRanges(); s.addRange(r);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing]);
+
   const color = note.color || "#ff9d00";
+  const common = {
+    ref,
+    className: `note ${selected ? "selected" : ""}`,
+    style: { left: note.x, top: note.y, "--nc": color, fontSize: (note.fontSize || 14) + "px" },
+  };
+
+  // While editing: a plain contentEditable surface (HTML set imperatively above).
+  if (editing) {
+    return (
+      <div
+        {...common}
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          setEditing(false);
+          const html = e.currentTarget.innerHTML;
+          const plain = e.currentTarget.textContent.trim();
+          onChange(note.id, { text: plain ? html : "" });
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
+        }}
+      />
+    );
+  }
+
+  // Display mode: render the stored HTML; click to select/drag, double-click to edit.
   return (
     <div
-      ref={ref}
-      className={`note ${selected ? "selected" : ""}`}
-      style={{
-        left: note.x, top: note.y,
-        "--nc": color,
-        fontSize: (note.fontSize || 14) + "px",
-      }}
-      contentEditable={editing}
-      suppressContentEditableWarning
+      {...common}
       onMouseDown={(e) => {
-        if (e.currentTarget.isContentEditable) return;
         e.stopPropagation();
         if (onEraser && onEraser(note.id)) return;
         onSelect(note.id, e.shiftKey);
         onStartDrag(e);
       }}
       onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
-      onBlur={(e) => {
-        setEditing(false);
-        onChange(note.id, { text: e.currentTarget.textContent });
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
-      }}
-    >{note.text}</div>
+      dangerouslySetInnerHTML={{ __html: note.text || "" }}
+    />
   );
 }
 
 /* ================== App ================== */
 function App() {
   const [tool, setTool] = useState("select");
-  const [blocks, setBlocks] = useState(() => ([
+  // Restore last session from localStorage (falls back to the demo content below)
+  const saved = useMemo(() => { const d = loadSaved(); bumpNidFromData(d); return d; }, []);
+  const [blocks, setBlocks] = useState(() => saved?.blocks ?? ([
     { id:"b1", x:200, y:240, w:240, h:80, color:"#00f0ff", title:"O QUE NÃO É A TRADE DE ABERTURA", body:"Teste de validação, volume alto" },
     { id:"b2", x:520, y:160, w:260, h:120, color:"#ff9d00", title:"NÃO É O 1 MINUTO DE ENTRADA", body:"O saldo acumulado antes do mercado abrir. O 1 minuto de abertura é para se aferir o funcionamento." },
     { id:"b3", x:880, y:180, w:260, h:120, color:"#00ff88", title:"NÃO É ENTRAR NO DIA INTEIRO", body:"O cenário depois dos primeiros minutos. Parece simples, mas requer mais abertura." },
     { id:"b4", x:560, y:460, w:260, h:120, color:"#ff3b9a", title:"NÃO É COMPRAR O DIA INTEIRO", body:"O setup de trazer a ponta definida define a direção dos próximos minutos — não do dia inteiro." },
   ]));
-  const [notes, setNotes] = useState([]);
-  const [strokes, setStrokes] = useState([]);
+  const [notes, setNotes] = useState(() => saved?.notes ?? []);
+  const [strokes, setStrokes] = useState(() => saved?.strokes ?? []);
   // Currently drawing stroke (not yet committed)
   const [drawing, setDrawing] = useState(null);
   // Which block (if any) is currently editing its body/title — for the floating format bar
   const [editingBodyId, setEditingBodyId] = useState(null);
   const [editingTitleId, setEditingTitleId] = useState(null);
+  const [editingNoteId, setEditingNoteId] = useState(null);
   // Drawing tool settings
   const [drawColor, setDrawColor] = useState("#ff9d00");
   const [drawWidth, setDrawWidth] = useState(3);
   const [drawFontSize, setDrawFontSize] = useState(16);
   const [drawShape, setDrawShape] = useState("text"); // text|freehand|line|rect|ellipse|arrow|eraser
-  const [edges, setEdges] = useState(() => ([
+  const [edges, setEdges] = useState(() => saved?.edges ?? ([
     { id:"e1", from:{id:"b1",port:"right"}, to:{id:"b2",port:"left"} },
     { id:"e2", from:{id:"b2",port:"right"}, to:{id:"b3",port:"left"} },
     { id:"e3", from:{id:"b2",port:"bottom"}, to:{id:"b4",port:"top"} },
   ]));
   const [selection, setSelection] = useState(new Set());
   const [selectedEdge, setSelectedEdge] = useState(null);
-  const [view, setView] = useState({ x: 20, y: 20, scale: 1 });
+  const [view, setView] = useState(() => saved?.view ?? { x: 20, y: 20, scale: 1 });
   const [preview, setPreview] = useState(null); // {from:{x,y}, to:{x,y}}
+
+  // Energy-flow animation toggle (animated pulse running along the connections)
+  const [flow, setFlow] = useState(() => saved?.flow ?? true);
+  // Presentation / focus mode
+  const [present, setPresent] = useState(false);
+  const [focusId, setFocusId] = useState(null);
+  const [focusIdx, setFocusIdx] = useState(0);
 
   // refs for imperative drag/connect state
   const dragRef = useRef(null);
   const connectRef = useRef(null);
   const resizeRef = useRef(null);
+  const edgeEditRef = useRef(null); // editing a connection's path (bend/waypoint/endpoint)
   const panRef = useRef(false);
   const spaceRef = useRef(false);
   const wsRef = useRef(null);
   const fileRef = useRef(null);
   const mdRef = useRef(null);
+
+  // undo/redo history (snapshot stacks) + restore guard
+  const histRef = useRef({ past: [], future: [] });
+  const lastSnapRef = useRef(null);
+  const pendingSnapRef = useRef(null);
+  const restoringRef = useRef(false);
+  const histTimerRef = useRef(null);
+  // smooth view tweening + always-fresh mirrors used inside global listeners
+  const tweenRef = useRef(0);
+  const viewRef = useRef(view);
+  const focusIdxRef = useRef(0);
+  const presentOrderRef = useRef([]);
+  useEffect(() => { viewRef.current = view; });
+  useEffect(() => { focusIdxRef.current = focusIdx; }, [focusIdx]);
 
   const blocksById = useMemo(() => {
     const m = new Map(); blocks.forEach(b => m.set(b.id, b)); return m;
@@ -933,6 +1133,180 @@ function App() {
     }));
   }, []);
 
+  /* ----- connection path editing ----- */
+  // Cycle the routing style of one connection: ortogonal → curva → reta
+  const cycleEdgeStyle = useCallback((id) => {
+    const order = ["ortho", "curved", "straight"];
+    setEdges(p => p.map(e => e.id === id
+      ? { ...e, style: order[(order.indexOf(e.style || "ortho") + 1) % order.length] }
+      : e));
+  }, []);
+  // Remove one waypoint (double-click a bend handle); empty list → back to auto-route
+  const removeWaypoint = useCallback((id, index) => {
+    setEdges(p => p.map(e => {
+      if (e.id !== id) return e;
+      const wps = (e.waypoints || []).slice();
+      wps.splice(index, 1);
+      return { ...e, waypoints: wps };
+    }));
+  }, []);
+
+  /* ----- undo / redo (snapshot history) ----- */
+  // Only the document content is tracked (not pan/zoom or selection).
+  const applySnapshot = useCallback((snap) => {
+    let d; try { d = JSON.parse(snap); } catch { return; }
+    setBlocks(d.blocks || []);
+    setNotes(d.notes || []);
+    setStrokes(d.strokes || []);
+    setEdges(d.edges || []);
+    setSelection(new Set());
+    setSelectedEdge(null);
+  }, []);
+
+  // Record content changes into history, debounced so a whole drag/edit
+  // collapses into a single undo step.
+  useEffect(() => {
+    const snap = JSON.stringify({ blocks, notes, strokes, edges });
+    pendingSnapRef.current = snap;
+    if (lastSnapRef.current === null) { lastSnapRef.current = snap; return; }
+    if (restoringRef.current) { restoringRef.current = false; lastSnapRef.current = snap; return; }
+    if (snap === lastSnapRef.current) return;
+    clearTimeout(histTimerRef.current);
+    histTimerRef.current = setTimeout(() => {
+      if (pendingSnapRef.current === lastSnapRef.current) return;
+      const h = histRef.current;
+      h.past.push(lastSnapRef.current);
+      if (h.past.length > 120) h.past.shift();
+      h.future = [];
+      lastSnapRef.current = pendingSnapRef.current;
+    }, 350);
+  }, [blocks, notes, strokes, edges]);
+
+  const undo = useCallback(() => {
+    clearTimeout(histTimerRef.current);
+    const h = histRef.current;
+    // flush any not-yet-committed change so it can be redone
+    if (pendingSnapRef.current && pendingSnapRef.current !== lastSnapRef.current) {
+      h.past.push(lastSnapRef.current);
+      lastSnapRef.current = pendingSnapRef.current;
+    }
+    if (!h.past.length) return;
+    const prev = h.past.pop();
+    h.future.push(lastSnapRef.current);
+    restoringRef.current = true;
+    lastSnapRef.current = prev;
+    applySnapshot(prev);
+  }, [applySnapshot]);
+
+  const redo = useCallback(() => {
+    clearTimeout(histTimerRef.current);
+    const h = histRef.current;
+    if (!h.future.length) return;
+    const next = h.future.pop();
+    h.past.push(lastSnapRef.current);
+    restoringRef.current = true;
+    lastSnapRef.current = next;
+    applySnapshot(next);
+  }, [applySnapshot]);
+
+  /* ----- duplicate selection (Ctrl+D) ----- */
+  const duplicateSelection = useCallback(() => {
+    if (selection.size === 0) return;
+    const OFF = 32;
+    const idMap = new Map();
+    const newBlocks = [], newNotes = [], newStrokes = [], newSel = new Set();
+    blocks.forEach(b => {
+      if (!selection.has(b.id)) return;
+      const nid = uid(); idMap.set(b.id, nid);
+      newBlocks.push({ ...b, id: nid, x: b.x + OFF, y: b.y + OFF }); newSel.add(nid);
+    });
+    notes.forEach(n => {
+      if (!selection.has(n.id)) return;
+      const nid = uid();
+      newNotes.push({ ...n, id: nid, x: n.x + OFF, y: n.y + OFF }); newSel.add(nid);
+    });
+    strokes.forEach(s => {
+      if (!selection.has(s.id)) return;
+      const nid = uid();
+      newStrokes.push({ ...s, id: nid, x: (s.x || 0) + OFF, y: (s.y || 0) + OFF }); newSel.add(nid);
+    });
+    // Re-create edges that live entirely inside the duplicated set
+    const newEdges = edges
+      .filter(e => idMap.has(e.from.id) && idMap.has(e.to.id))
+      .map(e => ({ ...e, id: uid(),
+        from: { ...e.from, id: idMap.get(e.from.id) },
+        to:   { ...e.to,   id: idMap.get(e.to.id) } }));
+    if (newBlocks.length)  setBlocks(p => [...p, ...newBlocks]);
+    if (newNotes.length)   setNotes(p => [...p, ...newNotes]);
+    if (newStrokes.length) setStrokes(p => [...p, ...newStrokes]);
+    if (newEdges.length)   setEdges(p => [...p, ...newEdges]);
+    if (newSel.size) { setSelection(newSel); setSelectedEdge(null); }
+  }, [blocks, notes, strokes, edges, selection]);
+
+  /* ----- autosave to localStorage (debounced) ----- */
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ blocks, notes, strokes, edges, view, flow })); } catch {}
+    }, 500);
+    return () => clearTimeout(t);
+  }, [blocks, notes, strokes, edges, view, flow]);
+
+  /* ----- smooth camera tween + center-on-block (used by presentation) ----- */
+  const tweenView = useCallback((target, dur = 440) => {
+    cancelAnimationFrame(tweenRef.current);
+    const start = { ...viewRef.current };
+    const t0 = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / dur);
+      const e = 1 - Math.pow(1 - k, 3); // easeOutCubic
+      setView({
+        x: start.x + (target.x - start.x) * e,
+        y: start.y + (target.y - start.y) * e,
+        scale: start.scale + (target.scale - start.scale) * e,
+      });
+      if (k < 1) tweenRef.current = requestAnimationFrame(step);
+    };
+    tweenRef.current = requestAnimationFrame(step);
+  }, []);
+  const centerOnBlock = useCallback((b, scale) => {
+    if (!b) return;
+    const w = b.w || 240, h = b.h || 80;
+    const sc = scale ?? Math.min(1.2, Math.max(0.9, viewRef.current.scale));
+    const cx = b.x + w / 2, cy = b.y + h / 2;
+    tweenView({ scale: sc, x: window.innerWidth / 2 - cx * sc, y: window.innerHeight / 2 - cy * sc });
+  }, [tweenView]);
+
+  /* ----- presentation / focus mode ----- */
+  // Visible blocks in reading order (top-to-bottom, then left-to-right by row)
+  const presentOrder = useMemo(() =>
+    blocks.filter(b => !hiddenBlockIds.has(b.id)).slice().sort((a, b) => {
+      const ra = Math.round(a.y / 60), rb = Math.round(b.y / 60);
+      return ra !== rb ? ra - rb : a.x - b.x;
+    }), [blocks, hiddenBlockIds]);
+  useEffect(() => { presentOrderRef.current = presentOrder; }, [presentOrder]);
+
+  const goToPresent = useCallback((idx) => {
+    const ord = presentOrderRef.current;
+    if (!ord.length) return;
+    const i = ((idx % ord.length) + ord.length) % ord.length;
+    setFocusIdx(i);
+    setFocusId(ord[i].id);
+    centerOnBlock(ord[i], 1.2);
+  }, [centerOnBlock]);
+  const enterPresent = useCallback(() => {
+    const ord = presentOrderRef.current;
+    if (!ord.length) return;
+    let i = 0;
+    const selId = [...selection][0];
+    if (selId) { const k = ord.findIndex(b => b.id === selId); if (k >= 0) i = k; }
+    clearSelection();
+    setPresent(true);
+    setFocusIdx(i);
+    setFocusId(ord[i].id);
+    centerOnBlock(ord[i], 1.2);
+  }, [selection, centerOnBlock, clearSelection]);
+  const exitPresent = useCallback(() => { setPresent(false); setFocusId(null); }, []);
+
   /* ----- mouse / keyboard global ----- */
   useEffect(() => {
     const onMove = (e) => {
@@ -956,6 +1330,43 @@ function App() {
         }
         setBlocks(prev => prev.map(bb => bb.id === r.id ? { ...bb, x, y, w, h } : bb));
         return;
+      }
+      if (edgeEditRef.current) {
+        const ed = edgeEditRef.current;
+        const wp = screenToWorld(e.clientX, e.clientY);
+        // First real movement on a line press: insert a bend (waypoint) at that segment
+        if (ed.kind === "press") {
+          const dx = e.clientX - ed.startScreen.x, dy = e.clientY - ed.startScreen.y;
+          if (dx*dx + dy*dy < 16) return; // < 4px → treat as click (select), not bend
+          const segIdx = nearestSegmentIndex(ed.pts, ed.wp);
+          setEdges(prev => prev.map(x => {
+            if (x.id !== ed.edgeId) return x;
+            const wps = (x.waypoints || []).slice();
+            wps.splice(segIdx, 0, wp);
+            return { ...x, waypoints: wps };
+          }));
+          ed.kind = "waypoint";
+          ed.index = segIdx;
+          setSelectedEdge(ed.edgeId);
+          return;
+        }
+        if (ed.kind === "waypoint") {
+          setEdges(prev => prev.map(x => {
+            if (x.id !== ed.edgeId) return x;
+            const wps = (x.waypoints || []).slice();
+            wps[ed.index] = wp;
+            return { ...x, waypoints: wps };
+          }));
+          return;
+        }
+        if (ed.kind === "endpoint") {
+          ed.moved = true;
+          setPreview({ from: ed.fixed, to: wp });
+          document.querySelectorAll(".port.hot").forEach(pp => pp.classList.remove("hot"));
+          const el = document.elementFromPoint(e.clientX, e.clientY);
+          if (el && el.classList.contains("port")) el.classList.add("hot");
+          return;
+        }
       }
       if (connectRef.current) {
         const c = connectRef.current;
@@ -1026,6 +1437,40 @@ function App() {
       }
     };
     const onUp = (e) => {
+      if (edgeEditRef.current) {
+        const ed = edgeEditRef.current;
+        edgeEditRef.current = null;
+        if (ed.kind === "press") {
+          // No drag happened → it was a click: just select the connection
+          clearSelection();
+          setSelectedEdge(ed.edgeId);
+        } else if (ed.kind === "endpoint") {
+          setPreview(null);
+          document.querySelectorAll(".port.hot").forEach(pp => pp.classList.remove("hot"));
+          if (ed.moved) {
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            if (el && el.classList.contains("port")) {
+              const blockEl = el.parentElement;
+              const all = Array.from(document.querySelectorAll(".block"));
+              const idx = all.indexOf(blockEl);
+              if (idx >= 0) {
+                const tb = blocks[idx];
+                const port = el.dataset.port;
+                // Re-attach this end, as long as it doesn't collapse the edge to a single block
+                if (tb && !hiddenBlockIds.has(tb.id)) {
+                  setEdges(prev => prev.map(x => {
+                    if (x.id !== ed.edgeId) return x;
+                    const other = ed.end === "from" ? x.to.id : x.from.id;
+                    if (tb.id === other) return x; // can't connect a block to itself
+                    return { ...x, [ed.end]: { id: tb.id, port } };
+                  }));
+                }
+              }
+            }
+          }
+        }
+        return;
+      }
       if (connectRef.current) {
         const c = connectRef.current;
         // Click (no drag) → toggle collapse on all edges touching this port
@@ -1106,18 +1551,33 @@ function App() {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [view.scale, blocks, hiddenBlockIds, togglePortCollapse, drawing, screenToWorld, drawShape]);
+  }, [view.scale, blocks, hiddenBlockIds, togglePortCollapse, drawing, screenToWorld, drawShape, clearSelection]);
 
   /* ----- keyboard ----- */
   useEffect(() => {
     const onKey = (e) => {
       if (document.activeElement && document.activeElement.isContentEditable) return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod) {
+        const k = e.key.toLowerCase();
+        if (k === "z")      { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+        else if (k === "y") { e.preventDefault(); redo(); }
+        else if (k === "d") { e.preventDefault(); duplicateSelection(); }
+        return; // never let a Ctrl/Cmd combo fall through to tool shortcuts
+      }
+      if (present) {
+        if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") { e.preventDefault(); goToPresent(focusIdxRef.current + 1); }
+        else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); goToPresent(focusIdxRef.current - 1); }
+        else if (e.key === "Escape") exitPresent();
+        return;
+      }
       if (e.key === " ") { spaceRef.current = true; e.preventDefault(); }
       if (e.key === "Delete" || e.key === "Backspace") deleteSelection();
       if (e.key === "b" || e.key === "B") setTool("block");
       if (e.key === "n" || e.key === "N") { setTool("draw"); setDrawShape("text"); }
       if (e.key === "d" || e.key === "D") { setTool("draw"); setDrawShape("freehand"); }
       if (e.key === "v" || e.key === "V") setTool("select");
+      if (e.key === "p" || e.key === "P") enterPresent();
       if (e.key === "Escape") { clearSelection(); setTool("select"); }
     };
     const onKeyUp = (e) => { if (e.key === " ") spaceRef.current = false; };
@@ -1127,7 +1587,7 @@ function App() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [deleteSelection, clearSelection]);
+  }, [deleteSelection, clearSelection, undo, redo, duplicateSelection, present, goToPresent, enterPresent, exitPresent]);
 
   /* ----- wheel zoom ----- */
   const onWheel = useCallback((e) => {
@@ -1203,6 +1663,25 @@ function App() {
       x: 80 - minX*scale + (cw-(maxX-minX)*scale)/2,
       y: 80 - minY*scale + (ch-(maxY-minY)*scale)/2,
     });
+  };
+
+  /* ----- export PNG (rasterize the whole map) ----- */
+  const exportPNG = () => {
+    const h2c = window.html2canvas;
+    if (!h2c) { alert("A biblioteca de imagem ainda está carregando — tente de novo em instantes."); return; }
+    const ws = wsRef.current;
+    if (!ws) return;
+    fitAll(); // frame everything first so the capture includes the full map
+    setTimeout(() => {
+      h2c(ws, { backgroundColor: "#030612", scale: 2, logging: false, useCORS: true })
+        .then(canvas => {
+          const a = document.createElement("a");
+          a.href = canvas.toDataURL("image/png");
+          a.download = "canvas-tron.png";
+          a.click();
+        })
+        .catch(err => { console.error(err); alert("Falha ao exportar PNG: " + err.message); });
+    }, 200);
   };
 
   /* ----- export / import ----- */
@@ -1412,15 +1891,34 @@ function App() {
     if (sourceHidden || targetHidden) return null;
     const p1 = portWorldPos(a, e.from.port);
     const p2 = portWorldPos(b, e.to.port);
+    const wps = e.waypoints || [];
+    const style = e.style || "ortho";
+    const pts = [p1, ...wps, p2];
+
+    // Choose how to draw the path: auto-route when straight, route through waypoints when bent
+    let curveD;
+    if (wps.length === 0) {
+      if (style === "straight")      curveD = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
+      else if (style === "curved")   curveD = dirBezier(p1, dir1, p2, dir2);
+      else                           curveD = orthogonalPath(p1, dir1, p2, dir2);
+    } else {
+      if (style === "curved")        curveD = catmullRomPath(pts);
+      else if (style === "straight") curveD = roundedPolyPath(pts, 0);
+      else                           curveD = roundedPolyPath(pts, 14);
+    }
+    // Midpoint of the central segment — anchors the style toggle
+    const mi = Math.floor((pts.length - 1) / 2);
+    const mid = { x: (pts[mi].x + pts[mi+1].x) / 2, y: (pts[mi].y + pts[mi+1].y) / 2 };
+
     return {
       id: e.id,
-      curveD: orthogonalPath(p1, dir1, p2, dir2),
+      curveD,
       stubD: "",
       stubEnd: { x: 0, y: 0 },
       color: a.color || DEFAULT_COLOR,
       fromColor: a.color || DEFAULT_COLOR,
       toColor:   b.color || DEFAULT_COLOR,
-      p1, p2,
+      p1, p2, pts, wps, mid, style,
       collapsed: false,
       count: 0,
     };
@@ -1431,22 +1929,40 @@ function App() {
     <>
       <div className="bg" />
 
+      {!present && (
       <div className="toolbar">
         <button className={`tool ${tool==="select"?"active":""}`} onClick={() => setTool("select")}>◉ SELECIONAR</button>
         <button className={`tool ${tool==="block"?"active":""}`} onClick={() => setTool("block")}>▭ BLOCO</button>
         <button className={`tool ${tool==="draw"?"active":""}`} onClick={() => setTool("draw")}>✎ ANOTAÇÃO</button>
         <div className="sep"/>
+        <button className="tool" onClick={undo} title="Desfazer (Ctrl+Z)">↶</button>
+        <button className="tool" onClick={redo} title="Refazer (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
+        <div className="sep"/>
         <button className="tool" onClick={fitAll}>⊡ FIT</button>
         <button className="tool" onClick={() => setView({x:0,y:0,scale:1})}>1:1</button>
+        <button className={`tool ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Liga/desliga o fluxo de energia nas conexões">⚡ FLUXO</button>
+        <button className="tool" onClick={enterPresent} title="Modo apresentação (P)">▶ APRESENTAR</button>
         <div className="sep"/>
         <button className="tool" onClick={exportJSON}>⤓ SALVAR</button>
         <button className="tool" onClick={() => fileRef.current.click()}>⤒ CARREGAR</button>
         <button className="tool" onClick={() => mdRef.current.click()} title="Importar Markdown (.md) — cria blocos a partir dos títulos #/##/###">📥 IMPORTAR MD</button>
+        <button className="tool" onClick={exportPNG} title="Exportar o mapa como imagem PNG">🖼 PNG</button>
         <div className="sep"/>
         <button className="tool danger" onClick={clearAll}>✕ LIMPAR</button>
       </div>
+      )}
 
-      {(editingBodyId || editingTitleId) && (
+      {present && (
+        <div className="presentbar">
+          <button className="tool" onClick={() => goToPresent(focusIdx - 1)} title="Anterior (←)">◀</button>
+          <span className="pcount">{presentOrder.length ? focusIdx + 1 : 0} / {presentOrder.length}</span>
+          <button className="tool" onClick={() => goToPresent(focusIdx + 1)} title="Próximo (→ / espaço)">▶</button>
+          <div className="sep"/>
+          <button className="tool danger" onClick={exitPresent} title="Sair (Esc)">✕ SAIR</button>
+        </div>
+      )}
+
+      {(editingBodyId || editingTitleId || editingNoteId) && (
         <div className="drawbar" onMouseDown={(e) => e.preventDefault()}>
           <div className="group">
             <span className="lbl">Texto</span>
@@ -1486,7 +2002,7 @@ function App() {
         </div>
       )}
 
-      {!editingBodyId && !editingTitleId && tool === "draw" && selection.size === 0 && (
+      {!editingBodyId && !editingTitleId && !editingNoteId && tool === "draw" && selection.size === 0 && (
         <div className="drawbar" onMouseDown={(e) => e.stopPropagation()}>
           <div className="group">
             <span className="lbl">Forma</span>
@@ -1559,7 +2075,7 @@ function App() {
       )}
 
       {(() => {
-        if (editingBodyId || editingTitleId) return null;
+        if (editingBodyId || editingTitleId || editingNoteId) return null;
         const hasStrokeSel = strokes.some(s => selection.has(s.id));
         const hasNoteSel   = notes.some(n => selection.has(n.id));
         const hasBlockSel  = blocks.some(b => selection.has(b.id));
@@ -1651,7 +2167,7 @@ function App() {
         }}
         onWheel={onWheel}
       >
-        <div className="world" style={{ transform:`translate(${view.x}px,${view.y}px) scale(${view.scale})` }}>
+        <div className={`world ${present ? "present" : ""}`} style={{ transform:`translate(${view.x}px,${view.y}px) scale(${view.scale})` }}>
           {/* freehand strokes + shapes (rendered beneath blocks) */}
           <svg className="strokes" xmlns="http://www.w3.org/2000/svg">
             {strokes.map(s => {
@@ -1732,6 +2248,19 @@ function App() {
                         : `drop-shadow(0 0 4px ${p.fromColor || p.color}) drop-shadow(0 0 4px ${p.toColor || p.color})`,
                     }}
                   />
+                  {/* Energy beam running source → target. Two layers, both using
+                      the edge's own gradient so even the GLOW follows the degradê:
+                      a thick blurred halo + a crisp core, flowing together. */}
+                  {flow && !p.collapsed && (() => {
+                    const fStroke = useGradient ? `url(#edge-g-${p.id})` : p.color;
+                    return (
+                      <>
+                        <path d={p.curveD} className="flow-glow"  stroke={fStroke} />
+                        <path d={p.curveD} className="flow"       stroke={fStroke} />
+                        <path d={p.curveD} className="flow-spark" stroke={fStroke} />
+                      </>
+                    );
+                  })()}
                   {/* Short stub — visible when collapsed */}
                   <path
                     d={p.stubD}
@@ -1739,14 +2268,24 @@ function App() {
                     stroke={p.color}
                     style={{ filter: `drop-shadow(0 0 6px ${p.color})` }}
                   />
-                  {/* Invisible thick hit area — captures clicks on the line */}
+                  {/* Invisible thick hit area — click selects, drag bends the line */}
                   <path
                     d={p.collapsed ? p.stubD : p.curveD}
                     fill="none"
                     stroke="transparent"
                     strokeWidth={18}
-                    style={{ pointerEvents: "stroke", cursor: "pointer" }}
-                    onMouseDown={(ev) => { ev.stopPropagation(); clearSelection(); setSelectedEdge(p.id); }}
+                    style={{ pointerEvents: "stroke", cursor: p.collapsed ? "pointer" : "grab" }}
+                    onMouseDown={(ev) => {
+                      ev.stopPropagation();
+                      if (p.collapsed) { clearSelection(); setSelectedEdge(p.id); return; }
+                      // Start a press: a tiny move turns it into a bend (waypoint), else it's a select
+                      edgeEditRef.current = {
+                        kind: "press", edgeId: p.id,
+                        startScreen: { x: ev.clientX, y: ev.clientY },
+                        wp: screenToWorld(ev.clientX, ev.clientY),
+                        pts: p.pts,
+                      };
+                    }}
                   />
                 </g>
               );
@@ -1775,6 +2314,7 @@ function App() {
               block={b}
               selected={selection.has(b.id)}
               hidden={hiddenBlockIds.has(b.id)}
+              focused={present && b.id === focusId}
               pendingEditRef={pendingEditRef}
               onSelect={selectOne}
               onStartDrag={(e) => startDrag(e, b.id)}
@@ -1800,6 +2340,10 @@ function App() {
               onSelect={selectOne}
               onStartDrag={(e) => startDrag(e, n.id)}
               onChange={updateNote}
+              onEditingChange={(id, on) => {
+                if (on) setEditingNoteId(id);
+                else setEditingNoteId(curr => curr === id ? null : curr);
+              }}
               onEraser={(id) => {
                 if (tool === "draw" && drawShape === "eraser") {
                   setNotes(p => p.filter(x => x.id !== id));
@@ -1809,12 +2353,54 @@ function App() {
               }}
             />
           ))}
+
+          {/* connection edit handles — shown for the selected (non-collapsed) edge.
+              Rendered after blocks so they sit above the ports and stay clickable.
+              scale(1/view.scale) keeps them a constant size on screen at any zoom. */}
+          {selectedEdge && (() => {
+            const p = edgePaths.find(x => x.id === selectedEdge);
+            if (!p || p.collapsed) return null;
+            const inv = `scale(${1/view.scale})`;
+            const styleLabel = p.style === "curved" ? "↝ CURVA" : p.style === "straight" ? "╱ RETA" : "⌐ ORTO";
+            return (
+              <div className="edge-edit">
+                <div
+                  className="edge-style-btn"
+                  style={{ left: p.mid.x, top: p.mid.y, color: p.toColor || p.color, transform: `translate(-50%,-50%) ${inv}` }}
+                  title="Estilo da linha: ortogonal → curva → reta"
+                  onMouseDown={(e) => { e.stopPropagation(); cycleEdgeStyle(p.id); }}
+                >{styleLabel}</div>
+                {[["from", p.p1, p.fromColor], ["to", p.p2, p.toColor]].map(([end, pos, col]) => (
+                  <div
+                    key={end}
+                    className="edge-handle endpoint"
+                    style={{ left: pos.x, top: pos.y, color: col, transform: `translate(-50%,-50%) ${inv}` }}
+                    title="Arraste para outra porta"
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      edgeEditRef.current = { kind: "endpoint", edgeId: p.id, end, fixed: end === "from" ? p.p2 : p.p1, moved: false };
+                    }}
+                  />
+                ))}
+                {p.wps.map((w, i) => (
+                  <div
+                    key={"wp"+i}
+                    className="edge-handle waypoint"
+                    style={{ left: w.x, top: w.y, color: p.toColor || p.color, transform: `translate(-50%,-50%) ${inv}` }}
+                    title="Arraste para mover · duplo-clique remove"
+                    onMouseDown={(e) => { e.stopPropagation(); edgeEditRef.current = { kind: "waypoint", edgeId: p.id, index: i }; }}
+                    onDoubleClick={(e) => { e.stopPropagation(); removeWaypoint(p.id, i); }}
+                  />
+                ))}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
       <div className="zoom">{Math.round(view.scale*100)}%</div>
       <div className="hint">
-        <b>B</b> bloco • <b>N</b> texto • <b>D</b> desenho • <b>duplo-clique</b> editar • <b>porta→porta</b> conectar • <b>clique na porta</b> recolher • <b>Del</b> apagar
+        <b>B</b> bloco • <b>N</b> texto • <b>D</b> desenho • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>arrasta a linha</b> dobrar • <b>clica na linha</b> editar/estilo • <b>duplo-clique</b> editar • <b>Del</b> apagar
       </div>
 
       <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON} />
