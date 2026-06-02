@@ -697,46 +697,69 @@ function Block({ block, selected, hidden, focused, pendingEditRef, onSelect, onS
 }
 
 /* ================== Note ================== */
-function Note({ note, selected, onSelect, onStartDrag, onChange, onEraser }) {
+function Note({ note, selected, onSelect, onStartDrag, onChange, onEraser, onEditingChange }) {
   const ref = useRef(null);
   const [editing, setEditing] = useState(false);
+
+  // Tell the parent when this note enters/leaves edit mode, so it can show the
+  // rich-text format bar (bold/italic/underline/size/color) — same bar the blocks use.
+  useEffect(() => {
+    onEditingChange?.(note.id, editing);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing]);
+
+  // On entering edit mode, load the stored HTML imperatively and select it all
+  // so the user can immediately retype or apply formatting to the whole note.
   useEffect(() => {
     if (editing && ref.current) {
+      ref.current.innerHTML = note.text || "";
       ref.current.focus();
       const r = document.createRange(); r.selectNodeContents(ref.current);
       const s = getSelection(); s.removeAllRanges(); s.addRange(r);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing]);
+
   const color = note.color || "#ff9d00";
+  const common = {
+    ref,
+    className: `note ${selected ? "selected" : ""}`,
+    style: { left: note.x, top: note.y, "--nc": color, fontSize: (note.fontSize || 14) + "px" },
+  };
+
+  // While editing: a plain contentEditable surface (HTML set imperatively above).
+  if (editing) {
+    return (
+      <div
+        {...common}
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          setEditing(false);
+          const html = e.currentTarget.innerHTML;
+          const plain = e.currentTarget.textContent.trim();
+          onChange(note.id, { text: plain ? html : "" });
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
+        }}
+      />
+    );
+  }
+
+  // Display mode: render the stored HTML; click to select/drag, double-click to edit.
   return (
     <div
-      ref={ref}
-      className={`note ${selected ? "selected" : ""}`}
-      style={{
-        left: note.x, top: note.y,
-        "--nc": color,
-        fontSize: (note.fontSize || 14) + "px",
-      }}
-      contentEditable={editing}
-      suppressContentEditableWarning
+      {...common}
       onMouseDown={(e) => {
-        if (e.currentTarget.isContentEditable) return;
         e.stopPropagation();
         if (onEraser && onEraser(note.id)) return;
         onSelect(note.id, e.shiftKey);
         onStartDrag(e);
       }}
       onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
-      onBlur={(e) => {
-        setEditing(false);
-        // innerText (not textContent) preserves the line breaks the browser inserts
-        // on Enter — textContent would join the lines, throwing the text sideways.
-        onChange(note.id, { text: e.currentTarget.innerText.replace(/\n$/, "") });
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
-      }}
-    >{note.text}</div>
+      dangerouslySetInnerHTML={{ __html: note.text || "" }}
+    />
   );
 }
 
@@ -758,6 +781,7 @@ function App() {
   // Which block (if any) is currently editing its body/title — for the floating format bar
   const [editingBodyId, setEditingBodyId] = useState(null);
   const [editingTitleId, setEditingTitleId] = useState(null);
+  const [editingNoteId, setEditingNoteId] = useState(null);
   // Drawing tool settings
   const [drawColor, setDrawColor] = useState("#ff9d00");
   const [drawWidth, setDrawWidth] = useState(3);
@@ -1755,7 +1779,7 @@ function App() {
         </div>
       )}
 
-      {(editingBodyId || editingTitleId) && (
+      {(editingBodyId || editingTitleId || editingNoteId) && (
         <div className="drawbar" onMouseDown={(e) => e.preventDefault()}>
           <div className="group">
             <span className="lbl">Texto</span>
@@ -1795,7 +1819,7 @@ function App() {
         </div>
       )}
 
-      {!editingBodyId && !editingTitleId && tool === "draw" && selection.size === 0 && (
+      {!editingBodyId && !editingTitleId && !editingNoteId && tool === "draw" && selection.size === 0 && (
         <div className="drawbar" onMouseDown={(e) => e.stopPropagation()}>
           <div className="group">
             <span className="lbl">Forma</span>
@@ -1868,7 +1892,7 @@ function App() {
       )}
 
       {(() => {
-        if (editingBodyId || editingTitleId) return null;
+        if (editingBodyId || editingTitleId || editingNoteId) return null;
         const hasStrokeSel = strokes.some(s => selection.has(s.id));
         const hasNoteSel   = notes.some(n => selection.has(n.id));
         const hasBlockSel  = blocks.some(b => selection.has(b.id));
@@ -2118,6 +2142,10 @@ function App() {
               onSelect={selectOne}
               onStartDrag={(e) => startDrag(e, n.id)}
               onChange={updateNote}
+              onEditingChange={(id, on) => {
+                if (on) setEditingNoteId(id);
+                else setEditingNoteId(curr => curr === id ? null : curr);
+              }}
               onEraser={(id) => {
                 if (tool === "draw" && drawShape === "eraser") {
                   setNotes(p => p.filter(x => x.id !== id));
