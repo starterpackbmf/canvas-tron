@@ -316,6 +316,10 @@
   }
   .note.selected{border-style:solid;opacity:1;box-shadow:0 0 12px currentColor,0 0 14px rgba(0,0,0,.35)}
   .note[contenteditable="true"]{cursor:text;border-style:solid;background:rgba(0,0,0,.6)}
+  /* "sem moldura": só o texto com glow, sem caixa/fundo (toggle na barra) */
+  .note.bare{background:transparent;border-color:transparent;box-shadow:none;padding:2px 4px}
+  .note.bare.selected{border-color:currentColor;border-style:dashed;box-shadow:none}
+  .note.bare[contenteditable="true"]{background:rgba(0,0,0,.45);border-color:currentColor}
 
   /* ===== energy flow (animated pulse running along edges) ===== */
   /* long lit segment + tiny gap: over the steady gradient edge below, this
@@ -797,7 +801,7 @@ function Note({ note, selected, onSelect, onStartDrag, onChange, onEraser, onEdi
   const color = note.color || "#ff9d00";
   const common = {
     ref,
-    className: `note ${selected ? "selected" : ""}`,
+    className: `note ${selected ? "selected" : ""} ${note.frame === false ? "bare" : ""}`,
     style: { left: note.x, top: note.y, "--nc": color, fontSize: (note.fontSize || 14) + "px" },
   };
 
@@ -861,6 +865,7 @@ function App() {
   const [drawWidth, setDrawWidth] = useState(3);
   const [drawFontSize, setDrawFontSize] = useState(16);
   const [drawShape, setDrawShape] = useState("text"); // text|freehand|line|rect|ellipse|arrow|eraser
+  const [noteFrame, setNoteFrame] = useState(true); // default: novas anotações têm moldura
   const [edges, setEdges] = useState(() => saved?.edges ?? ([
     { id:"e1", from:{id:"b1",port:"right"}, to:{id:"b2",port:"left"} },
     { id:"e2", from:{id:"b2",port:"right"}, to:{id:"b3",port:"left"} },
@@ -1048,16 +1053,21 @@ function App() {
     sel.removeAllRanges();
   }, []);
 
-  const createNote = useCallback((x, y, color, fontSize) => {
+  const createNote = useCallback((x, y, color, fontSize, frame) => {
     const n = {
       id: uid(), x, y, text: "Anotação…",
       color: color || "#ff9d00",
       fontSize: fontSize || 14,
+      frame: frame !== false, // false = sem moldura (só o texto)
     };
     setNotes(p => [...p, n]);
     selectOne(n.id);
     return n;
   }, [selectOne]);
+  // Toggle the box/frame on the selected note(s)
+  const toggleNoteFrame = useCallback(() => {
+    setNotes(p => p.map(n => selection.has(n.id) ? { ...n, frame: n.frame === false } : n));
+  }, [selection]);
 
   const updateStroke = useCallback((id, patch) => {
     setStrokes(p => p.map(s => s.id === id ? { ...s, ...patch } : s));
@@ -1621,7 +1631,7 @@ function App() {
         return;
       }
       if (drawShape === "text") {
-        createNote(wp.x, wp.y, drawColor, drawFontSize);
+        createNote(wp.x, wp.y, drawColor, drawFontSize, noteFrame);
         e.preventDefault();
         return;
       }
@@ -2032,6 +2042,13 @@ function App() {
               <input type="color" value={drawColor} onChange={(e) => setDrawColor(e.target.value)} />
             </label>
           </div>
+          <div className="vsep"/>
+          <div className="group">
+            <span className="lbl">Moldura</span>
+            <button className={`shape-btn ${noteFrame ? "active" : ""}`} onClick={() => setNoteFrame(f => !f)} title="Liga/desliga a caixa em volta do texto (novas anotações)">
+              <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/></svg>
+            </button>
+          </div>
         </div>
       )}
 
@@ -2156,6 +2173,19 @@ function App() {
                       >T</button>
                     );
                   })}
+                </div>
+                <div className="vsep"/>
+                <div className="group">
+                  <span className="lbl">Moldura</span>
+                  {(() => {
+                    const sel = notes.find(n => selection.has(n.id));
+                    const on = sel && sel.frame !== false;
+                    return (
+                      <button className={`shape-btn ${on?"active":""}`} onClick={toggleNoteFrame} title="Liga/desliga a caixa em volta do texto">
+                        <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/></svg>
+                      </button>
+                    );
+                  })()}
                 </div>
               </>
             )}
