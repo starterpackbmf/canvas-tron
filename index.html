@@ -376,6 +376,23 @@
       inset 0 0 28px rgba(var(--bc-rgb),.18);
     z-index:5;
   }
+
+  /* ===== connection edit handles ===== */
+  .edge-handle{
+    position:absolute;width:13px;height:13px;
+    background:var(--bg);border:2px solid currentColor;border-radius:50%;
+    box-shadow:0 0 8px currentColor;cursor:grab;z-index:6;
+  }
+  .edge-handle.endpoint{border-radius:3px} /* squared = an endpoint you can re-attach */
+  .edge-handle:hover{box-shadow:0 0 14px currentColor;background:color-mix(in srgb,currentColor 25%,var(--bg))}
+  .edge-style-btn{
+    position:absolute;z-index:6;cursor:pointer;user-select:none;white-space:nowrap;
+    padding:3px 8px;border-radius:12px;
+    background:rgba(5,12,24,.95);border:1.5px solid currentColor;color:currentColor;
+    font-size:10px;font-weight:700;letter-spacing:.5px;
+    box-shadow:0 0 12px rgba(0,0,0,.5);
+  }
+  .edge-style-btn:hover{box-shadow:0 0 12px currentColor}
 </style>
 </head>
 <body>
@@ -491,6 +508,47 @@ const orthogonalPath = (p1, dir1, p2, dir2) => {
   pts.push(p2);
   return roundedPolyPath(pts, 14);
 };
+
+// Cubic bezier that leaves p1 along dir1 and arrives at p2 along dir2 (smooth "curva" style)
+const dirBezier = (p1, dir1, p2, dir2) => {
+  const k = Math.max(60, Math.hypot(p2.x - p1.x, p2.y - p1.y) * 0.4);
+  const c1 = { x: p1.x + dir1.x * k, y: p1.y + dir1.y * k };
+  const c2 = { x: p2.x + dir2.x * k, y: p2.y + dir2.y * k };
+  return `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
+};
+
+// Smooth Catmull-Rom spline through an arbitrary list of points (free "curva" through waypoints)
+const catmullRomPath = (pts) => {
+  if (!pts || pts.length < 2) return "";
+  if (pts.length === 2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i-1] || pts[i], p1 = pts[i], p2 = pts[i+1], p3 = pts[i+2] || pts[i+1];
+    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+};
+
+// Distance from point p to segment a-b, and the index of the closest segment in a polyline
+const distToSeg = (p, a, b) => {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len2 = dx*dx + dy*dy || 1;
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const cx = a.x + t*dx, cy = a.y + t*dy;
+  return Math.hypot(p.x - cx, p.y - cy);
+};
+const nearestSegmentIndex = (pts, p) => {
+  let best = 0, bestD = Infinity;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const d = distToSeg(p, pts[i], pts[i+1]);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+};
+
 // Compute an SVG path string for any stroke shape
 const strokeToPath = (s) => {
   if (!s) return "";
@@ -824,6 +882,7 @@ function App() {
   const dragRef = useRef(null);
   const connectRef = useRef(null);
   const resizeRef = useRef(null);
+  const edgeEditRef = useRef(null); // editing a connection's path (bend/waypoint/endpoint)
   const panRef = useRef(false);
   const spaceRef = useRef(false);
   const wsRef = useRef(null);
@@ -1074,6 +1133,24 @@ function App() {
     }));
   }, []);
 
+  /* ----- connection path editing ----- */
+  // Cycle the routing style of one connection: ortogonal → curva → reta
+  const cycleEdgeStyle = useCallback((id) => {
+    const order = ["ortho", "curved", "straight"];
+    setEdges(p => p.map(e => e.id === id
+      ? { ...e, style: order[(order.indexOf(e.style || "ortho") + 1) % order.length] }
+      : e));
+  }, []);
+  // Remove one waypoint (double-click a bend handle); empty list → back to auto-route
+  const removeWaypoint = useCallback((id, index) => {
+    setEdges(p => p.map(e => {
+      if (e.id !== id) return e;
+      const wps = (e.waypoints || []).slice();
+      wps.splice(index, 1);
+      return { ...e, waypoints: wps };
+    }));
+  }, []);
+
   /* ----- undo / redo (snapshot history) ----- */
   // Only the document content is tracked (not pan/zoom or selection).
   const applySnapshot = useCallback((snap) => {
@@ -1254,6 +1331,43 @@ function App() {
         setBlocks(prev => prev.map(bb => bb.id === r.id ? { ...bb, x, y, w, h } : bb));
         return;
       }
+      if (edgeEditRef.current) {
+        const ed = edgeEditRef.current;
+        const wp = screenToWorld(e.clientX, e.clientY);
+        // First real movement on a line press: insert a bend (waypoint) at that segment
+        if (ed.kind === "press") {
+          const dx = e.clientX - ed.startScreen.x, dy = e.clientY - ed.startScreen.y;
+          if (dx*dx + dy*dy < 16) return; // < 4px → treat as click (select), not bend
+          const segIdx = nearestSegmentIndex(ed.pts, ed.wp);
+          setEdges(prev => prev.map(x => {
+            if (x.id !== ed.edgeId) return x;
+            const wps = (x.waypoints || []).slice();
+            wps.splice(segIdx, 0, wp);
+            return { ...x, waypoints: wps };
+          }));
+          ed.kind = "waypoint";
+          ed.index = segIdx;
+          setSelectedEdge(ed.edgeId);
+          return;
+        }
+        if (ed.kind === "waypoint") {
+          setEdges(prev => prev.map(x => {
+            if (x.id !== ed.edgeId) return x;
+            const wps = (x.waypoints || []).slice();
+            wps[ed.index] = wp;
+            return { ...x, waypoints: wps };
+          }));
+          return;
+        }
+        if (ed.kind === "endpoint") {
+          ed.moved = true;
+          setPreview({ from: ed.fixed, to: wp });
+          document.querySelectorAll(".port.hot").forEach(pp => pp.classList.remove("hot"));
+          const el = document.elementFromPoint(e.clientX, e.clientY);
+          if (el && el.classList.contains("port")) el.classList.add("hot");
+          return;
+        }
+      }
       if (connectRef.current) {
         const c = connectRef.current;
         // Threshold: don't start the connection drag until the mouse has really moved.
@@ -1323,6 +1437,40 @@ function App() {
       }
     };
     const onUp = (e) => {
+      if (edgeEditRef.current) {
+        const ed = edgeEditRef.current;
+        edgeEditRef.current = null;
+        if (ed.kind === "press") {
+          // No drag happened → it was a click: just select the connection
+          clearSelection();
+          setSelectedEdge(ed.edgeId);
+        } else if (ed.kind === "endpoint") {
+          setPreview(null);
+          document.querySelectorAll(".port.hot").forEach(pp => pp.classList.remove("hot"));
+          if (ed.moved) {
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            if (el && el.classList.contains("port")) {
+              const blockEl = el.parentElement;
+              const all = Array.from(document.querySelectorAll(".block"));
+              const idx = all.indexOf(blockEl);
+              if (idx >= 0) {
+                const tb = blocks[idx];
+                const port = el.dataset.port;
+                // Re-attach this end, as long as it doesn't collapse the edge to a single block
+                if (tb && !hiddenBlockIds.has(tb.id)) {
+                  setEdges(prev => prev.map(x => {
+                    if (x.id !== ed.edgeId) return x;
+                    const other = ed.end === "from" ? x.to.id : x.from.id;
+                    if (tb.id === other) return x; // can't connect a block to itself
+                    return { ...x, [ed.end]: { id: tb.id, port } };
+                  }));
+                }
+              }
+            }
+          }
+        }
+        return;
+      }
       if (connectRef.current) {
         const c = connectRef.current;
         // Click (no drag) → toggle collapse on all edges touching this port
@@ -1403,7 +1551,7 @@ function App() {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [view.scale, blocks, hiddenBlockIds, togglePortCollapse, drawing, screenToWorld, drawShape]);
+  }, [view.scale, blocks, hiddenBlockIds, togglePortCollapse, drawing, screenToWorld, drawShape, clearSelection]);
 
   /* ----- keyboard ----- */
   useEffect(() => {
@@ -1743,15 +1891,34 @@ function App() {
     if (sourceHidden || targetHidden) return null;
     const p1 = portWorldPos(a, e.from.port);
     const p2 = portWorldPos(b, e.to.port);
+    const wps = e.waypoints || [];
+    const style = e.style || "ortho";
+    const pts = [p1, ...wps, p2];
+
+    // Choose how to draw the path: auto-route when straight, route through waypoints when bent
+    let curveD;
+    if (wps.length === 0) {
+      if (style === "straight")      curveD = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
+      else if (style === "curved")   curveD = dirBezier(p1, dir1, p2, dir2);
+      else                           curveD = orthogonalPath(p1, dir1, p2, dir2);
+    } else {
+      if (style === "curved")        curveD = catmullRomPath(pts);
+      else if (style === "straight") curveD = roundedPolyPath(pts, 0);
+      else                           curveD = roundedPolyPath(pts, 14);
+    }
+    // Midpoint of the central segment — anchors the style toggle
+    const mi = Math.floor((pts.length - 1) / 2);
+    const mid = { x: (pts[mi].x + pts[mi+1].x) / 2, y: (pts[mi].y + pts[mi+1].y) / 2 };
+
     return {
       id: e.id,
-      curveD: orthogonalPath(p1, dir1, p2, dir2),
+      curveD,
       stubD: "",
       stubEnd: { x: 0, y: 0 },
       color: a.color || DEFAULT_COLOR,
       fromColor: a.color || DEFAULT_COLOR,
       toColor:   b.color || DEFAULT_COLOR,
-      p1, p2,
+      p1, p2, pts, wps, mid, style,
       collapsed: false,
       count: 0,
     };
@@ -2101,14 +2268,24 @@ function App() {
                     stroke={p.color}
                     style={{ filter: `drop-shadow(0 0 6px ${p.color})` }}
                   />
-                  {/* Invisible thick hit area — captures clicks on the line */}
+                  {/* Invisible thick hit area — click selects, drag bends the line */}
                   <path
                     d={p.collapsed ? p.stubD : p.curveD}
                     fill="none"
                     stroke="transparent"
                     strokeWidth={18}
-                    style={{ pointerEvents: "stroke", cursor: "pointer" }}
-                    onMouseDown={(ev) => { ev.stopPropagation(); clearSelection(); setSelectedEdge(p.id); }}
+                    style={{ pointerEvents: "stroke", cursor: p.collapsed ? "pointer" : "grab" }}
+                    onMouseDown={(ev) => {
+                      ev.stopPropagation();
+                      if (p.collapsed) { clearSelection(); setSelectedEdge(p.id); return; }
+                      // Start a press: a tiny move turns it into a bend (waypoint), else it's a select
+                      edgeEditRef.current = {
+                        kind: "press", edgeId: p.id,
+                        startScreen: { x: ev.clientX, y: ev.clientY },
+                        wp: screenToWorld(ev.clientX, ev.clientY),
+                        pts: p.pts,
+                      };
+                    }}
                   />
                 </g>
               );
@@ -2176,12 +2353,54 @@ function App() {
               }}
             />
           ))}
+
+          {/* connection edit handles — shown for the selected (non-collapsed) edge.
+              Rendered after blocks so they sit above the ports and stay clickable.
+              scale(1/view.scale) keeps them a constant size on screen at any zoom. */}
+          {selectedEdge && (() => {
+            const p = edgePaths.find(x => x.id === selectedEdge);
+            if (!p || p.collapsed) return null;
+            const inv = `scale(${1/view.scale})`;
+            const styleLabel = p.style === "curved" ? "↝ CURVA" : p.style === "straight" ? "╱ RETA" : "⌐ ORTO";
+            return (
+              <div className="edge-edit">
+                <div
+                  className="edge-style-btn"
+                  style={{ left: p.mid.x, top: p.mid.y, color: p.toColor || p.color, transform: `translate(-50%,-50%) ${inv}` }}
+                  title="Estilo da linha: ortogonal → curva → reta"
+                  onMouseDown={(e) => { e.stopPropagation(); cycleEdgeStyle(p.id); }}
+                >{styleLabel}</div>
+                {[["from", p.p1, p.fromColor], ["to", p.p2, p.toColor]].map(([end, pos, col]) => (
+                  <div
+                    key={end}
+                    className="edge-handle endpoint"
+                    style={{ left: pos.x, top: pos.y, color: col, transform: `translate(-50%,-50%) ${inv}` }}
+                    title="Arraste para outra porta"
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      edgeEditRef.current = { kind: "endpoint", edgeId: p.id, end, fixed: end === "from" ? p.p2 : p.p1, moved: false };
+                    }}
+                  />
+                ))}
+                {p.wps.map((w, i) => (
+                  <div
+                    key={"wp"+i}
+                    className="edge-handle waypoint"
+                    style={{ left: w.x, top: w.y, color: p.toColor || p.color, transform: `translate(-50%,-50%) ${inv}` }}
+                    title="Arraste para mover · duplo-clique remove"
+                    onMouseDown={(e) => { e.stopPropagation(); edgeEditRef.current = { kind: "waypoint", edgeId: p.id, index: i }; }}
+                    onDoubleClick={(e) => { e.stopPropagation(); removeWaypoint(p.id, i); }}
+                  />
+                ))}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
       <div className="zoom">{Math.round(view.scale*100)}%</div>
       <div className="hint">
-        <b>B</b> bloco • <b>N</b> texto • <b>D</b> desenho • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>Ctrl+D</b> duplicar • <b>duplo-clique</b> editar • <b>porta→porta</b> conectar • <b>Del</b> apagar
+        <b>B</b> bloco • <b>N</b> texto • <b>D</b> desenho • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>arrasta a linha</b> dobrar • <b>clica na linha</b> editar/estilo • <b>duplo-clique</b> editar • <b>Del</b> apagar
       </div>
 
       <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON} />
