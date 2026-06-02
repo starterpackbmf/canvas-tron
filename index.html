@@ -6,6 +6,7 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   :root{
     --bg:#030612; --bg-2:#050a1a;
@@ -305,6 +306,52 @@
   }
   .note.selected{border-style:solid;opacity:1;box-shadow:0 0 12px currentColor}
   .note[contenteditable="true"]{cursor:text;border-style:solid;background:rgba(0,0,0,.3)}
+
+  /* ===== energy flow (animated pulse running along edges) ===== */
+  .edges path.flow{
+    fill:none;
+    stroke-width:3;
+    stroke-linecap:round;
+    stroke-dasharray:0.6 13;
+    opacity:.95;
+    pointer-events:none;
+    filter:drop-shadow(0 0 6px currentColor) drop-shadow(0 0 3px currentColor);
+    animation:edge-flow 1.15s linear infinite;
+  }
+  @keyframes edge-flow{ from{stroke-dashoffset:0} to{stroke-dashoffset:-13.6} }
+  @media (prefers-reduced-motion: reduce){ .edges path.flow{animation:none} }
+
+  /* ===== presentation / focus mode ===== */
+  .presentbar{
+    position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:20;
+    display:flex;gap:8px;align-items:center;padding:8px 12px;
+    background:rgba(5,12,24,.92);
+    border:1px solid rgba(0,240,255,.45);
+    border-radius:10px;
+    backdrop-filter:blur(8px);
+    box-shadow:0 0 32px rgba(0,240,255,.3);
+    animation:fadein .18s ease;
+  }
+  .presentbar .pcount{
+    color:var(--cyan);font-size:13px;font-weight:700;letter-spacing:1px;
+    min-width:56px;text-align:center;text-shadow:0 0 8px rgba(0,240,255,.6);
+  }
+  .world.present .block{
+    transition:opacity .4s cubic-bezier(.4,0,.2,1),filter .4s ease,
+               box-shadow .3s ease,transform .32s cubic-bezier(.4,0,.2,1);
+  }
+  .world.present .block:not(.focused){opacity:.12;filter:blur(1.5px) saturate(.5)}
+  .world.present .block.hidden{opacity:0}
+  .world.present .note{opacity:.12;transition:opacity .4s ease}
+  .world.present .edges,.world.present .strokes{opacity:.22;transition:opacity .4s ease}
+  .block.focused{
+    box-shadow:
+      0 0 0 2px rgba(var(--bc-rgb),1),
+      0 0 44px rgba(var(--bc-rgb),.95),
+      0 0 100px rgba(var(--bc-rgb),.5),
+      inset 0 0 28px rgba(var(--bc-rgb),.18);
+    z-index:5;
+  }
 </style>
 </head>
 <body>
@@ -316,6 +363,27 @@ const { useState, useRef, useEffect, useCallback, useMemo } = React;
 /* ================== ID + helpers ================== */
 let _nid = 1;
 const uid = () => "n" + (_nid++);
+
+/* ---- persistence (autosave) ---- */
+const LS_KEY = "canvas-tron:autosave";
+const loadSaved = () => {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!d || !Array.isArray(d.blocks)) return null;
+    return d;
+  } catch { return null; }
+};
+// Push the global id counter past any numeric ids found in loaded data,
+// so freshly created nodes never collide with restored ones.
+const bumpNidFromData = (d) => {
+  if (!d) return;
+  const ids = [...(d.blocks||[]),...(d.notes||[]),...(d.strokes||[]),...(d.edges||[])]
+    .map(o => parseInt(String(o.id).replace(/\D/g,""),10))
+    .filter(Number.isFinite);
+  if (ids.length) _nid = Math.max(_nid, ...ids) + 1;
+};
 
 const DEFAULT_COLOR = "#00f0ff";
 const PRESET_COLORS = [
@@ -451,7 +519,7 @@ const bezierMidpoint = (a, b) => {
 };
 
 /* ================== Block ================== */
-function Block({ block, selected, hidden, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange }) {
+function Block({ block, selected, hidden, focused, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange }) {
   const elRef = useRef(null);
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
@@ -526,7 +594,7 @@ function Block({ block, selected, hidden, pendingEditRef, onSelect, onStartDrag,
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
@@ -665,14 +733,16 @@ function Note({ note, selected, onSelect, onStartDrag, onChange, onEraser }) {
 /* ================== App ================== */
 function App() {
   const [tool, setTool] = useState("select");
-  const [blocks, setBlocks] = useState(() => ([
+  // Restore last session from localStorage (falls back to the demo content below)
+  const saved = useMemo(() => { const d = loadSaved(); bumpNidFromData(d); return d; }, []);
+  const [blocks, setBlocks] = useState(() => saved?.blocks ?? ([
     { id:"b1", x:200, y:240, w:240, h:80, color:"#00f0ff", title:"O QUE NÃO É A TRADE DE ABERTURA", body:"Teste de validação, volume alto" },
     { id:"b2", x:520, y:160, w:260, h:120, color:"#ff9d00", title:"NÃO É O 1 MINUTO DE ENTRADA", body:"O saldo acumulado antes do mercado abrir. O 1 minuto de abertura é para se aferir o funcionamento." },
     { id:"b3", x:880, y:180, w:260, h:120, color:"#00ff88", title:"NÃO É ENTRAR NO DIA INTEIRO", body:"O cenário depois dos primeiros minutos. Parece simples, mas requer mais abertura." },
     { id:"b4", x:560, y:460, w:260, h:120, color:"#ff3b9a", title:"NÃO É COMPRAR O DIA INTEIRO", body:"O setup de trazer a ponta definida define a direção dos próximos minutos — não do dia inteiro." },
   ]));
-  const [notes, setNotes] = useState([]);
-  const [strokes, setStrokes] = useState([]);
+  const [notes, setNotes] = useState(() => saved?.notes ?? []);
+  const [strokes, setStrokes] = useState(() => saved?.strokes ?? []);
   // Currently drawing stroke (not yet committed)
   const [drawing, setDrawing] = useState(null);
   // Which block (if any) is currently editing its body/title — for the floating format bar
@@ -683,15 +753,22 @@ function App() {
   const [drawWidth, setDrawWidth] = useState(3);
   const [drawFontSize, setDrawFontSize] = useState(16);
   const [drawShape, setDrawShape] = useState("text"); // text|freehand|line|rect|ellipse|arrow|eraser
-  const [edges, setEdges] = useState(() => ([
+  const [edges, setEdges] = useState(() => saved?.edges ?? ([
     { id:"e1", from:{id:"b1",port:"right"}, to:{id:"b2",port:"left"} },
     { id:"e2", from:{id:"b2",port:"right"}, to:{id:"b3",port:"left"} },
     { id:"e3", from:{id:"b2",port:"bottom"}, to:{id:"b4",port:"top"} },
   ]));
   const [selection, setSelection] = useState(new Set());
   const [selectedEdge, setSelectedEdge] = useState(null);
-  const [view, setView] = useState({ x: 20, y: 20, scale: 1 });
+  const [view, setView] = useState(() => saved?.view ?? { x: 20, y: 20, scale: 1 });
   const [preview, setPreview] = useState(null); // {from:{x,y}, to:{x,y}}
+
+  // Energy-flow animation toggle (animated pulse running along the connections)
+  const [flow, setFlow] = useState(() => saved?.flow ?? true);
+  // Presentation / focus mode
+  const [present, setPresent] = useState(false);
+  const [focusId, setFocusId] = useState(null);
+  const [focusIdx, setFocusIdx] = useState(0);
 
   // refs for imperative drag/connect state
   const dragRef = useRef(null);
@@ -702,6 +779,20 @@ function App() {
   const wsRef = useRef(null);
   const fileRef = useRef(null);
   const mdRef = useRef(null);
+
+  // undo/redo history (snapshot stacks) + restore guard
+  const histRef = useRef({ past: [], future: [] });
+  const lastSnapRef = useRef(null);
+  const pendingSnapRef = useRef(null);
+  const restoringRef = useRef(false);
+  const histTimerRef = useRef(null);
+  // smooth view tweening + always-fresh mirrors used inside global listeners
+  const tweenRef = useRef(0);
+  const viewRef = useRef(view);
+  const focusIdxRef = useRef(0);
+  const presentOrderRef = useRef([]);
+  useEffect(() => { viewRef.current = view; });
+  useEffect(() => { focusIdxRef.current = focusIdx; }, [focusIdx]);
 
   const blocksById = useMemo(() => {
     const m = new Map(); blocks.forEach(b => m.set(b.id, b)); return m;
@@ -933,6 +1024,162 @@ function App() {
     }));
   }, []);
 
+  /* ----- undo / redo (snapshot history) ----- */
+  // Only the document content is tracked (not pan/zoom or selection).
+  const applySnapshot = useCallback((snap) => {
+    let d; try { d = JSON.parse(snap); } catch { return; }
+    setBlocks(d.blocks || []);
+    setNotes(d.notes || []);
+    setStrokes(d.strokes || []);
+    setEdges(d.edges || []);
+    setSelection(new Set());
+    setSelectedEdge(null);
+  }, []);
+
+  // Record content changes into history, debounced so a whole drag/edit
+  // collapses into a single undo step.
+  useEffect(() => {
+    const snap = JSON.stringify({ blocks, notes, strokes, edges });
+    pendingSnapRef.current = snap;
+    if (lastSnapRef.current === null) { lastSnapRef.current = snap; return; }
+    if (restoringRef.current) { restoringRef.current = false; lastSnapRef.current = snap; return; }
+    if (snap === lastSnapRef.current) return;
+    clearTimeout(histTimerRef.current);
+    histTimerRef.current = setTimeout(() => {
+      if (pendingSnapRef.current === lastSnapRef.current) return;
+      const h = histRef.current;
+      h.past.push(lastSnapRef.current);
+      if (h.past.length > 120) h.past.shift();
+      h.future = [];
+      lastSnapRef.current = pendingSnapRef.current;
+    }, 350);
+  }, [blocks, notes, strokes, edges]);
+
+  const undo = useCallback(() => {
+    clearTimeout(histTimerRef.current);
+    const h = histRef.current;
+    // flush any not-yet-committed change so it can be redone
+    if (pendingSnapRef.current && pendingSnapRef.current !== lastSnapRef.current) {
+      h.past.push(lastSnapRef.current);
+      lastSnapRef.current = pendingSnapRef.current;
+    }
+    if (!h.past.length) return;
+    const prev = h.past.pop();
+    h.future.push(lastSnapRef.current);
+    restoringRef.current = true;
+    lastSnapRef.current = prev;
+    applySnapshot(prev);
+  }, [applySnapshot]);
+
+  const redo = useCallback(() => {
+    clearTimeout(histTimerRef.current);
+    const h = histRef.current;
+    if (!h.future.length) return;
+    const next = h.future.pop();
+    h.past.push(lastSnapRef.current);
+    restoringRef.current = true;
+    lastSnapRef.current = next;
+    applySnapshot(next);
+  }, [applySnapshot]);
+
+  /* ----- duplicate selection (Ctrl+D) ----- */
+  const duplicateSelection = useCallback(() => {
+    if (selection.size === 0) return;
+    const OFF = 32;
+    const idMap = new Map();
+    const newBlocks = [], newNotes = [], newStrokes = [], newSel = new Set();
+    blocks.forEach(b => {
+      if (!selection.has(b.id)) return;
+      const nid = uid(); idMap.set(b.id, nid);
+      newBlocks.push({ ...b, id: nid, x: b.x + OFF, y: b.y + OFF }); newSel.add(nid);
+    });
+    notes.forEach(n => {
+      if (!selection.has(n.id)) return;
+      const nid = uid();
+      newNotes.push({ ...n, id: nid, x: n.x + OFF, y: n.y + OFF }); newSel.add(nid);
+    });
+    strokes.forEach(s => {
+      if (!selection.has(s.id)) return;
+      const nid = uid();
+      newStrokes.push({ ...s, id: nid, x: (s.x || 0) + OFF, y: (s.y || 0) + OFF }); newSel.add(nid);
+    });
+    // Re-create edges that live entirely inside the duplicated set
+    const newEdges = edges
+      .filter(e => idMap.has(e.from.id) && idMap.has(e.to.id))
+      .map(e => ({ ...e, id: uid(),
+        from: { ...e.from, id: idMap.get(e.from.id) },
+        to:   { ...e.to,   id: idMap.get(e.to.id) } }));
+    if (newBlocks.length)  setBlocks(p => [...p, ...newBlocks]);
+    if (newNotes.length)   setNotes(p => [...p, ...newNotes]);
+    if (newStrokes.length) setStrokes(p => [...p, ...newStrokes]);
+    if (newEdges.length)   setEdges(p => [...p, ...newEdges]);
+    if (newSel.size) { setSelection(newSel); setSelectedEdge(null); }
+  }, [blocks, notes, strokes, edges, selection]);
+
+  /* ----- autosave to localStorage (debounced) ----- */
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ blocks, notes, strokes, edges, view, flow })); } catch {}
+    }, 500);
+    return () => clearTimeout(t);
+  }, [blocks, notes, strokes, edges, view, flow]);
+
+  /* ----- smooth camera tween + center-on-block (used by presentation) ----- */
+  const tweenView = useCallback((target, dur = 440) => {
+    cancelAnimationFrame(tweenRef.current);
+    const start = { ...viewRef.current };
+    const t0 = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / dur);
+      const e = 1 - Math.pow(1 - k, 3); // easeOutCubic
+      setView({
+        x: start.x + (target.x - start.x) * e,
+        y: start.y + (target.y - start.y) * e,
+        scale: start.scale + (target.scale - start.scale) * e,
+      });
+      if (k < 1) tweenRef.current = requestAnimationFrame(step);
+    };
+    tweenRef.current = requestAnimationFrame(step);
+  }, []);
+  const centerOnBlock = useCallback((b, scale) => {
+    if (!b) return;
+    const w = b.w || 240, h = b.h || 80;
+    const sc = scale ?? Math.min(1.2, Math.max(0.9, viewRef.current.scale));
+    const cx = b.x + w / 2, cy = b.y + h / 2;
+    tweenView({ scale: sc, x: window.innerWidth / 2 - cx * sc, y: window.innerHeight / 2 - cy * sc });
+  }, [tweenView]);
+
+  /* ----- presentation / focus mode ----- */
+  // Visible blocks in reading order (top-to-bottom, then left-to-right by row)
+  const presentOrder = useMemo(() =>
+    blocks.filter(b => !hiddenBlockIds.has(b.id)).slice().sort((a, b) => {
+      const ra = Math.round(a.y / 60), rb = Math.round(b.y / 60);
+      return ra !== rb ? ra - rb : a.x - b.x;
+    }), [blocks, hiddenBlockIds]);
+  useEffect(() => { presentOrderRef.current = presentOrder; }, [presentOrder]);
+
+  const goToPresent = useCallback((idx) => {
+    const ord = presentOrderRef.current;
+    if (!ord.length) return;
+    const i = ((idx % ord.length) + ord.length) % ord.length;
+    setFocusIdx(i);
+    setFocusId(ord[i].id);
+    centerOnBlock(ord[i], 1.2);
+  }, [centerOnBlock]);
+  const enterPresent = useCallback(() => {
+    const ord = presentOrderRef.current;
+    if (!ord.length) return;
+    let i = 0;
+    const selId = [...selection][0];
+    if (selId) { const k = ord.findIndex(b => b.id === selId); if (k >= 0) i = k; }
+    clearSelection();
+    setPresent(true);
+    setFocusIdx(i);
+    setFocusId(ord[i].id);
+    centerOnBlock(ord[i], 1.2);
+  }, [selection, centerOnBlock, clearSelection]);
+  const exitPresent = useCallback(() => { setPresent(false); setFocusId(null); }, []);
+
   /* ----- mouse / keyboard global ----- */
   useEffect(() => {
     const onMove = (e) => {
@@ -1112,12 +1359,27 @@ function App() {
   useEffect(() => {
     const onKey = (e) => {
       if (document.activeElement && document.activeElement.isContentEditable) return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod) {
+        const k = e.key.toLowerCase();
+        if (k === "z")      { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+        else if (k === "y") { e.preventDefault(); redo(); }
+        else if (k === "d") { e.preventDefault(); duplicateSelection(); }
+        return; // never let a Ctrl/Cmd combo fall through to tool shortcuts
+      }
+      if (present) {
+        if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") { e.preventDefault(); goToPresent(focusIdxRef.current + 1); }
+        else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); goToPresent(focusIdxRef.current - 1); }
+        else if (e.key === "Escape") exitPresent();
+        return;
+      }
       if (e.key === " ") { spaceRef.current = true; e.preventDefault(); }
       if (e.key === "Delete" || e.key === "Backspace") deleteSelection();
       if (e.key === "b" || e.key === "B") setTool("block");
       if (e.key === "n" || e.key === "N") { setTool("draw"); setDrawShape("text"); }
       if (e.key === "d" || e.key === "D") { setTool("draw"); setDrawShape("freehand"); }
       if (e.key === "v" || e.key === "V") setTool("select");
+      if (e.key === "p" || e.key === "P") enterPresent();
       if (e.key === "Escape") { clearSelection(); setTool("select"); }
     };
     const onKeyUp = (e) => { if (e.key === " ") spaceRef.current = false; };
@@ -1127,7 +1389,7 @@ function App() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [deleteSelection, clearSelection]);
+  }, [deleteSelection, clearSelection, undo, redo, duplicateSelection, present, goToPresent, enterPresent, exitPresent]);
 
   /* ----- wheel zoom ----- */
   const onWheel = useCallback((e) => {
@@ -1203,6 +1465,25 @@ function App() {
       x: 80 - minX*scale + (cw-(maxX-minX)*scale)/2,
       y: 80 - minY*scale + (ch-(maxY-minY)*scale)/2,
     });
+  };
+
+  /* ----- export PNG (rasterize the whole map) ----- */
+  const exportPNG = () => {
+    const h2c = window.html2canvas;
+    if (!h2c) { alert("A biblioteca de imagem ainda está carregando — tente de novo em instantes."); return; }
+    const ws = wsRef.current;
+    if (!ws) return;
+    fitAll(); // frame everything first so the capture includes the full map
+    setTimeout(() => {
+      h2c(ws, { backgroundColor: "#030612", scale: 2, logging: false, useCORS: true })
+        .then(canvas => {
+          const a = document.createElement("a");
+          a.href = canvas.toDataURL("image/png");
+          a.download = "canvas-tron.png";
+          a.click();
+        })
+        .catch(err => { console.error(err); alert("Falha ao exportar PNG: " + err.message); });
+    }, 200);
   };
 
   /* ----- export / import ----- */
@@ -1431,20 +1712,38 @@ function App() {
     <>
       <div className="bg" />
 
+      {!present && (
       <div className="toolbar">
         <button className={`tool ${tool==="select"?"active":""}`} onClick={() => setTool("select")}>◉ SELECIONAR</button>
         <button className={`tool ${tool==="block"?"active":""}`} onClick={() => setTool("block")}>▭ BLOCO</button>
         <button className={`tool ${tool==="draw"?"active":""}`} onClick={() => setTool("draw")}>✎ ANOTAÇÃO</button>
         <div className="sep"/>
+        <button className="tool" onClick={undo} title="Desfazer (Ctrl+Z)">↶</button>
+        <button className="tool" onClick={redo} title="Refazer (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
+        <div className="sep"/>
         <button className="tool" onClick={fitAll}>⊡ FIT</button>
         <button className="tool" onClick={() => setView({x:0,y:0,scale:1})}>1:1</button>
+        <button className={`tool ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Liga/desliga o fluxo de energia nas conexões">⚡ FLUXO</button>
+        <button className="tool" onClick={enterPresent} title="Modo apresentação (P)">▶ APRESENTAR</button>
         <div className="sep"/>
         <button className="tool" onClick={exportJSON}>⤓ SALVAR</button>
         <button className="tool" onClick={() => fileRef.current.click()}>⤒ CARREGAR</button>
         <button className="tool" onClick={() => mdRef.current.click()} title="Importar Markdown (.md) — cria blocos a partir dos títulos #/##/###">📥 IMPORTAR MD</button>
+        <button className="tool" onClick={exportPNG} title="Exportar o mapa como imagem PNG">🖼 PNG</button>
         <div className="sep"/>
         <button className="tool danger" onClick={clearAll}>✕ LIMPAR</button>
       </div>
+      )}
+
+      {present && (
+        <div className="presentbar">
+          <button className="tool" onClick={() => goToPresent(focusIdx - 1)} title="Anterior (←)">◀</button>
+          <span className="pcount">{presentOrder.length ? focusIdx + 1 : 0} / {presentOrder.length}</span>
+          <button className="tool" onClick={() => goToPresent(focusIdx + 1)} title="Próximo (→ / espaço)">▶</button>
+          <div className="sep"/>
+          <button className="tool danger" onClick={exitPresent} title="Sair (Esc)">✕ SAIR</button>
+        </div>
+      )}
 
       {(editingBodyId || editingTitleId) && (
         <div className="drawbar" onMouseDown={(e) => e.preventDefault()}>
@@ -1651,7 +1950,7 @@ function App() {
         }}
         onWheel={onWheel}
       >
-        <div className="world" style={{ transform:`translate(${view.x}px,${view.y}px) scale(${view.scale})` }}>
+        <div className={`world ${present ? "present" : ""}`} style={{ transform:`translate(${view.x}px,${view.y}px) scale(${view.scale})` }}>
           {/* freehand strokes + shapes (rendered beneath blocks) */}
           <svg className="strokes" xmlns="http://www.w3.org/2000/svg">
             {strokes.map(s => {
@@ -1732,6 +2031,14 @@ function App() {
                         : `drop-shadow(0 0 4px ${p.fromColor || p.color}) drop-shadow(0 0 4px ${p.toColor || p.color})`,
                     }}
                   />
+                  {/* Energy pulse running from source → target */}
+                  {flow && !p.collapsed && (
+                    <path
+                      d={p.curveD}
+                      className="flow"
+                      style={{ stroke: p.toColor || p.color, color: p.toColor || p.color }}
+                    />
+                  )}
                   {/* Short stub — visible when collapsed */}
                   <path
                     d={p.stubD}
@@ -1775,6 +2082,7 @@ function App() {
               block={b}
               selected={selection.has(b.id)}
               hidden={hiddenBlockIds.has(b.id)}
+              focused={present && b.id === focusId}
               pendingEditRef={pendingEditRef}
               onSelect={selectOne}
               onStartDrag={(e) => startDrag(e, b.id)}
@@ -1814,7 +2122,7 @@ function App() {
 
       <div className="zoom">{Math.round(view.scale*100)}%</div>
       <div className="hint">
-        <b>B</b> bloco • <b>N</b> texto • <b>D</b> desenho • <b>duplo-clique</b> editar • <b>porta→porta</b> conectar • <b>clique na porta</b> recolher • <b>Del</b> apagar
+        <b>B</b> bloco • <b>N</b> texto • <b>D</b> desenho • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>Ctrl+D</b> duplicar • <b>duplo-clique</b> editar • <b>porta→porta</b> conectar • <b>Del</b> apagar
       </div>
 
       <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON} />
