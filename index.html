@@ -321,18 +321,28 @@
   /* long lit segment + tiny gap: over the steady gradient edge below, this
      reads as a continuous beam with a bright band flowing along it.
      keyframe offset MUST equal -(dash+gap) for a seamless loop */
-  .edges path.flow,.edges path.flow-glow{
-    fill:none;
-    stroke-linecap:round;
-    stroke-dasharray:30 6;
-    pointer-events:none;
-    animation:edge-flow 1.25s linear infinite;
+  /* flow-glow: continuous blurred gradient halo — uniform glow that follows
+     the degradê, no periodic notches. */
+  .edges path.flow-glow{
+    fill:none;stroke-width:6;stroke-linecap:round;
+    opacity:.22;filter:blur(2.5px);pointer-events:none;
   }
-  .edges path.flow{ stroke-width:3.2;opacity:.95 }
-  /* the glow is the SAME gradient stroke, just thicker and blurred — so the
-     halo fades origin→destination instead of being a flat-color drop-shadow */
-  .edges path.flow-glow{ stroke-width:6;opacity:.28;filter:blur(2.5px) }
-  @keyframes edge-flow{ from{stroke-dashoffset:0} to{stroke-dashoffset:-36} }
+  /* flow: SOLID continuous gradient beam — no dash means it can never show a
+     notch. This is the body of the beam. */
+  .edges path.flow{
+    fill:none;stroke-width:3.2;stroke-linecap:round;
+    opacity:.95;pointer-events:none;
+  }
+  /* flow-spark: a single bright band sweeping along (big gaps) in SCREEN blend.
+     Over the solid beam it only ADDS light, so it reads as a surge of energy
+     flowing — never a dashed line. */
+  .edges path.flow-spark{
+    fill:none;stroke-width:3.4;stroke-linecap:round;
+    stroke-dasharray:18 64;opacity:.6;
+    mix-blend-mode:screen;pointer-events:none;
+    animation:edge-flow 1.7s linear infinite;
+  }
+  @keyframes edge-flow{ from{stroke-dashoffset:0} to{stroke-dashoffset:-82} }
   @media (prefers-reduced-motion: reduce){ .edges path.flow{animation:none} }
 
   /* ===== presentation / focus mode ===== */
@@ -2078,8 +2088,9 @@ function App() {
                     const fStroke = useGradient ? `url(#edge-g-${p.id})` : p.color;
                     return (
                       <>
-                        <path d={p.curveD} className="flow-glow" stroke={fStroke} />
-                        <path d={p.curveD} className="flow" stroke={fStroke} />
+                        <path d={p.curveD} className="flow-glow"  stroke={fStroke} />
+                        <path d={p.curveD} className="flow"       stroke={fStroke} />
+                        <path d={p.curveD} className="flow-spark" stroke={fStroke} />
                       </>
                     );
                   })()}
