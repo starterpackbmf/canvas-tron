@@ -329,7 +329,7 @@
   .edges path.flow{ stroke-width:3.2;opacity:.95 }
   /* the glow is the SAME gradient stroke, just thicker and blurred — so the
      halo fades origin→destination instead of being a flat-color drop-shadow */
-  .edges path.flow-glow{ stroke-width:8;opacity:.5;filter:blur(3px) }
+  .edges path.flow-glow{ stroke-width:6;opacity:.28;filter:blur(2.5px) }
   @keyframes edge-flow{ from{stroke-dashoffset:0} to{stroke-dashoffset:-36} }
   @media (prefers-reduced-motion: reduce){ .edges path.flow{animation:none} }
 
