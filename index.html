@@ -729,7 +729,9 @@ function Note({ note, selected, onSelect, onStartDrag, onChange, onEraser }) {
       onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
       onBlur={(e) => {
         setEditing(false);
-        onChange(note.id, { text: e.currentTarget.textContent });
+        // innerText (not textContent) preserves the line breaks the browser inserts
+        // on Enter — textContent would join the lines, throwing the text sideways.
+        onChange(note.id, { text: e.currentTarget.innerText.replace(/\n$/, "") });
       }}
       onKeyDown={(e) => {
         if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
