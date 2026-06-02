@@ -320,14 +320,16 @@
     fill:none;
     stroke-width:3.4;
     stroke-linecap:round;
-    stroke-dasharray:0.6 13;
-    opacity:.95;
+    /* long lit segment + tiny gap: over the steady gradient edge below, this
+       reads as a continuous beam with a bright band flowing along it.
+       keyframe offset MUST equal -(dash+gap) for a seamless loop */
+    stroke-dasharray:30 6;
+    opacity:.9;
     pointer-events:none;
-    /* lighter glow so the gradient color of each dot stays visible */
-    filter:drop-shadow(0 0 3px currentColor);
-    animation:edge-flow 1.15s linear infinite;
+    filter:drop-shadow(0 0 4px currentColor);
+    animation:edge-flow 1.25s linear infinite;
   }
-  @keyframes edge-flow{ from{stroke-dashoffset:0} to{stroke-dashoffset:-13.6} }
+  @keyframes edge-flow{ from{stroke-dashoffset:0} to{stroke-dashoffset:-36} }
   @media (prefers-reduced-motion: reduce){ .edges path.flow{animation:none} }
 
   /* ===== presentation / focus mode ===== */
