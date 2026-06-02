@@ -316,19 +316,20 @@
   .note[contenteditable="true"]{cursor:text;border-style:solid;background:rgba(0,0,0,.6)}
 
   /* ===== energy flow (animated pulse running along edges) ===== */
-  .edges path.flow{
+  /* long lit segment + tiny gap: over the steady gradient edge below, this
+     reads as a continuous beam with a bright band flowing along it.
+     keyframe offset MUST equal -(dash+gap) for a seamless loop */
+  .edges path.flow,.edges path.flow-glow{
     fill:none;
-    stroke-width:3.4;
     stroke-linecap:round;
-    /* long lit segment + tiny gap: over the steady gradient edge below, this
-       reads as a continuous beam with a bright band flowing along it.
-       keyframe offset MUST equal -(dash+gap) for a seamless loop */
     stroke-dasharray:30 6;
-    opacity:.9;
     pointer-events:none;
-    filter:drop-shadow(0 0 4px currentColor);
     animation:edge-flow 1.25s linear infinite;
   }
+  .edges path.flow{ stroke-width:3.2;opacity:.95 }
+  /* the glow is the SAME gradient stroke, just thicker and blurred — so the
+     halo fades origin→destination instead of being a flat-color drop-shadow */
+  .edges path.flow-glow{ stroke-width:8;opacity:.5;filter:blur(3px) }
   @keyframes edge-flow{ from{stroke-dashoffset:0} to{stroke-dashoffset:-36} }
   @media (prefers-reduced-motion: reduce){ .edges path.flow{animation:none} }
 
@@ -2068,17 +2069,18 @@ function App() {
                         : `drop-shadow(0 0 4px ${p.fromColor || p.color}) drop-shadow(0 0 4px ${p.toColor || p.color})`,
                     }}
                   />
-                  {/* Energy pulse running from source → target.
-                      Uses the SAME gradient as the edge so the dots fade
-                      origin→destination color instead of being one flat color. */}
-                  {flow && !p.collapsed && (
-                    <path
-                      d={p.curveD}
-                      className="flow"
-                      stroke={useGradient ? `url(#edge-g-${p.id})` : p.color}
-                      style={{ color: p.toColor || p.color }}
-                    />
-                  )}
+                  {/* Energy beam running source → target. Two layers, both using
+                      the edge's own gradient so even the GLOW follows the degradê:
+                      a thick blurred halo + a crisp core, flowing together. */}
+                  {flow && !p.collapsed && (() => {
+                    const fStroke = useGradient ? `url(#edge-g-${p.id})` : p.color;
+                    return (
+                      <>
+                        <path d={p.curveD} className="flow-glow" stroke={fStroke} />
+                        <path d={p.curveD} className="flow" stroke={fStroke} />
+                      </>
+                    );
+                  })()}
                   {/* Short stub — visible when collapsed */}
                   <path
                     d={p.stubD}
