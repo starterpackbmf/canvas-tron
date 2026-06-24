@@ -46,7 +46,8 @@
   /* ===== toolbar ===== */
   .toolbar{
     position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10;
-    display:flex;gap:8px;padding:8px 12px;
+    display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:8px 12px;
+    max-width:96vw;
     background:rgba(5,12,24,.85);
     border:1px solid rgba(0,240,255,.35);
     border-radius:10px;
@@ -1351,6 +1352,21 @@ function App() {
   }, [selection, centerOnBlock, clearSelection]);
   const exitPresent = useCallback(() => { setPresent(false); setFocusId(null); }, []);
 
+  /* ----- fullscreen (tela cheia do navegador) ----- */
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+    } else {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
+  }, []);
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
   /* ----- mouse / keyboard global ----- */
   useEffect(() => {
     const onMove = (e) => {
@@ -1992,6 +2008,7 @@ function App() {
         <button className="tool" onClick={() => setView({x:0,y:0,scale:1})}>1:1</button>
         <button className={`tool ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Liga/desliga o fluxo de energia nas conexões">⚡ FLUXO</button>
         <button className="tool" onClick={enterPresent} title="Modo apresentação (P)">▶ APRESENTAR</button>
+        <button className={`tool ${isFullscreen?"active":""}`} onClick={toggleFullscreen} title="Tela cheia">{isFullscreen ? "⤧ SAIR DA TELA CHEIA" : "⛶ TELA CHEIA"}</button>
         <div className="sep"/>
         <button className="tool" onClick={exportJSON}>⤓ SALVAR</button>
         <button className="tool" onClick={() => fileRef.current.click()}>⤒ CARREGAR</button>
