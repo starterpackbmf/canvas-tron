@@ -5,7 +5,16 @@
 <title>Canvas Tron — React</title>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+<script>
+  // Força o JSX classic (React.createElement). Sem isso, versões novas do
+  // Babel standalone usam o "automatic runtime" e injetam
+  // `import ... from "react/jsx-runtime"`, que não existe via <script> global
+  // (React vem do UMD) — o que deixava a página em tela preta.
+  Babel.registerPreset("react-classic", {
+    presets: [[Babel.availablePresets.react, { runtime: "classic" }]],
+  });
+</script>
 <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   :root{
@@ -417,7 +426,7 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" data-type="module">
+<script type="text/babel" data-presets="react-classic">
 const { useState, useRef, useEffect, useCallback, useMemo } = React;
 
 /* ================== ID + helpers ================== */
