@@ -2486,13 +2486,17 @@ function App() {
                       </>
                     );
                   })()}
-                  {/* Directional arrowhead at the target (A → B) */}
+                  {/* Directional arrowhead at the target (A → B).
+                      fill MUST come via style — the `.edges path{fill:none}` rule
+                      would otherwise override a fill="" attribute and hide it. */}
                   {p.arrowD && (
                     <path
                       d={p.arrowD}
-                      stroke="none"
-                      fill={p.toColor || p.color}
-                      style={{ filter: `drop-shadow(0 0 4px ${p.toColor || p.color})` }}
+                      style={{
+                        fill: p.toColor || p.color,
+                        stroke: "none",
+                        filter: `drop-shadow(0 0 4px ${p.toColor || p.color})`,
+                      }}
                     />
                   )}
                   {/* Short stub — visible when collapsed */}
