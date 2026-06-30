@@ -2000,8 +2000,8 @@ function App() {
       if (e.key === " ") { spaceRef.current = true; e.preventDefault(); }
       if (e.key === "Delete" || e.key === "Backspace") deleteSelection();
       if (e.key === "b" || e.key === "B") setTool("block");
-      if (e.key === "n" || e.key === "N") { setTool("draw"); setDrawShape("text"); }
-      if (e.key === "d" || e.key === "D") { setTool("draw"); setDrawShape("freehand"); }
+      if (e.key === "n" || e.key === "N") { clearSelection(); setTool("draw"); setDrawShape("text"); }
+      if (e.key === "d" || e.key === "D") { clearSelection(); setTool("draw"); setDrawShape("freehand"); }
       if (e.key === "v" || e.key === "V") setTool("select");
       if (e.key === "p" || e.key === "P") enterPresent();
       if (e.key === "Escape") { clearSelection(); setTool("select"); }
@@ -2046,6 +2046,7 @@ function App() {
       }
       if (drawShape === "text") {
         createNote(wp.x, wp.y, drawColor, drawFontSize, noteFrame);
+        setTool("select"); // one-shot: cria uma nota e volta pro mouse normal
         e.preventDefault();
         return;
       }
@@ -2451,10 +2452,10 @@ function App() {
       <div className="toolbar">
         <button className={`ic ${tool==="select"?"active":""}`} onClick={() => setTool("select")} title="Selecionar / mover (V)">◉</button>
         <button className={`ic ${tool==="block"?"active":""}`} onClick={() => setTool("block")} title="Bloco (B)">▭</button>
-        <button className={`ic ${tool==="draw" && drawShape==="text" ? "active":""}`} onClick={() => { setTool("draw"); setDrawShape("text"); }} title="Texto / anotação (N)">
+        <button className={`ic ${tool==="draw" && drawShape==="text" ? "active":""}`} onClick={() => { clearSelection(); setTool("draw"); setDrawShape("text"); }} title="Texto / anotação (N)">
           <svg viewBox="0 0 24 24" className="ic-svg"><path d="M6 6 H18 M12 6 V18 M9 18 H15"/></svg>
         </button>
-        <button className={`ic ${tool==="draw" && drawShape!=="text" ? "active":""}`} onClick={() => { setTool("draw"); if (drawShape==="text") setDrawShape(lastDrawShapeRef.current); }} title="Pincel, formas e borracha (D)">✐</button>
+        <button className={`ic ${tool==="draw" && drawShape!=="text" ? "active":""}`} onClick={() => { clearSelection(); setTool("draw"); if (drawShape==="text") setDrawShape(lastDrawShapeRef.current); }} title="Pincel, formas e borracha (D)">✐</button>
         <button className="ic" onClick={() => imgRef.current.click()} title="Inserir imagem (ou cole com Ctrl+V)">
           <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.4"/><path d="M21 15 l-5-5 -8 8"/></svg>
         </button>
