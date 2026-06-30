@@ -1427,23 +1427,6 @@ function App() {
     reader.readAsDataURL(blob);
   }, [view]);
 
-  // Colar imagem (Ctrl+V) — só quando não está editando texto
-  useEffect(() => {
-    const onPaste = (e) => {
-      if (document.activeElement && document.activeElement.isContentEditable) return;
-      const items = e.clipboardData && e.clipboardData.items;
-      if (!items) return;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type && items[i].type.indexOf("image/") === 0) {
-          const blob = items[i].getAsFile();
-          if (blob) { e.preventDefault(); addImageFromBlob(blob, null); break; }
-        }
-      }
-    };
-    window.addEventListener("paste", onPaste);
-    return () => window.removeEventListener("paste", onPaste);
-  }, [addImageFromBlob]);
-
   // Coloca uma imagem DENTRO dos blocos selecionados (entre título e corpo)
   const setBlockImageFromFile = useCallback((blob) => {
     if (!blob || blob.type.indexOf("image/") !== 0) return;
@@ -1469,6 +1452,32 @@ function App() {
   const removeBlockImage = useCallback(() => {
     setBlocks(p => p.map(b => selection.has(b.id) ? (() => { const { image, ...rest } = b; return rest; })() : b));
   }, [selection]);
+
+  // Colar imagem (Ctrl+V): se tem bloco selecionado → entra DENTRO do bloco;
+  // senão → vira imagem solta no canvas. (não dispara enquanto edita texto)
+  const blockSelectedRef = useRef(false);
+  useEffect(() => { blockSelectedRef.current = blocks.some(b => selection.has(b.id)); });
+  useEffect(() => {
+    const onPaste = (e) => {
+      if (document.activeElement && document.activeElement.isContentEditable) return;
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.indexOf("image/") === 0) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            e.preventDefault();
+            if (blockSelectedRef.current) setBlockImageFromFile(blob);
+            else addImageFromBlob(blob, null);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [addImageFromBlob, setBlockImageFromFile]);
+
   // Toggle the box/frame on the selected note(s)
   const toggleNoteFrame = useCallback(() => {
     setNotes(p => p.map(n => selection.has(n.id) ? { ...n, frame: n.frame === false } : n));
