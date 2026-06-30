@@ -77,7 +77,8 @@
   /* ===== drawing toolbar ===== */
   .drawbar{
     position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:10;
-    display:flex;gap:10px;align-items:center;
+    display:flex;flex-wrap:wrap;justify-content:center;gap:10px;align-items:center;
+    max-width:96vw;
     padding:8px 12px;
     background:rgba(5,12,24,.92);
     border:1px solid rgba(0,240,255,.35);
@@ -231,7 +232,7 @@
     position:absolute;
     padding:14px 16px;
     background:rgba(5,14,28,.9);
-    border:1px solid var(--bc);border-radius:6px;
+    border:1px solid var(--bc);border-width:var(--bw,1px);border-radius:6px;
     color:var(--white);font-size:13px;line-height:1.45;
     box-shadow:0 0 14px rgba(var(--bc-rgb),.35),inset 0 0 20px rgba(var(--bc-rgb),.06);
     cursor:move;
@@ -256,14 +257,39 @@
       inset 0 0 22px rgba(var(--bc-rgb),.12);
   }
   .block .title{
-    font-weight:700;letter-spacing:.5px;color:var(--bc);
-    text-transform:uppercase;font-size:11px;margin-bottom:6px;
+    font-weight:var(--title-weight,700);letter-spacing:.5px;color:var(--bc);
+    text-transform:uppercase;font-size:var(--title-size,11px);margin-bottom:6px;
     /* currentColor (not the block base --bc) so a recolored word's glow
        follows its own color instead of keeping the old block color */
     text-shadow:0 0 7px currentColor;outline:none;
     text-align:center;
   }
-  .block .body{color:#dcefff;outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;text-align:center}
+  .block .body{color:#dcefff;outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;text-align:center;font-size:var(--body-size,13px)}
+
+  /* ===== block roles (hierarquia: papel define tamanho/peso/forma, não a cor) ===== */
+  /* kicker = rótulo discreto do papel no topo do bloco, pra bater o olho */
+  .block .role-kicker{
+    font-size:var(--kicker-size,9px);letter-spacing:1.6px;text-transform:uppercase;
+    font-weight:700;color:var(--bc);opacity:.65;text-align:center;margin-bottom:4px;
+    text-shadow:0 0 6px currentColor;
+  }
+  /* glow tiers — peso visual diferente por importância */
+  .block.role-g{box-shadow:0 0 28px rgba(var(--bc-rgb),.5),inset 0 0 26px rgba(var(--bc-rgb),.1)}
+  .block.role-s{box-shadow:0 0 9px rgba(var(--bc-rgb),.22),inset 0 0 14px rgba(var(--bc-rgb),.04);opacity:.94}
+  .block.role-italic .body{font-style:italic}
+  /* selected sempre vence os tiers acima */
+  .block.role-g.selected,.block.role-s.selected{
+    box-shadow:0 0 0 2px rgba(var(--bc-rgb),.9),0 0 24px rgba(var(--bc-rgb),.7),inset 0 0 22px rgba(var(--bc-rgb),.12);
+  }
+  /* botões de papel na barra de seleção */
+  .role-btn{
+    padding:5px 9px;background:transparent;color:var(--white);
+    border:1px solid rgba(0,240,255,.25);border-radius:5px;
+    font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;
+    cursor:pointer;white-space:nowrap;transition:all .12s ease;
+  }
+  .role-btn:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 8px rgba(0,240,255,.3)}
+  .role-btn.active{background:rgba(0,240,255,.15);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 10px rgba(0,240,255,.4)}
   .block [contenteditable="true"]{background:rgba(var(--bc-rgb),.06);border-radius:3px;padding:2px 4px;margin:-2px -4px;cursor:text}
   .block [data-placeholder]:empty::before{
     content:attr(data-placeholder);
@@ -470,6 +496,18 @@ const PRESET_COLORS = [
   "#ff3b5c", // red
   "#e9fbff", // white
 ];
+// Papéis de bloco → hierarquia visual. Cada papel define TAMANHO + tipografia +
+// peso/glow (NÃO a cor — a cor continua manual). 3 tiers de glow: g/m/s.
+const BLOCK_ROLES = [
+  { key:"principal",  label:"Principal",  full:"Conceito Principal", w:330, h:150, kicker:11, title:18,   body:15,   weight:800, bw:2.6, glow:"g" },
+  { key:"conceito",   label:"Conceito",   full:"Conceito",           w:280, h:118, kicker:9,  title:14,   body:14,   weight:760, bw:1.8, glow:"m" },
+  { key:"explicacao", label:"Explicação", full:"Explicação",         w:240, h:92,  kicker:9,  title:11,   body:13,   weight:700, bw:1.2, glow:"m" },
+  { key:"exemplo",    label:"Exemplo",    full:"Exemplo",            w:220, h:84,  kicker:9,  title:10,   body:12.5, weight:600, bw:1,   glow:"s", italic:true },
+  { key:"regra",      label:"Regra",      full:"Regra prática",      w:235, h:86,  kicker:9,  title:11,   body:13,   weight:760, bw:1.4, glow:"m" },
+  { key:"erro",       label:"Erro",       full:"Erro comum",         w:205, h:74,  kicker:9,  title:10,   body:12,   weight:650, bw:1,   glow:"s" },
+];
+const ROLE_BY_KEY = Object.fromEntries(BLOCK_ROLES.map(r => [r.key, r]));
+
 const hexToRgb = (hex) => {
   const h = hex.replace("#","");
   const n = parseInt(h.length===3 ? h.split("").map(c=>c+c).join("") : h, 16);
@@ -720,15 +758,23 @@ function Block({ block, selected, hidden, focused, pendingEditRef, onSelect, onS
   }, [editingBody]);
 
   const color = block.color || DEFAULT_COLOR;
+  const roleDef = block.role ? ROLE_BY_KEY[block.role] : null;
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${roleDef ? "role-"+roleDef.glow : ""} ${roleDef && roleDef.italic ? "role-italic" : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
         minHeight: (block.h || 80) + "px",
         "--bc": color, "--bc-rgb": hexToRgb(color),
+        ...(roleDef ? {
+          "--title-size": roleDef.title + "px",
+          "--body-size": roleDef.body + "px",
+          "--title-weight": roleDef.weight,
+          "--kicker-size": roleDef.kicker + "px",
+          "--bw": roleDef.bw + "px",
+        } : {}),
       }}
       onMouseDown={(e) => {
         if (e.target.classList.contains("port")) return;
@@ -746,6 +792,7 @@ function Block({ block, selected, hidden, focused, pendingEditRef, onSelect, onS
         else setEditingBody(true);
       }}
     >
+      {roleDef && <div className="role-kicker">{roleDef.full}</div>}
       {editingTitle ? (
         <div
           ref={titleRef}
@@ -1076,6 +1123,16 @@ function App() {
     setBlocks(p => p.map(b => selection.has(b.id) ? { ...b, color } : b));
     setStrokes(p => p.map(s => selection.has(s.id) ? { ...s, color } : s));
     setNotes(p => p.map(n => selection.has(n.id) ? { ...n, color } : n));
+  }, [selection]);
+  // Aplica (ou limpa) o papel nos blocos selecionados. O papel define o
+  // tamanho/peso/glow; a cor permanece a que o usuário escolheu.
+  const setBlockRole = useCallback((key) => {
+    const r = key ? ROLE_BY_KEY[key] : null;
+    setBlocks(p => p.map(b => {
+      if (!selection.has(b.id)) return b;
+      if (!r) { const { role, ...rest } = b; return rest; } // limpar papel (mantém tamanho atual)
+      return { ...b, role: key, w: r.w, h: r.h };
+    }));
   }, [selection]);
   const setSelectedStrokeWidth = useCallback((width) => {
     setStrokes(p => p.map(s => selection.has(s.id) ? { ...s, width } : s));
@@ -2268,6 +2325,26 @@ function App() {
                 <input type="color" onChange={(e) => setBlockColor(e.target.value)} />
               </label>
             </div>
+            {hasBlockSel && (() => {
+              const selRole = blocks.find(b => selection.has(b.id))?.role;
+              return (
+                <>
+                  <div className="vsep"/>
+                  <div className="group">
+                    <span className="lbl">Papel</span>
+                    {BLOCK_ROLES.map(r => (
+                      <button
+                        key={r.key}
+                        className={`role-btn ${selRole === r.key ? "active" : ""}`}
+                        onClick={() => setBlockRole(r.key)}
+                        title={r.full + " — define tamanho e peso (a cor continua sua)"}
+                      >{r.label}</button>
+                    ))}
+                    <button className="role-btn" onClick={() => setBlockRole(null)} title="Sem papel (padrão)">—</button>
+                  </div>
+                </>
+              );
+            })()}
             {hasStrokeSel && (
               <>
                 <div className="vsep"/>
