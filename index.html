@@ -26,22 +26,45 @@
   html,body,#root{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:"Segoe UI",Inter,system-ui,sans-serif;user-select:none}
 
   /* ===== background grid ===== */
+  /* Apple-ish: preto, leve gradiente azul frio, grid quase imperceptível e
+     vinheta nas bordas. Nada chama atenção — o conteúdo é o protagonista. */
   .bg{
     position:fixed;inset:0;z-index:0;
     background:
-      radial-gradient(ellipse at 30% 20%,rgba(0,240,255,.08),transparent 60%),
-      radial-gradient(ellipse at 80% 90%,rgba(255,157,0,.06),transparent 60%),
-      linear-gradient(var(--bg),var(--bg-2));
+      radial-gradient(ellipse 120% 80% at 50% -15%,rgba(0,140,255,.10),transparent 60%),
+      radial-gradient(ellipse 100% 70% at 50% 120%,rgba(0,80,150,.06),transparent 55%),
+      #02040a;
   }
+  /* grid quase invisível, sumindo nas bordas */
   .bg::before{
     content:"";position:absolute;inset:0;
     background-image:
-      linear-gradient(rgba(0,240,255,.06) 1px,transparent 1px),
-      linear-gradient(90deg,rgba(0,240,255,.06) 1px,transparent 1px);
-    background-size:40px 40px;
-    -webkit-mask-image:radial-gradient(ellipse at center,black 40%,transparent 85%);
-    mask-image:radial-gradient(ellipse at center,black 40%,transparent 85%);
+      linear-gradient(rgba(120,180,255,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(120,180,255,.035) 1px,transparent 1px);
+    background-size:46px 46px;
+    -webkit-mask-image:radial-gradient(ellipse at center,black 28%,transparent 78%);
+    mask-image:radial-gradient(ellipse at center,black 28%,transparent 78%);
   }
+  /* vinheta — escurece as bordas pra dar foco ao centro */
+  .bg::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at center,transparent 52%,rgba(0,0,0,.55) 100%);
+  }
+  /* partículas bem discretas, deriva lenta (desliga em prefers-reduced-motion) */
+  .bg-particles{
+    position:fixed;inset:-20%;z-index:0;pointer-events:none;opacity:.4;
+    background-image:
+      radial-gradient(circle, rgba(190,215,255,.7) .6px, transparent 1.4px),
+      radial-gradient(circle, rgba(160,200,255,.5) .5px, transparent 1.3px);
+    background-size:170px 170px,230px 230px;
+    background-position:0 0,80px 120px;
+    animation:particles-drift 90s linear infinite;
+  }
+  @keyframes particles-drift{
+    from{transform:translate3d(0,0,0)}
+    to{transform:translate3d(40px,-60px,0)}
+  }
+  @media (prefers-reduced-motion: reduce){ .bg-particles{animation:none} }
 
   /* ===== toolbar ===== */
   .toolbar{
@@ -388,6 +411,21 @@
   }
   @keyframes edge-flow{ from{stroke-dashoffset:0} to{stroke-dashoffset:-82} }
   @media (prefers-reduced-motion: reduce){ .edges path.flow{animation:none} }
+
+  /* ===== pulse — corrente disparada ao clicar num bloco (one-shot ~500ms) =====
+     Uma faixa curta e brilhante que viaja UMA vez pela conexão, saindo do nó
+     clicado. pathLength=100 normaliza o dash pra qualquer comprimento de linha. */
+  .edges path.pulse{
+    fill:none;stroke-width:4.5;stroke-linecap:round;
+    stroke-dasharray:10 90;opacity:.95;
+    mix-blend-mode:screen;pointer-events:none;
+    filter:drop-shadow(0 0 7px currentColor) drop-shadow(0 0 3px #fff);
+  }
+  .edges path.pulse.fwd{animation:pulse-fwd .5s ease-out forwards}
+  .edges path.pulse.rev{animation:pulse-rev .5s ease-out forwards}
+  @keyframes pulse-fwd{from{stroke-dashoffset:0;opacity:1}to{stroke-dashoffset:-100;opacity:.05}}
+  @keyframes pulse-rev{from{stroke-dashoffset:0;opacity:1}to{stroke-dashoffset:100;opacity:.05}}
+  @media (prefers-reduced-motion: reduce){ .edges path.pulse{display:none} }
 
   /* ===== presentation / focus mode ===== */
   .presentbar{
@@ -979,6 +1017,10 @@ function App() {
       return { ...prev, [id]: { w, h } };
     });
   }, []);
+  // one-shot "current" pulses traveling along the edges of a clicked block
+  const [pulses, setPulses] = useState([]); // [{edgeId, dir, key}]
+  const pulseKeyRef = useRef(0);
+  const pulseTimerRef = useRef(null);
 
   // Energy-flow animation toggle (animated pulse running along the connections)
   const [flow, setFlow] = useState(() => saved?.flow ?? true);
@@ -1075,6 +1117,24 @@ function App() {
   const toggleEdgeCollapse = useCallback((edgeId) => {
     setEdges(p => p.map(e => e.id === edgeId ? { ...e, collapsed: !e.collapsed } : e));
   }, []);
+
+  // Fire a one-shot pulse along every (visible) connection touching this block,
+  // traveling AWAY from it — out toward the target on outgoing edges (fwd) and
+  // out toward the source on incoming edges (rev).
+  const pulseFrom = useCallback((blockId) => {
+    const k = ++pulseKeyRef.current;
+    const list = [];
+    edges.forEach(e => {
+      if (e.collapsed) return;
+      if (hiddenBlockIds.has(e.from.id) || hiddenBlockIds.has(e.to.id)) return;
+      if (e.from.id === blockId)      list.push({ edgeId: e.id, dir: "fwd", key: e.id + "-" + k });
+      else if (e.to.id === blockId)   list.push({ edgeId: e.id, dir: "rev", key: e.id + "-" + k });
+    });
+    if (!list.length) return;
+    setPulses(list);
+    clearTimeout(pulseTimerRef.current);
+    pulseTimerRef.current = setTimeout(() => setPulses([]), 650);
+  }, [edges, hiddenBlockIds]);
 
   /* ----- view helpers ----- */
   const screenToWorld = useCallback((sx, sy) => ({
@@ -2107,6 +2167,7 @@ function App() {
   return (
     <>
       <div className="bg" />
+      <div className="bg-particles" />
 
       {!present && (
       <div className="toolbar">
@@ -2605,6 +2666,16 @@ function App() {
                 </g>
               );
             })}
+            {pulses.map(pl => {
+              const p = edgePaths.find(x => x.id === pl.edgeId);
+              if (!p || p.collapsed) return null;
+              const col = pl.dir === "fwd" ? (p.fromColor || p.color) : (p.toColor || p.color);
+              return (
+                <path key={pl.key} d={p.curveD} pathLength="100"
+                  className={`pulse ${pl.dir}`}
+                  style={{ stroke: col, color: col }} />
+              );
+            })}
             {preview && <path d={bezierPath(preview.from, preview.to)} className="preview" />}
           </svg>
 
@@ -2631,7 +2702,7 @@ function App() {
               hidden={hiddenBlockIds.has(b.id)}
               focused={present && b.id === focusId}
               pendingEditRef={pendingEditRef}
-              onSelect={selectOne}
+              onSelect={(id, additive) => { selectOne(id, additive); pulseFrom(id); }}
               onStartDrag={(e) => startDrag(e, b.id)}
               onStartConnection={startConnection}
               onStartResize={startResize}
