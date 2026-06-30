@@ -1104,7 +1104,7 @@ function App() {
   const [focusIdx, setFocusIdx] = useState(0);
   // Holofote (spotlight no modo edição) + minimapa
   const [spotlight, setSpotlight] = useState(false);
-  const [showMinimap, setShowMinimap] = useState(true);
+  const [showMinimap, setShowMinimap] = useState(false);
 
   // refs for imperative drag/connect state
   const dragRef = useRef(null);
@@ -1973,7 +1973,27 @@ function App() {
     if (!ws) return;
     fitAll(); // frame everything first so the capture includes the full map
     setTimeout(() => {
-      h2c(ws, { backgroundColor: "#030612", scale: 2, logging: false, useCORS: true })
+      h2c(ws, {
+        backgroundColor: "#030612", scale: 2, logging: false, useCORS: true,
+        // html2canvas não renderiza gradiente url(#...), drop-shadow nem
+        // mix-blend-mode — sem isso as ligações somem. Normaliza o clone:
+        onclone: (doc) => {
+          doc.querySelectorAll(".edges path").forEach(pth => {
+            pth.style.filter = "none";
+            const s = pth.getAttribute("stroke") || "";
+            if (s.indexOf("url(") === 0) {
+              const solid = pth.getAttribute("data-stroke");
+              if (solid) pth.setAttribute("stroke", solid); // gradiente → cor sólida
+            }
+          });
+          // camadas decorativas (animadas / blend-mode) saem da imagem estática
+          doc.querySelectorAll(".edges .flow-glow,.edges .flow,.edges .flow-spark,.edges .pulse")
+             .forEach(el => el.remove());
+          // tira filtros de traços e das formas (losango/hexágono) pra não sumirem
+          doc.querySelectorAll(".strokes path,.block-skin polygon")
+             .forEach(el => { el.style.filter = "none"; });
+        },
+      })
         .then(canvas => {
           const a = document.createElement("a");
           a.href = canvas.toDataURL("image/png");
@@ -2318,7 +2338,6 @@ function App() {
         <button className="ic" onClick={redo} title="Refazer (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
         <div className="dvr"/>
         <button className="ic" onClick={fitAll} title="Enquadrar tudo">⊡</button>
-        <button className="ic" onClick={() => setView({x:0,y:0,scale:1})} title="Zoom 100%"><span className="mini">1:1</span></button>
         <button className={`ic ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Minimapa">⊞</button>
         <button className={`ic ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Fluxo de energia nas conexões">⚡</button>
         <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>
@@ -2770,6 +2789,7 @@ function App() {
                     d={p.curveD}
                     className={p.collapsed ? "gone" : ""}
                     stroke={strokeVal}
+                    data-stroke={p.color}
                     strokeWidth={isSel ? 4 : 2.2}
                     style={{
                       filter: isSel
