@@ -67,56 +67,71 @@
   @media (prefers-reduced-motion: reduce){ .bg-particles{animation:none} }
 
   /* ===== toolbar ===== */
+  /* ===== shared HUD surface (toolbar + todas as barras) ===== */
   .toolbar{
     position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10;
-    display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:8px 12px;
-    max-width:96vw;
-    background:rgba(5,12,24,.85);
-    border:1px solid rgba(0,240,255,.35);
-    border-radius:10px;
-    backdrop-filter:blur(8px);
-    box-shadow:0 0 30px rgba(0,240,255,.15),inset 0 0 20px rgba(0,240,255,.05);
+    display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:3px;
+    padding:6px 9px;max-width:96vw;
+    background:linear-gradient(180deg,rgba(9,19,34,.86),rgba(5,12,24,.86));
+    border:1px solid rgba(0,240,255,.20);
+    border-radius:13px;
+    backdrop-filter:blur(14px) saturate(1.3);
+    box-shadow:
+      0 10px 34px rgba(0,0,0,.5),
+      inset 0 1px 0 rgba(255,255,255,.06),
+      inset 0 0 26px rgba(0,240,255,.05);
   }
-  .tool{
-    display:flex;align-items:center;gap:6px;padding:8px 12px;
-    background:transparent;color:var(--white);
-    border:1px solid rgba(0,240,255,.25);border-radius:6px;
-    font-size:12px;font-weight:600;letter-spacing:.5px;
-    cursor:pointer;text-transform:uppercase;transition:all .15s ease;
+  /* botão de ícone — base de todas as barras */
+  .ic{
+    width:36px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+    background:transparent;color:#9fc2d6;
+    border:1px solid transparent;border-radius:9px;
+    font-size:16px;line-height:1;cursor:pointer;
+    transition:background .14s ease,border-color .14s ease,color .14s ease,box-shadow .14s ease,transform .1s ease;
   }
-  .tool:hover{background:rgba(0,240,255,.08);border-color:var(--cyan);box-shadow:0 0 12px rgba(0,240,255,.4);color:var(--cyan)}
-  .tool.active{background:rgba(0,240,255,.15);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 14px rgba(0,240,255,.5)}
-  .tool.danger:hover{background:rgba(255,59,92,.1);border-color:var(--danger);color:var(--danger);box-shadow:0 0 12px rgba(255,59,92,.4)}
+  .ic:hover{background:rgba(0,240,255,.08);border-color:rgba(0,240,255,.45);color:var(--cyan);box-shadow:0 0 12px rgba(0,240,255,.22)}
+  .ic:active{transform:translateY(1px)}
+  .ic.active{background:rgba(0,240,255,.16);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 14px rgba(0,240,255,.4),inset 0 0 10px rgba(0,240,255,.12)}
+  .ic.danger:hover{background:rgba(255,59,92,.12);border-color:var(--danger);color:var(--danger);box-shadow:0 0 12px rgba(255,59,92,.32)}
+  .ic .mini{font-size:11px;font-weight:800;letter-spacing:.5px}
+  /* divisória vertical entre grupos */
+  .dvr{width:1px;height:20px;margin:0 5px;background:linear-gradient(transparent,rgba(0,240,255,.35),transparent)}
+  /* compat: barras antigas que ainda usam .tool/.sep herdam o visual novo */
+  .tool{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;background:transparent;color:#9fc2d6;border:1px solid rgba(0,240,255,.22);border-radius:8px;font-size:12px;font-weight:600;letter-spacing:.5px;cursor:pointer;text-transform:uppercase;transition:all .14s ease}
+  .tool:hover{background:rgba(0,240,255,.08);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 12px rgba(0,240,255,.3)}
+  .tool.active{background:rgba(0,240,255,.15);border-color:var(--cyan);color:var(--cyan)}
   .sep{width:1px;background:rgba(0,240,255,.2);margin:4px 2px}
 
   .hint{
     position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:10;
     color:var(--muted);font-size:11px;letter-spacing:.5px;
-    background:rgba(5,12,24,.7);border:1px solid rgba(0,240,255,.2);
+    background:linear-gradient(180deg,rgba(9,19,34,.78),rgba(5,12,24,.78));
+    border:1px solid rgba(0,240,255,.16);
     padding:6px 14px;border-radius:20px;
+    backdrop-filter:blur(10px);box-shadow:0 6px 18px rgba(0,0,0,.4);
   }
   .hint b{color:var(--cyan)}
 
   /* ===== drawing toolbar ===== */
   .drawbar{
     position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:10;
-    display:flex;flex-wrap:wrap;justify-content:center;gap:10px;align-items:center;
+    display:flex;flex-wrap:wrap;justify-content:center;gap:9px;align-items:center;
     max-width:96vw;
-    padding:8px 12px;
-    background:rgba(5,12,24,.92);
-    border:1px solid rgba(0,240,255,.35);
-    border-radius:10px;
-    backdrop-filter:blur(8px);
-    box-shadow:0 0 22px rgba(0,240,255,.15);
+    padding:7px 11px;
+    background:linear-gradient(180deg,rgba(9,19,34,.9),rgba(5,12,24,.9));
+    border:1px solid rgba(0,240,255,.20);
+    border-radius:12px;
+    backdrop-filter:blur(14px) saturate(1.3);
+    box-shadow:0 10px 30px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06),inset 0 0 22px rgba(0,240,255,.05);
     animation:fadein .15s ease;
   }
   .drawbar .lbl{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
   .drawbar .group{display:flex;gap:4px;align-items:center}
-  .drawbar .vsep{width:1px;align-self:stretch;background:rgba(0,240,255,.2);margin:0 2px}
+  .drawbar .vsep{width:1px;height:22px;align-self:center;background:linear-gradient(transparent,rgba(0,240,255,.35),transparent);margin:0 3px}
   .shape-btn{
     width:32px;height:32px;display:flex;align-items:center;justify-content:center;
-    background:transparent;color:var(--white);
-    border:1px solid rgba(0,240,255,.25);border-radius:6px;
+    background:transparent;color:#9fc2d6;
+    border:1px solid rgba(0,240,255,.22);border-radius:8px;
     cursor:pointer;transition:all .12s ease;
     padding:0;
   }
@@ -136,8 +151,8 @@
   /* ===== format bar (rich text editor) ===== */
   .fmt-btn{
     width:32px;height:32px;display:flex;align-items:center;justify-content:center;
-    background:transparent;color:var(--white);
-    border:1px solid rgba(0,240,255,.25);border-radius:6px;
+    background:transparent;color:#9fc2d6;
+    border:1px solid rgba(0,240,255,.22);border-radius:8px;
     cursor:pointer;transition:all .12s ease;
     padding:0;font-size:14px;
   }
@@ -150,12 +165,12 @@
   .palette{
     position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:10;
     display:flex;gap:6px;align-items:center;
-    padding:8px 12px;
-    background:rgba(5,12,24,.9);
-    border:1px solid rgba(0,240,255,.35);
-    border-radius:10px;
-    backdrop-filter:blur(8px);
-    box-shadow:0 0 20px rgba(0,240,255,.15);
+    padding:7px 11px;
+    background:linear-gradient(180deg,rgba(9,19,34,.9),rgba(5,12,24,.9));
+    border:1px solid rgba(0,240,255,.20);
+    border-radius:12px;
+    backdrop-filter:blur(14px) saturate(1.3);
+    box-shadow:0 10px 30px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06),inset 0 0 22px rgba(0,240,255,.05);
     animation:fadein .15s ease;
   }
   @keyframes fadein{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -177,9 +192,11 @@
   }
   .zoom{
     position:fixed;bottom:14px;right:14px;z-index:10;
-    color:var(--cyan);font-size:11px;
-    background:rgba(5,12,24,.7);border:1px solid rgba(0,240,255,.2);
-    padding:6px 12px;border-radius:4px;letter-spacing:.5px;
+    color:var(--cyan);font-size:11px;font-weight:700;
+    background:linear-gradient(180deg,rgba(9,19,34,.78),rgba(5,12,24,.78));
+    border:1px solid rgba(0,240,255,.2);
+    padding:6px 12px;border-radius:9px;letter-spacing:.5px;
+    backdrop-filter:blur(10px);box-shadow:0 6px 18px rgba(0,0,0,.4);
   }
 
   /* ===== workspace ===== */
@@ -415,12 +432,12 @@
   /* ===== presentation / focus mode ===== */
   .presentbar{
     position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:20;
-    display:flex;gap:8px;align-items:center;padding:8px 12px;
-    background:rgba(5,12,24,.92);
-    border:1px solid rgba(0,240,255,.45);
-    border-radius:10px;
-    backdrop-filter:blur(8px);
-    box-shadow:0 0 32px rgba(0,240,255,.3);
+    display:flex;gap:4px;align-items:center;padding:6px 10px;
+    background:linear-gradient(180deg,rgba(9,19,34,.9),rgba(5,12,24,.9));
+    border:1px solid rgba(0,240,255,.3);
+    border-radius:13px;
+    backdrop-filter:blur(14px) saturate(1.3);
+    box-shadow:0 10px 34px rgba(0,0,0,.5),0 0 26px rgba(0,240,255,.15),inset 0 1px 0 rgba(255,255,255,.06);
     animation:fadein .18s ease;
   }
   .presentbar .pcount{
@@ -494,9 +511,11 @@
   .breadcrumb{
     position:fixed;top:64px;left:16px;z-index:9;
     display:flex;align-items:center;flex-wrap:wrap;gap:1px;max-width:44vw;
-    padding:6px 10px;border-radius:8px;
-    background:rgba(5,12,24,.82);border:1px solid rgba(0,240,255,.25);
-    backdrop-filter:blur(8px);font-size:11px;
+    padding:6px 10px;border-radius:10px;
+    background:linear-gradient(180deg,rgba(9,19,34,.84),rgba(5,12,24,.84));
+    border:1px solid rgba(0,240,255,.20);
+    backdrop-filter:blur(14px) saturate(1.3);font-size:11px;
+    box-shadow:0 8px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.05);
     animation:fadein-bc .15s ease;
   }
   @keyframes fadein-bc{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
@@ -511,11 +530,12 @@
 
   /* ===== minimap ===== */
   .minimap{
-    position:fixed;right:14px;bottom:44px;z-index:9;
-    background:rgba(3,8,18,.85);border:1px solid rgba(0,240,255,.3);
-    border-radius:8px;box-shadow:0 0 22px rgba(0,0,0,.5);
-    backdrop-filter:blur(6px);overflow:hidden;cursor:crosshair;
-    line-height:0;
+    position:fixed;right:14px;bottom:48px;z-index:9;
+    background:linear-gradient(180deg,rgba(7,15,28,.88),rgba(3,8,18,.88));
+    border:1px solid rgba(0,240,255,.22);
+    border-radius:11px;box-shadow:0 10px 30px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05);
+    backdrop-filter:blur(10px) saturate(1.2);overflow:hidden;cursor:crosshair;
+    line-height:0;padding:4px;
   }
   .minimap .mm-view{fill:rgba(0,240,255,.10);stroke:var(--cyan);stroke-width:1.5}
 </style>
@@ -2251,7 +2271,8 @@ function App() {
   const mmJump = (e) => {
     if (!mmData) return;
     e.stopPropagation();
-    const r = e.currentTarget.getBoundingClientRect();
+    const svgEl = e.currentTarget.querySelector("svg");
+    const r = (svgEl || e.currentTarget).getBoundingClientRect();
     const worldX = mmData.minX + (e.clientX - r.left) / mmData.sc;
     const worldY = mmData.minY + (e.clientY - r.top) / mmData.sc;
     setView(v => ({ ...v, x: window.innerWidth / 2 - worldX * v.scale, y: window.innerHeight / 2 - worldY * v.scale }));
@@ -2265,38 +2286,39 @@ function App() {
 
       {!present && (
       <div className="toolbar">
-        <button className={`tool ${tool==="select"?"active":""}`} onClick={() => setTool("select")}>◉ SELECIONAR</button>
-        <button className={`tool ${tool==="block"?"active":""}`} onClick={() => setTool("block")}>▭ BLOCO</button>
-        <button className={`tool ${tool==="draw" && drawShape==="text" ? "active":""}`} onClick={() => { setTool("draw"); setDrawShape("text"); }} title="Texto / anotação (N)">✎ ANOTAÇÃO</button>
-        <button className={`tool ${tool==="draw" && drawShape!=="text" ? "active":""}`} onClick={() => { setTool("draw"); if (drawShape==="text") setDrawShape(lastDrawShapeRef.current); }} title="Pincel, formas e borracha (D)">✐ DESENHO</button>
-        <div className="sep"/>
-        <button className="tool" onClick={undo} title="Desfazer (Ctrl+Z)">↶</button>
-        <button className="tool" onClick={redo} title="Refazer (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
-        <div className="sep"/>
-        <button className="tool" onClick={fitAll}>⊡ FIT</button>
-        <button className="tool" onClick={() => setView({x:0,y:0,scale:1})}>1:1</button>
-        <button className={`tool ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Liga/desliga o fluxo de energia nas conexões">⚡ FLUXO</button>
-        <button className={`tool ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado e escurece o resto (sem mover a câmera)">◎ HOLOFOTE</button>
-        <button className={`tool ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Mostra/esconde o minimapa">⊞ MINIMAPA</button>
-        <button className="tool" onClick={enterPresent} title="Modo apresentação (P)">▶ APRESENTAR</button>
-        <button className={`tool ${isFullscreen?"active":""}`} onClick={toggleFullscreen} title="Tela cheia">{isFullscreen ? "⤧ SAIR DA TELA CHEIA" : "⛶ TELA CHEIA"}</button>
-        <div className="sep"/>
-        <button className="tool" onClick={exportJSON}>⤓ SALVAR</button>
-        <button className="tool" onClick={() => fileRef.current.click()}>⤒ CARREGAR</button>
-        <button className="tool" onClick={() => mdRef.current.click()} title="Importar Markdown (.md) — cria blocos a partir dos títulos #/##/###">📥 IMPORTAR MD</button>
-        <button className="tool" onClick={exportPNG} title="Exportar o mapa como imagem PNG">🖼 PNG</button>
-        <div className="sep"/>
-        <button className="tool danger" onClick={clearAll}>✕ LIMPAR</button>
+        <button className={`ic ${tool==="select"?"active":""}`} onClick={() => setTool("select")} title="Selecionar / mover (V)">◉</button>
+        <button className={`ic ${tool==="block"?"active":""}`} onClick={() => setTool("block")} title="Bloco (B)">▭</button>
+        <button className={`ic ${tool==="draw" && drawShape==="text" ? "active":""}`} onClick={() => { setTool("draw"); setDrawShape("text"); }} title="Texto / anotação (N)">✎</button>
+        <button className={`ic ${tool==="draw" && drawShape!=="text" ? "active":""}`} onClick={() => { setTool("draw"); if (drawShape==="text") setDrawShape(lastDrawShapeRef.current); }} title="Pincel, formas e borracha (D)">✐</button>
+        <div className="dvr"/>
+        <button className="ic" onClick={undo} title="Desfazer (Ctrl+Z)">↶</button>
+        <button className="ic" onClick={redo} title="Refazer (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
+        <div className="dvr"/>
+        <button className="ic" onClick={fitAll} title="Enquadrar tudo">⊡</button>
+        <button className="ic" onClick={() => setView({x:0,y:0,scale:1})} title="Zoom 100%"><span className="mini">1:1</span></button>
+        <button className={`ic ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Minimapa">⊞</button>
+        <button className={`ic ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Fluxo de energia nas conexões">⚡</button>
+        <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>
+        <div className="dvr"/>
+        <button className="ic" onClick={enterPresent} title="Apresentar (P)">▶</button>
+        <button className={`ic ${isFullscreen?"active":""}`} onClick={toggleFullscreen} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>{isFullscreen ? "⤧" : "⛶"}</button>
+        <div className="dvr"/>
+        <button className="ic" onClick={exportJSON} title="Salvar (.json)">⤓</button>
+        <button className="ic" onClick={() => fileRef.current.click()} title="Carregar (.json)">⤒</button>
+        <button className="ic" onClick={() => mdRef.current.click()} title="Importar Markdown (.md) — cria blocos dos títulos #/##/###">📥</button>
+        <button className="ic" onClick={exportPNG} title="Exportar PNG">🖼</button>
+        <div className="dvr"/>
+        <button className="ic danger" onClick={clearAll} title="Limpar tudo">✕</button>
       </div>
       )}
 
       {present && (
         <div className="presentbar">
-          <button className="tool" onClick={() => goToPresent(focusIdx - 1)} title="Anterior (←)">◀</button>
+          <button className="ic" onClick={() => goToPresent(focusIdx - 1)} title="Anterior (←)">◀</button>
           <span className="pcount">{presentOrder.length ? focusIdx + 1 : 0} / {presentOrder.length}</span>
-          <button className="tool" onClick={() => goToPresent(focusIdx + 1)} title="Próximo (→ / espaço)">▶</button>
-          <div className="sep"/>
-          <button className="tool danger" onClick={exitPresent} title="Sair (Esc)">✕ SAIR</button>
+          <button className="ic" onClick={() => goToPresent(focusIdx + 1)} title="Próximo (→ / espaço)">▶</button>
+          <div className="dvr"/>
+          <button className="ic danger" onClick={exitPresent} title="Sair (Esc)">✕</button>
         </div>
       )}
 
