@@ -168,7 +168,11 @@
   .workspace.panning{cursor:grabbing}
 
   /* ===== strokes (freehand drawings) ===== */
-  .strokes{position:absolute;top:0;left:0;width:8000px;height:8000px;pointer-events:none;overflow:visible}
+  /* z-index:5 puts the drawings IN FRONT of the blocks (blocks are z-index auto).
+     The container stays pointer-events:none so only the actual stroke bands grab
+     clicks — blocks remain interactive everywhere else. Edge handles (z-index 6)
+     still sit above the strokes. */
+  .strokes{position:absolute;top:0;left:0;width:8000px;height:8000px;pointer-events:none;overflow:visible;z-index:5}
   .strokes .stroke-hit{fill:none;stroke:transparent;stroke-width:18;pointer-events:stroke;cursor:move}
   .strokes .stroke-line{
     fill:none;
@@ -472,8 +476,8 @@ const hexToRgb = (hex) => {
   return `${(n>>16)&255},${(n>>8)&255},${n&255}`;
 };
 
-const portWorldPos = (b, port) => {
-  const w = b.w ?? 240, h = b.h ?? 80;
+const portWorldPos = (b, port, size) => {
+  const w = size?.w ?? b.w ?? 240, h = size?.h ?? b.h ?? 80;
   switch (port) {
     case "top":    return { x: b.x + w/2, y: b.y };
     case "bottom": return { x: b.x + w/2, y: b.y + h };
@@ -630,12 +634,26 @@ const bezierMidpoint = (a, b) => {
 };
 
 /* ================== Block ================== */
-function Block({ block, selected, hidden, focused, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange }) {
+function Block({ block, selected, hidden, focused, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange, onMeasure }) {
   const elRef = useRef(null);
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingBody, setEditingBody] = useState(false);
+
+  // Report the block's REAL rendered size up to the parent, so connections
+  // anchor to the actual box (which grows with content / changes on resize)
+  // instead of the stored w/h. Fixes edges drifting off the ports.
+  useEffect(() => {
+    if (!elRef.current || !onMeasure) return;
+    const el = elRef.current;
+    const report = () => onMeasure(block.id, el.offsetWidth, el.offsetHeight);
+    report();
+    if (typeof ResizeObserver === "undefined") return; // fallback to stored w/h
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [block.id, onMeasure]);
 
   // Auto-enter edit mode on the title when the block was just created
   useEffect(() => {
@@ -904,6 +922,16 @@ function App() {
   const [selectedEdge, setSelectedEdge] = useState(null);
   const [view, setView] = useState(() => saved?.view ?? { x: 20, y: 20, scale: 1 });
   const [preview, setPreview] = useState(null); // {from:{x,y}, to:{x,y}}
+  // Real (measured) rendered size of each block — id -> {w,h}. Reported by the
+  // Block via ResizeObserver so edge endpoints follow the actual box.
+  const [sizes, setSizes] = useState({});
+  const reportSize = useCallback((id, w, h) => {
+    setSizes(prev => {
+      const cur = prev[id];
+      if (cur && Math.abs(cur.w - w) < 0.5 && Math.abs(cur.h - h) < 0.5) return prev;
+      return { ...prev, [id]: { w, h } };
+    });
+  }, []);
 
   // Energy-flow animation toggle (animated pulse running along the connections)
   const [flow, setFlow] = useState(() => saved?.flow ?? true);
@@ -1106,6 +1134,20 @@ function App() {
     setStrokes(p => p.map(s => s.id === id ? { ...s, ...patch } : s));
   }, []);
 
+  // Begin a fresh stroke at a screen position (shared by the empty-canvas press
+  // and by pressing ON an existing stroke while a drawing tool is active — so a
+  // new rabisco can start right where the previous one ended).
+  const beginDrawAt = useCallback((clientX, clientY) => {
+    const wp = screenToWorld(clientX, clientY);
+    const base = { id: uid(), type: drawShape, x: 0, y: 0, color: drawColor, width: drawWidth };
+    if ((drawShape === "rect" || drawShape === "ellipse") && fillOn) {
+      base.fill = fillColor;
+      base.fillOpacity = fillOpacity;
+    }
+    if (drawShape === "freehand") setDrawing({ ...base, points: [{ x: wp.x, y: wp.y }] });
+    else setDrawing({ ...base, p1: { x: wp.x, y: wp.y }, p2: { x: wp.x, y: wp.y } });
+  }, [screenToWorld, drawShape, drawColor, drawWidth, fillOn, fillColor, fillOpacity]);
+
   /* ----- update ----- */
   const updateBlock = useCallback((id, patch) => {
     setBlocks(p => p.map(b => b.id === id ? { ...b, ...patch } : b));
@@ -1179,12 +1221,16 @@ function App() {
   }, []);
 
   /* ----- connection path editing ----- */
-  // Cycle the routing style of one connection: ortogonal → curva → reta
+  // Cycle the routing style of one connection: curva → ortogonal → reta
   const cycleEdgeStyle = useCallback((id) => {
-    const order = ["ortho", "curved", "straight"];
+    const order = ["curved", "ortho", "straight"];
     setEdges(p => p.map(e => e.id === id
-      ? { ...e, style: order[(order.indexOf(e.style || "ortho") + 1) % order.length] }
+      ? { ...e, style: order[(order.indexOf(e.style || "curved") + 1) % order.length] }
       : e));
+  }, []);
+  // Toggle the directional arrowhead on one connection
+  const toggleEdgeArrow = useCallback((id) => {
+    setEdges(p => p.map(e => e.id === id ? { ...e, arrow: e.arrow === false } : e));
   }, []);
   // Remove one waypoint (double-click a bend handle); empty list → back to auto-route
   const removeWaypoint = useCallback((id, index) => {
@@ -1684,17 +1730,7 @@ function App() {
         return;
       }
       // Start a new stroke
-      const base = { id: uid(), type: drawShape, x: 0, y: 0, color: drawColor, width: drawWidth };
-      // rect/ellipse can carry a fill (color + opacity)
-      if ((drawShape === "rect" || drawShape === "ellipse") && fillOn) {
-        base.fill = fillColor;
-        base.fillOpacity = fillOpacity;
-      }
-      if (drawShape === "freehand") {
-        setDrawing({ ...base, points: [{ x: wp.x, y: wp.y }] });
-      } else {
-        setDrawing({ ...base, p1: { x: wp.x, y: wp.y }, p2: { x: wp.x, y: wp.y } });
-      }
+      beginDrawAt(e.clientX, e.clientY);
       e.preventDefault();
       return;
     }
@@ -1925,6 +1961,7 @@ function App() {
     if (!a || !b) return null;
     const sourceHidden = hiddenBlockIds.has(a.id);
     const targetHidden = hiddenBlockIds.has(b.id);
+    const sa = sizes[a.id], sb = sizes[b.id];
 
     const dir1 = PORT_DIR[e.from.port] || { x: 1, y: 0 };
     const dir2 = PORT_DIR[e.to.port]   || { x:-1, y: 0 };
@@ -1936,8 +1973,8 @@ function App() {
       const nearPort    = backward ? e.to.port : e.from.port;
       const nearHidden  = backward ? targetHidden : sourceHidden;
       if (nearHidden) return null;
-      const p1 = portWorldPos(a, e.from.port);
-      const p2 = portWorldPos(b, e.to.port);
+      const p1 = portWorldPos(a, e.from.port, sa);
+      const p2 = portWorldPos(b, e.to.port, sb);
       const nearPos = backward ? p2 : p1;
       const dir = PORT_DIR[nearPort] || { x: 1, y: 0 };
       const stubEnd = { x: nearPos.x + dir.x * STUB_LEN, y: nearPos.y + dir.y * STUB_LEN };
@@ -1954,26 +1991,46 @@ function App() {
 
     // Non-collapsed edge: hide entirely if either endpoint is in the hidden set
     if (sourceHidden || targetHidden) return null;
-    const p1 = portWorldPos(a, e.from.port);
-    const p2 = portWorldPos(b, e.to.port);
+    const p1 = portWorldPos(a, e.from.port, sa);
+    const p2 = portWorldPos(b, e.to.port, sb);
     const wps = e.waypoints || [];
-    const style = e.style || "ortho";
+    const style = e.style || "curved"; // padrão: linha curva (não mais ortogonal)
     const pts = [p1, ...wps, p2];
 
     // Choose how to draw the path: auto-route when straight, route through waypoints when bent
     let curveD;
     if (wps.length === 0) {
       if (style === "straight")      curveD = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
-      else if (style === "curved")   curveD = dirBezier(p1, dir1, p2, dir2);
-      else                           curveD = orthogonalPath(p1, dir1, p2, dir2);
+      else if (style === "ortho")    curveD = orthogonalPath(p1, dir1, p2, dir2);
+      else                           curveD = dirBezier(p1, dir1, p2, dir2);
     } else {
-      if (style === "curved")        curveD = catmullRomPath(pts);
+      if (style === "ortho")         curveD = roundedPolyPath(pts, 14);
       else if (style === "straight") curveD = roundedPolyPath(pts, 0);
-      else                           curveD = roundedPolyPath(pts, 14);
+      else                           curveD = catmullRomPath(pts);
     }
     // Midpoint of the central segment — anchors the style toggle
     const mi = Math.floor((pts.length - 1) / 2);
     const mid = { x: (pts[mi].x + pts[mi+1].x) / 2, y: (pts[mi].y + pts[mi+1].y) / 2 };
+
+    // Directional arrowhead at the target end (on by default). Orient it along
+    // the real travel direction into the port so it reads as "sai de A → vai pra B".
+    const arrow = e.arrow !== false;
+    let arrowD = "";
+    if (arrow) {
+      let adx, ady;
+      if (style === "straight") {
+        const prev = pts[pts.length - 2] || p1;
+        adx = p2.x - prev.x; ady = p2.y - prev.y;
+      } else {
+        adx = -dir2.x; ady = -dir2.y; // curva/orto chegam alinhadas à normal da porta
+      }
+      const al = Math.hypot(adx, ady) || 1;
+      const ang = Math.atan2(ady / al, adx / al);
+      const AH = 13, spread = 0.46;
+      const wx1 = p2.x - AH * Math.cos(ang - spread), wy1 = p2.y - AH * Math.sin(ang - spread);
+      const wx2 = p2.x - AH * Math.cos(ang + spread), wy2 = p2.y - AH * Math.sin(ang + spread);
+      arrowD = `M ${p2.x} ${p2.y} L ${wx1} ${wy1} L ${wx2} ${wy2} Z`;
+    }
 
     return {
       id: e.id,
@@ -1983,7 +2040,7 @@ function App() {
       color: a.color || DEFAULT_COLOR,
       fromColor: a.color || DEFAULT_COLOR,
       toColor:   b.color || DEFAULT_COLOR,
-      p1, p2, pts, wps, mid, style,
+      p1, p2, pts, wps, mid, style, arrow, arrowD,
       collapsed: false,
       count: 0,
     };
@@ -2318,7 +2375,7 @@ function App() {
         onWheel={onWheel}
       >
         <div className={`world ${present ? "present" : ""}`} style={{ transform:`translate(${view.x}px,${view.y}px) scale(${view.scale})` }}>
-          {/* freehand strokes + shapes (rendered beneath blocks) */}
+          {/* freehand strokes + shapes (z-index:5 → rendered IN FRONT of blocks) */}
           <svg className="strokes" xmlns="http://www.w3.org/2000/svg">
             {strokes.map(s => {
               const d = strokeToPath(s);
@@ -2339,6 +2396,17 @@ function App() {
                       ev.stopPropagation();
                       if (tool === "draw" && drawShape === "eraser") {
                         setStrokes(p => p.filter(x => x.id !== s.id));
+                        return;
+                      }
+                      // Drawing tool active: a press on an existing stroke must
+                      // START a new stroke/note here — not grab the old one.
+                      if (tool === "draw") {
+                        if (drawShape === "text") {
+                          const wp = screenToWorld(ev.clientX, ev.clientY);
+                          createNote(wp.x, wp.y, drawColor, drawFontSize, noteFrame);
+                        } else {
+                          beginDrawAt(ev.clientX, ev.clientY);
+                        }
                         return;
                       }
                       selectOne(s.id, ev.shiftKey);
@@ -2418,6 +2486,15 @@ function App() {
                       </>
                     );
                   })()}
+                  {/* Directional arrowhead at the target (A → B) */}
+                  {p.arrowD && (
+                    <path
+                      d={p.arrowD}
+                      stroke="none"
+                      fill={p.toColor || p.color}
+                      style={{ filter: `drop-shadow(0 0 4px ${p.toColor || p.color})` }}
+                    />
+                  )}
                   {/* Short stub — visible when collapsed */}
                   <path
                     d={p.stubD}
@@ -2487,6 +2564,7 @@ function App() {
                 if (on) setEditingTitleId(id);
                 else setEditingTitleId(curr => curr === id ? null : curr);
               }}
+              onMeasure={reportSize}
             />
           ))}
           {notes.map(n => (
@@ -2524,9 +2602,15 @@ function App() {
                 <div
                   className="edge-style-btn"
                   style={{ left: p.mid.x, top: p.mid.y, color: p.toColor || p.color, transform: `translate(-50%,-50%) ${inv}` }}
-                  title="Estilo da linha: ortogonal → curva → reta"
+                  title="Estilo da linha: curva → ortogonal → reta"
                   onMouseDown={(e) => { e.stopPropagation(); cycleEdgeStyle(p.id); }}
                 >{styleLabel}</div>
+                <div
+                  className="edge-style-btn"
+                  style={{ left: p.mid.x, top: p.mid.y + 24, color: p.toColor || p.color, transform: `translate(-50%,-50%) ${inv}` }}
+                  title="Mostrar/ocultar a setinha de direção"
+                  onMouseDown={(e) => { e.stopPropagation(); toggleEdgeArrow(p.id); }}
+                >{p.arrow ? "➤ SETA" : "⊘ SETA"}</div>
                 {[["from", p.p1, p.fromColor], ["to", p.p2, p.toColor]].map(([end, pos, col]) => (
                   <div
                     key={end}
