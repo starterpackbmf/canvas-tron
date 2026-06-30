@@ -94,6 +94,7 @@
   .ic.active{background:rgba(0,240,255,.16);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 14px rgba(0,240,255,.4),inset 0 0 10px rgba(0,240,255,.12)}
   .ic.danger:hover{background:rgba(255,59,92,.12);border-color:var(--danger);color:var(--danger);box-shadow:0 0 12px rgba(255,59,92,.32)}
   .ic .mini{font-size:11px;font-weight:800;letter-spacing:.5px}
+  .ic .ic-svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
   /* divisória vertical entre grupos */
   .dvr{width:1px;height:20px;margin:0 5px;background:linear-gradient(transparent,rgba(0,240,255,.35),transparent)}
   /* compat: barras antigas que ainda usam .tool/.sep herdam o visual novo */
@@ -368,23 +369,25 @@
     /* width:max-content lets the note size to its text even though .world is 0px wide;
        max-width caps it so long notes wrap into a readable column instead of 1 word/line */
     min-width:80px;max-width:340px;width:max-content;
-    padding:7px 11px;
+    padding:8px 12px;
     color:var(--nc);font-weight:600;
-    background:rgba(5,12,24,.5);
-    border:1px dashed currentColor;
-    border-radius:5px;cursor:move;outline:none;
+    background:linear-gradient(180deg,rgba(9,19,34,.62),rgba(5,12,24,.62));
+    border:1px solid rgba(var(--nc-rgb),.42);
+    border-radius:9px;cursor:move;outline:none;
     line-height:1.45;white-space:pre-wrap;word-wrap:break-word;
-    /* dark drop anchors the letters for legibility; faint colored halo keeps the Tron glow */
-    text-shadow:0 1px 2px rgba(0,0,0,.85),0 0 7px currentColor;
-    box-shadow:0 0 14px rgba(0,0,0,.35);
-    opacity:.96;
+    /* só a sombra escura pra legibilidade — sem halo neon (igual aos blocos) */
+    text-shadow:0 1px 2px rgba(0,0,0,.85);
+    box-shadow:0 6px 18px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.04);
+    backdrop-filter:blur(6px);
+    opacity:.98;
   }
-  .note.selected{border-style:solid;opacity:1;box-shadow:0 0 12px currentColor,0 0 14px rgba(0,0,0,.35)}
-  .note[contenteditable="true"]{cursor:text;border-style:solid;background:rgba(0,0,0,.6)}
-  /* "sem moldura": só o texto com glow, sem caixa/fundo (toggle na barra) */
-  .note.bare{background:transparent;border-color:transparent;box-shadow:none;padding:2px 4px}
-  .note.bare.selected{border-color:currentColor;border-style:dashed;box-shadow:none}
-  .note.bare[contenteditable="true"]{background:rgba(0,0,0,.45);border-color:currentColor}
+  .note.selected{border-color:rgba(var(--nc-rgb),.95);opacity:1;box-shadow:0 0 0 1px rgba(var(--nc-rgb),.55),0 8px 22px rgba(0,0,0,.4)}
+  .note[contenteditable="true"]{cursor:text;background:rgba(2,6,14,.86);border-color:rgba(var(--nc-rgb),.9)}
+  /* "sem moldura": só o texto, sem caixa/fundo (toggle na barra) */
+  .note.bare{background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none;padding:2px 4px;text-shadow:0 1px 3px rgba(0,0,0,.95)}
+  .note.bare.selected{border:1px dashed rgba(var(--nc-rgb),.7);box-shadow:none}
+  .note.bare[contenteditable="true"]{background:rgba(2,6,14,.7);border-color:rgba(var(--nc-rgb),.7)}
+  .note[contenteditable]:empty::before{content:attr(data-placeholder);opacity:.4;font-style:italic;pointer-events:none}
 
   /* ===== energy flow (animated pulse running along edges) ===== */
   /* long lit segment + tiny gap: over the steady gradient edge below, this
@@ -962,9 +965,18 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
 }
 
 /* ================== Note ================== */
-function Note({ note, selected, onSelect, onStartDrag, onChange, onEraser, onEditingChange }) {
+function Note({ note, selected, pendingEditRef, onSelect, onStartDrag, onChange, onEraser, onEditingChange, onRemove }) {
   const ref = useRef(null);
   const [editing, setEditing] = useState(false);
+
+  // Auto-enter edit mode when the note was just created (mirrors the blocks)
+  useEffect(() => {
+    if (pendingEditRef && pendingEditRef.current === note.id) {
+      pendingEditRef.current = null;
+      setEditing(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Tell the parent when this note enters/leaves edit mode, so it can show the
   // rich-text format bar (bold/italic/underline/size/color) — same bar the blocks use.
@@ -989,7 +1001,7 @@ function Note({ note, selected, onSelect, onStartDrag, onChange, onEraser, onEdi
   const common = {
     ref,
     className: `note ${selected ? "selected" : ""} ${note.frame === false ? "bare" : ""}`,
-    style: { left: note.x, top: note.y, "--nc": color, fontSize: (note.fontSize || 14) + "px" },
+    style: { left: note.x, top: note.y, "--nc": color, "--nc-rgb": hexToRgb(color), fontSize: (note.fontSize || 14) + "px" },
   };
 
   // While editing: a plain contentEditable surface (HTML set imperatively above).
@@ -999,11 +1011,14 @@ function Note({ note, selected, onSelect, onStartDrag, onChange, onEraser, onEdi
         {...common}
         contentEditable
         suppressContentEditableWarning
+        data-placeholder="Anotação…"
         onBlur={(e) => {
           setEditing(false);
           const html = e.currentTarget.innerHTML;
           const plain = e.currentTarget.textContent.trim();
-          onChange(note.id, { text: plain ? html : "" });
+          // nota criada e deixada vazia → remove (não vira fantasma invisível)
+          if (!plain) { onRemove?.(note.id); return; }
+          onChange(note.id, { text: html });
         }}
         onKeyDown={(e) => {
           if (e.key === "Escape") { e.preventDefault(); e.currentTarget.blur(); }
@@ -1292,17 +1307,23 @@ function App() {
     sel.removeAllRanges();
   }, []);
 
+  const pendingNoteEditRef = useRef(null);
   const createNote = useCallback((x, y, color, fontSize, frame) => {
     const n = {
-      id: uid(), x, y, text: "Anotação…",
+      id: uid(), x, y, text: "", // nasce vazia e já entra em edição (placeholder)
       color: color || "#ff9d00",
       fontSize: fontSize || 14,
       frame: frame !== false, // false = sem moldura (só o texto)
     };
+    pendingNoteEditRef.current = n.id;
     setNotes(p => [...p, n]);
     selectOne(n.id);
     return n;
   }, [selectOne]);
+  const removeNote = useCallback((id) => {
+    setNotes(p => p.filter(n => n.id !== id));
+    setSelection(prev => { const s = new Set(prev); s.delete(id); return s; });
+  }, []);
   // Toggle the box/frame on the selected note(s)
   const toggleNoteFrame = useCallback(() => {
     setNotes(p => p.map(n => selection.has(n.id) ? { ...n, frame: n.frame === false } : n));
@@ -2288,7 +2309,9 @@ function App() {
       <div className="toolbar">
         <button className={`ic ${tool==="select"?"active":""}`} onClick={() => setTool("select")} title="Selecionar / mover (V)">◉</button>
         <button className={`ic ${tool==="block"?"active":""}`} onClick={() => setTool("block")} title="Bloco (B)">▭</button>
-        <button className={`ic ${tool==="draw" && drawShape==="text" ? "active":""}`} onClick={() => { setTool("draw"); setDrawShape("text"); }} title="Texto / anotação (N)">✎</button>
+        <button className={`ic ${tool==="draw" && drawShape==="text" ? "active":""}`} onClick={() => { setTool("draw"); setDrawShape("text"); }} title="Texto / anotação (N)">
+          <svg viewBox="0 0 24 24" className="ic-svg"><path d="M6 6 H18 M12 6 V18 M9 18 H15"/></svg>
+        </button>
         <button className={`ic ${tool==="draw" && drawShape!=="text" ? "active":""}`} onClick={() => { setTool("draw"); if (drawShape==="text") setDrawShape(lastDrawShapeRef.current); }} title="Pincel, formas e borracha (D)">✐</button>
         <div className="dvr"/>
         <button className="ic" onClick={undo} title="Desfazer (Ctrl+Z)">↶</button>
@@ -2868,9 +2891,11 @@ function App() {
               key={n.id}
               note={n}
               selected={selection.has(n.id)}
+              pendingEditRef={pendingNoteEditRef}
               onSelect={selectOne}
               onStartDrag={(e) => startDrag(e, n.id)}
               onChange={updateNote}
+              onRemove={removeNote}
               onEditingChange={(id, on) => {
                 if (on) setEditingNoteId(id);
                 else setEditingNoteId(curr => curr === id ? null : curr);
