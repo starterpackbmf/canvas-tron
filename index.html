@@ -304,6 +304,8 @@
     text-align:center;
   }
   .block .body{color:#dcefff;outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;text-align:center;font-size:var(--body-size,13px)}
+  /* imagem dentro do bloco (entre título e corpo) */
+  .block .block-img{display:block;width:100%;max-height:300px;object-fit:contain;border-radius:5px;margin:2px 0 8px;background:rgba(0,0,0,.25);pointer-events:none;user-select:none}
 
   /* ===== block shapes (forma por bloco) =====
      Retângulo/arredondado/pílula/elipse = só border-radius (borda+glow normais).
@@ -322,20 +324,21 @@
     opacity:.35;font-style:italic;pointer-events:none;
   }
 
+  /* ports pequenos — só um detalhe, pra não tampar a setinha. Crescem no hover. */
   .port{
-    position:absolute;width:12px;height:12px;
-    background:var(--bg);border:2px solid var(--bc,var(--cyan));border-radius:50%;
-    cursor:crosshair;transition:all .12s ease;z-index:2;
+    position:absolute;width:7px;height:7px;
+    background:var(--bg);border:1.5px solid var(--bc,var(--cyan));border-radius:50%;
+    cursor:crosshair;transition:all .12s ease;z-index:2;opacity:.7;
   }
-  .port:hover,.port.hot{background:var(--bc,var(--cyan));box-shadow:0 0 12px var(--bc,var(--cyan)),0 0 20px rgba(var(--bc-rgb,0,240,255),.6);transform:scale(1.4)}
-  .port.top{top:-7px;left:50%;transform:translateX(-50%)}
-  .port.bottom{bottom:-7px;left:50%;transform:translateX(-50%)}
-  .port.left{left:-7px;top:50%;transform:translateY(-50%)}
-  .port.right{right:-7px;top:50%;transform:translateY(-50%)}
-  .port.top:hover,.port.top.hot{transform:translateX(-50%) scale(1.4)}
-  .port.bottom:hover,.port.bottom.hot{transform:translateX(-50%) scale(1.4)}
-  .port.left:hover,.port.left.hot{transform:translateY(-50%) scale(1.4)}
-  .port.right:hover,.port.right.hot{transform:translateY(-50%) scale(1.4)}
+  .port:hover,.port.hot{background:var(--bc,var(--cyan));box-shadow:0 0 12px var(--bc,var(--cyan)),0 0 20px rgba(var(--bc-rgb,0,240,255),.6);transform:scale(2);opacity:1}
+  .port.top{top:-4px;left:50%;transform:translateX(-50%)}
+  .port.bottom{bottom:-4px;left:50%;transform:translateX(-50%)}
+  .port.left{left:-4px;top:50%;transform:translateY(-50%)}
+  .port.right{right:-4px;top:50%;transform:translateY(-50%)}
+  .port.top:hover,.port.top.hot{transform:translateX(-50%) scale(2)}
+  .port.bottom:hover,.port.bottom.hot{transform:translateX(-50%) scale(2)}
+  .port.left:hover,.port.left.hot{transform:translateY(-50%) scale(2)}
+  .port.right:hover,.port.right.hot{transform:translateY(-50%) scale(2)}
 
   .del{
     position:absolute;top:-10px;right:-10px;width:20px;height:20px;
@@ -476,9 +479,9 @@
 
   /* ===== connection edit handles ===== */
   .edge-handle{
-    position:absolute;width:13px;height:13px;
-    background:var(--bg);border:2px solid currentColor;border-radius:50%;
-    box-shadow:0 0 8px currentColor;cursor:grab;z-index:6;
+    position:absolute;width:8px;height:8px;
+    background:var(--bg);border:1.5px solid currentColor;border-radius:50%;
+    box-shadow:0 0 5px currentColor;cursor:grab;z-index:6;
   }
   .edge-handle.endpoint{border-radius:3px} /* squared = an endpoint you can re-attach */
   .edge-handle:hover{box-shadow:0 0 14px currentColor;background:color-mix(in srgb,currentColor 25%,var(--bg))}
@@ -936,6 +939,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
           dangerouslySetInnerHTML={{ __html: block.title || "" }}
         />
       )}
+      {block.image && <img className="block-img" src={block.image} draggable={false} alt="" />}
       {(editingBody || (block.body && block.body.replace(/<[^>]*>/g, "").trim() !== "")) && (
         editingBody ? (
           <div
@@ -1151,6 +1155,7 @@ function App() {
   const fileRef = useRef(null);
   const mdRef = useRef(null);
   const imgRef = useRef(null);
+  const blockImgRef = useRef(null);
   const lastDrawShapeRef = useRef("freehand"); // remembers the last drawing shape so "DESENHO" returns to it
 
   // undo/redo history (snapshot stacks) + restore guard
@@ -1420,6 +1425,32 @@ function App() {
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
   }, [addImageFromBlob]);
+
+  // Coloca uma imagem DENTRO dos blocos selecionados (entre título e corpo)
+  const setBlockImageFromFile = useCallback((blob) => {
+    if (!blob || blob.type.indexOf("image/") !== 0) return;
+    const ids = [...selection];
+    if (!ids.length) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let sw = img.naturalWidth || 600, sh = img.naturalHeight || 400, src = reader.result;
+        const MAXSTORE = 1000;
+        if (Math.max(sw, sh) > MAXSTORE) {
+          const k = MAXSTORE / Math.max(sw, sh);
+          const cw = Math.round(sw * k), ch = Math.round(sh * k);
+          try { const cv = document.createElement("canvas"); cv.width = cw; cv.height = ch; cv.getContext("2d").drawImage(img, 0, 0, cw, ch); src = cv.toDataURL("image/png"); } catch {}
+        }
+        setBlocks(p => p.map(b => ids.indexOf(b.id) >= 0 ? { ...b, image: src } : b));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(blob);
+  }, [selection]);
+  const removeBlockImage = useCallback(() => {
+    setBlocks(p => p.map(b => selection.has(b.id) ? (() => { const { image, ...rest } = b; return rest; })() : b));
+  }, [selection]);
   // Toggle the box/frame on the selected note(s)
   const toggleNoteFrame = useCallback(() => {
     setNotes(p => p.map(n => selection.has(n.id) ? { ...n, frame: n.frame === false } : n));
@@ -2717,6 +2748,26 @@ function App() {
                 </>
               );
             })()}
+            {hasBlockSel && (() => {
+              const selBlock = blocks.find(b => selection.has(b.id));
+              const hasImg = !!(selBlock && selBlock.image);
+              return (
+                <>
+                  <div className="vsep"/>
+                  <div className="group">
+                    <span className="lbl">Imagem</span>
+                    <button className="shape-btn" onClick={() => blockImgRef.current.click()} title={hasImg ? "Trocar a imagem do bloco" : "Inserir imagem no bloco"}>
+                      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M21 15 l-5-5 -8 8"/></svg>
+                    </button>
+                    {hasImg && (
+                      <button className="shape-btn eraser" onClick={removeBlockImage} title="Remover a imagem do bloco">
+                        <svg viewBox="0 0 24 24"><path d="M5 5 L19 19 M19 5 L5 19"/></svg>
+                      </button>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
             {hasStrokeSel && (
               <>
                 <div className="vsep"/>
@@ -3163,6 +3214,7 @@ function App() {
       <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON} />
       <input ref={mdRef} type="file" accept=".md,.markdown,.txt" style={{display:"none"}} onChange={importMarkdown} />
       <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={(e) => { const f = e.target.files[0]; if (f) addImageFromBlob(f, null); e.target.value = ""; }} />
+      <input ref={blockImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={(e) => { const f = e.target.files[0]; if (f) setBlockImageFromFile(f); e.target.value = ""; }} />
     </>
   );
 }
