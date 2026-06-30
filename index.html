@@ -389,6 +389,16 @@
   .note.bare[contenteditable="true"]{background:rgba(2,6,14,.7);border-color:rgba(var(--nc-rgb),.7)}
   .note[contenteditable]:empty::before{content:attr(data-placeholder);opacity:.4;font-style:italic;pointer-events:none}
 
+  /* ===== imagens ===== */
+  .imgnode{
+    position:absolute;cursor:move;border-radius:8px;--bc:#00f0ff;
+    border:1px solid transparent;box-shadow:0 6px 20px rgba(0,0,0,.45);
+  }
+  .imgnode img{width:100%;height:100%;display:block;object-fit:fill;border-radius:7px;pointer-events:none;user-select:none}
+  .imgnode.selected{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 0 18px rgba(0,240,255,.4),0 6px 20px rgba(0,0,0,.5)}
+  .imgnode .del,.imgnode .resize{display:none}
+  .imgnode.selected .del,.imgnode.selected .resize{display:block}
+
   /* ===== energy flow (animated pulse running along edges) ===== */
   /* long lit segment + tiny gap: over the steady gradient edge below, this
      reads as a continuous beam with a bright band flowing along it.
@@ -568,7 +578,7 @@ const loadSaved = () => {
 // so freshly created nodes never collide with restored ones.
 const bumpNidFromData = (d) => {
   if (!d) return;
-  const ids = [...(d.blocks||[]),...(d.notes||[]),...(d.strokes||[]),...(d.edges||[])]
+  const ids = [...(d.blocks||[]),...(d.notes||[]),...(d.strokes||[]),...(d.edges||[]),...(d.images||[])]
     .map(o => parseInt(String(o.id).replace(/\D/g,""),10))
     .filter(Number.isFinite);
   if (ids.length) _nid = Math.max(_nid, ...ids) + 1;
@@ -1043,6 +1053,29 @@ function Note({ note, selected, pendingEditRef, onSelect, onStartDrag, onChange,
   );
 }
 
+/* ================== ImageNode ================== */
+function ImageNode({ image, selected, onSelect, onStartDrag, onStartResize, onDelete, onEraser }) {
+  return (
+    <div
+      className={`imgnode ${selected ? "selected" : ""}`}
+      style={{ left: image.x, top: image.y, width: image.w, height: image.h }}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        if (onEraser && onEraser(image.id)) return;
+        onSelect(image.id, e.shiftKey);
+        onStartDrag(e);
+      }}
+    >
+      <img src={image.src} draggable={false} alt="" />
+      <div className="del" onMouseDown={(e) => { e.stopPropagation(); onDelete(image.id); }}>×</div>
+      {["tl","tr","bl","br"].map(c => (
+        <div key={c} className={`resize ${c}`}
+          onMouseDown={(e) => { e.stopPropagation(); onSelect(image.id, false); onStartResize(image.id, c, e, "image"); }} />
+      ))}
+    </div>
+  );
+}
+
 /* ================== App ================== */
 function App() {
   const [tool, setTool] = useState("select");
@@ -1056,6 +1089,7 @@ function App() {
   ]));
   const [notes, setNotes] = useState(() => saved?.notes ?? []);
   const [strokes, setStrokes] = useState(() => saved?.strokes ?? []);
+  const [images, setImages] = useState(() => saved?.images ?? []);
   // Currently drawing stroke (not yet committed)
   const [drawing, setDrawing] = useState(null);
   // Which block (if any) is currently editing its body/title — for the floating format bar
@@ -1116,6 +1150,7 @@ function App() {
   const wsRef = useRef(null);
   const fileRef = useRef(null);
   const mdRef = useRef(null);
+  const imgRef = useRef(null);
   const lastDrawShapeRef = useRef("freehand"); // remembers the last drawing shape so "DESENHO" returns to it
 
   // undo/redo history (snapshot stacks) + restore guard
@@ -1235,16 +1270,15 @@ function App() {
   }, []);
 
   /* ----- resize ----- */
-  const startResize = useCallback((blockId, corner, e) => {
-    const b = blocks.find(x => x.id === blockId);
-    if (!b) return;
+  const startResize = useCallback((id, corner, e, kind = "block") => {
+    const o = kind === "image" ? images.find(x => x.id === id) : blocks.find(x => x.id === id);
+    if (!o) return;
     resizeRef.current = {
-      id: blockId,
-      corner,
+      id, corner, kind,
       startMouse: { x: e.clientX, y: e.clientY },
-      startBlock: { x: b.x, y: b.y, w: b.w || 240, h: b.h || 80 },
+      startBlock: { x: o.x, y: o.y, w: o.w || 240, h: o.h || 80 },
     };
-  }, [blocks]);
+  }, [blocks, images]);
 
   /* ----- create ----- */
   const pendingEditRef = useRef(null);
@@ -1324,6 +1358,68 @@ function App() {
     setNotes(p => p.filter(n => n.id !== id));
     setSelection(prev => { const s = new Set(prev); s.delete(id); return s; });
   }, []);
+  const removeImage = useCallback((id) => {
+    setImages(p => p.filter(im => im.id !== id));
+    setSelection(prev => { const s = new Set(prev); s.delete(id); return s; });
+  }, []);
+
+  /* ----- imagens (colar / arrastar / botão) ----- */
+  // Lê um arquivo/blob de imagem, reduz pra caber no localStorage e cria um
+  // nó de imagem. atWorld = ponto no mundo (drop); senão, centro da tela.
+  const addImageFromBlob = useCallback((blob, atWorld) => {
+    if (!blob || !blob.type || blob.type.indexOf("image/") !== 0) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let sw = img.naturalWidth || 600, sh = img.naturalHeight || 400;
+        let src = reader.result;
+        // downscale de armazenamento (localStorage tem limite) → máx 1400px
+        const MAXSTORE = 1400;
+        if (Math.max(sw, sh) > MAXSTORE) {
+          const k = MAXSTORE / Math.max(sw, sh);
+          const cw = Math.round(sw * k), ch = Math.round(sh * k);
+          try {
+            const cv = document.createElement("canvas"); cv.width = cw; cv.height = ch;
+            cv.getContext("2d").drawImage(img, 0, 0, cw, ch);
+            src = cv.toDataURL("image/png");
+            sw = cw; sh = ch;
+          } catch {}
+        }
+        // tamanho de exibição: cabe em ~360px de largura, mantendo proporção
+        const DISP = 360;
+        const sc = Math.min(1, DISP / sw);
+        const w = Math.round(sw * sc), h = Math.round(sh * sc);
+        const pos = atWorld || {
+          x: (-view.x + window.innerWidth / 2) / view.scale,
+          y: (-view.y + window.innerHeight / 2) / view.scale,
+        };
+        const id = uid();
+        setImages(p => [...p, { id, x: pos.x - w / 2, y: pos.y - h / 2, w, h, src }]);
+        setSelection(new Set([id]));
+        setSelectedEdge(null);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(blob);
+  }, [view]);
+
+  // Colar imagem (Ctrl+V) — só quando não está editando texto
+  useEffect(() => {
+    const onPaste = (e) => {
+      if (document.activeElement && document.activeElement.isContentEditable) return;
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.indexOf("image/") === 0) {
+          const blob = items[i].getAsFile();
+          if (blob) { e.preventDefault(); addImageFromBlob(blob, null); break; }
+        }
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [addImageFromBlob]);
   // Toggle the box/frame on the selected note(s)
   const toggleNoteFrame = useCallback(() => {
     setNotes(p => p.map(n => selection.has(n.id) ? { ...n, frame: n.frame === false } : n));
@@ -1366,6 +1462,7 @@ function App() {
     setBlocks(p => p.filter(b => !selection.has(b.id)));
     setNotes(p => p.filter(n => !selection.has(n.id)));
     setStrokes(p => p.filter(s => !selection.has(s.id)));
+    setImages(p => p.filter(im => !selection.has(im.id)));
     setEdges(p => p.filter(e => !selection.has(e.from.id) && !selection.has(e.to.id)));
     setSelection(new Set());
   }, [selection, selectedEdge]);
@@ -1385,10 +1482,11 @@ function App() {
       blocks.forEach(b => { if (sel.has(b.id)) items.push({ kind:"block", id:b.id, startX:b.x, startY:b.y }); });
       notes.forEach(n => { if (sel.has(n.id)) items.push({ kind:"note",  id:n.id, startX:n.x, startY:n.y }); });
       strokes.forEach(s => { if (sel.has(s.id)) items.push({ kind:"stroke", id:s.id, startX:s.x, startY:s.y }); });
+      images.forEach(im => { if (sel.has(im.id)) items.push({ kind:"image", id:im.id, startX:im.x, startY:im.y }); });
       dragRef.current = { startMouse:{ x:e.clientX, y:e.clientY }, items };
       return sel;
     });
-  }, [blocks, notes, strokes]);
+  }, [blocks, notes, strokes, images]);
 
   /* ----- connection ----- */
   const startConnection = useCallback((blockId, port, e) => {
@@ -1448,6 +1546,7 @@ function App() {
     setBlocks(d.blocks || []);
     setNotes(d.notes || []);
     setStrokes(d.strokes || []);
+    setImages(d.images || []);
     setEdges(d.edges || []);
     setSelection(new Set());
     setSelectedEdge(null);
@@ -1456,7 +1555,7 @@ function App() {
   // Record content changes into history, debounced so a whole drag/edit
   // collapses into a single undo step.
   useEffect(() => {
-    const snap = JSON.stringify({ blocks, notes, strokes, edges });
+    const snap = JSON.stringify({ blocks, notes, strokes, images, edges });
     pendingSnapRef.current = snap;
     if (lastSnapRef.current === null) { lastSnapRef.current = snap; return; }
     if (restoringRef.current) { restoringRef.current = false; lastSnapRef.current = snap; return; }
@@ -1470,7 +1569,7 @@ function App() {
       h.future = [];
       lastSnapRef.current = pendingSnapRef.current;
     }, 350);
-  }, [blocks, notes, strokes, edges]);
+  }, [blocks, notes, strokes, images, edges]);
 
   const undo = useCallback(() => {
     clearTimeout(histTimerRef.current);
@@ -1504,7 +1603,7 @@ function App() {
     if (selection.size === 0) return;
     const OFF = 32;
     const idMap = new Map();
-    const newBlocks = [], newNotes = [], newStrokes = [], newSel = new Set();
+    const newBlocks = [], newNotes = [], newStrokes = [], newImages = [], newSel = new Set();
     blocks.forEach(b => {
       if (!selection.has(b.id)) return;
       const nid = uid(); idMap.set(b.id, nid);
@@ -1520,6 +1619,11 @@ function App() {
       const nid = uid();
       newStrokes.push({ ...s, id: nid, x: (s.x || 0) + OFF, y: (s.y || 0) + OFF }); newSel.add(nid);
     });
+    images.forEach(im => {
+      if (!selection.has(im.id)) return;
+      const nid = uid();
+      newImages.push({ ...im, id: nid, x: im.x + OFF, y: im.y + OFF }); newSel.add(nid);
+    });
     // Re-create edges that live entirely inside the duplicated set
     const newEdges = edges
       .filter(e => idMap.has(e.from.id) && idMap.has(e.to.id))
@@ -1529,17 +1633,18 @@ function App() {
     if (newBlocks.length)  setBlocks(p => [...p, ...newBlocks]);
     if (newNotes.length)   setNotes(p => [...p, ...newNotes]);
     if (newStrokes.length) setStrokes(p => [...p, ...newStrokes]);
+    if (newImages.length)  setImages(p => [...p, ...newImages]);
     if (newEdges.length)   setEdges(p => [...p, ...newEdges]);
     if (newSel.size) { setSelection(newSel); setSelectedEdge(null); }
-  }, [blocks, notes, strokes, edges, selection]);
+  }, [blocks, notes, strokes, images, edges, selection]);
 
   /* ----- autosave to localStorage (debounced) ----- */
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem(LS_KEY, JSON.stringify({ blocks, notes, strokes, edges, view, flow })); } catch {}
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ blocks, notes, strokes, images, edges, view, flow })); } catch {}
     }, 500);
     return () => clearTimeout(t);
-  }, [blocks, notes, strokes, edges, view, flow]);
+  }, [blocks, notes, strokes, images, edges, view, flow]);
 
   /* ----- smooth camera tween + center-on-block (used by presentation) ----- */
   const tweenView = useCallback((target, dur = 440) => {
@@ -1619,6 +1724,18 @@ function App() {
         const r = resizeRef.current;
         const dx = (e.clientX - r.startMouse.x) / view.scale;
         const dy = (e.clientY - r.startMouse.y) / view.scale;
+        if (r.kind === "image") {
+          // imagens redimensionam mantendo a proporção (largura comanda)
+          const ratio = r.startBlock.h / r.startBlock.w || 1;
+          const signX = r.corner.includes("l") ? -1 : 1;
+          const newW = Math.max(40, r.startBlock.w + signX * dx);
+          const newH = newW * ratio;
+          let x = r.startBlock.x, y = r.startBlock.y;
+          if (r.corner.includes("l")) x = r.startBlock.x + (r.startBlock.w - newW);
+          if (r.corner.includes("t")) y = r.startBlock.y + (r.startBlock.h - newH);
+          setImages(prev => prev.map(im => im.id === r.id ? { ...im, x, y, w: newW, h: newH } : im));
+          return;
+        }
         const MIN_W = 120, MIN_H = 60;
         let { x, y, w, h } = r.startBlock;
         if (r.corner.includes("r")) w = Math.max(MIN_W, r.startBlock.w + dx);
@@ -1707,6 +1824,10 @@ function App() {
         setStrokes(prev => prev.map(s => {
           const it = d.items.find(i => i.kind === "stroke" && i.id === s.id);
           return it ? { ...s, x: it.startX + dx, y: it.startY + dy } : s;
+        }));
+        setImages(prev => prev.map(im => {
+          const it = d.items.find(i => i.kind === "image" && i.id === im.id);
+          return it ? { ...im, x: it.startX + dx, y: it.startY + dy } : im;
         }));
         return;
       }
@@ -1942,7 +2063,7 @@ function App() {
 
   /* ----- fit/reset/clear ----- */
   const fitAll = () => {
-    const items = [...blocks.filter(b => !hiddenBlockIds.has(b.id)), ...notes];
+    const items = [...blocks.filter(b => !hiddenBlockIds.has(b.id)), ...notes, ...images];
     // Include strokes' extents
     const strokeBounds = strokes.flatMap(s =>
       (s.points || []).map(p => ({ x: p.x + (s.x||0), y: p.y + (s.y||0), w: 0, h: 0 }))
@@ -2006,7 +2127,7 @@ function App() {
 
   /* ----- export / import ----- */
   const exportJSON = () => {
-    const data = { blocks, notes, strokes, edges, view };
+    const data = { blocks, notes, strokes, images, edges, view };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -2022,10 +2143,11 @@ function App() {
         setBlocks(data.blocks || []);
         setNotes(data.notes || []);
         setStrokes(data.strokes || []);
+        setImages(data.images || []);
         setEdges(data.edges || []);
         if (data.view) setView(data.view);
         // bump id counter
-        const ids = [...(data.blocks||[]),...(data.notes||[]),...(data.strokes||[])].map(o=>parseInt(String(o.id).replace(/\D/g,""),10));
+        const ids = [...(data.blocks||[]),...(data.notes||[]),...(data.strokes||[]),...(data.images||[])].map(o=>parseInt(String(o.id).replace(/\D/g,""),10));
         _nid = Math.max(_nid, ...ids.filter(Number.isFinite)) + 1;
       } catch { alert("Arquivo inválido"); }
     };
@@ -2034,7 +2156,7 @@ function App() {
   };
   const clearAll = () => {
     if (!confirm("Limpar todo o canvas?")) return;
-    setBlocks([]); setNotes([]); setStrokes([]); setEdges([]); clearSelection();
+    setBlocks([]); setNotes([]); setStrokes([]); setImages([]); setEdges([]); clearSelection();
   };
 
   /* ----- Markdown → mind map ----- */
@@ -2333,6 +2455,9 @@ function App() {
           <svg viewBox="0 0 24 24" className="ic-svg"><path d="M6 6 H18 M12 6 V18 M9 18 H15"/></svg>
         </button>
         <button className={`ic ${tool==="draw" && drawShape!=="text" ? "active":""}`} onClick={() => { setTool("draw"); if (drawShape==="text") setDrawShape(lastDrawShapeRef.current); }} title="Pincel, formas e borracha (D)">✐</button>
+        <button className="ic" onClick={() => imgRef.current.click()} title="Inserir imagem (ou cole com Ctrl+V)">
+          <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.4"/><path d="M21 15 l-5-5 -8 8"/></svg>
+        </button>
         <div className="dvr"/>
         <button className="ic" onClick={undo} title="Desfazer (Ctrl+Z)">↶</button>
         <button className="ic" onClick={redo} title="Refazer (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
@@ -2695,6 +2820,11 @@ function App() {
           const wp = screenToWorld(e.clientX, e.clientY);
           createBlock(wp.x, wp.y);
         }}
+        onDragOver={(e) => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files")) e.preventDefault(); }}
+        onDrop={(e) => {
+          const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          if (f && f.type.indexOf("image/") === 0) { e.preventDefault(); addImageFromBlob(f, screenToWorld(e.clientX, e.clientY)); }
+        }}
         onWheel={onWheel}
       >
         <div className={`world ${present ? "present" : ""} ${spotlight && !present ? "spotlight" : ""}`} style={{ transform:`translate(${view.x}px,${view.y}px) scale(${view.scale})` }}>
@@ -2872,6 +3002,22 @@ function App() {
             </div>
           ))}
 
+          {images.map(im => (
+            <ImageNode
+              key={im.id}
+              image={im}
+              selected={selection.has(im.id)}
+              onSelect={selectOne}
+              onStartDrag={(e) => startDrag(e, im.id)}
+              onStartResize={startResize}
+              onDelete={removeImage}
+              onEraser={(id) => {
+                if (tool === "draw" && drawShape === "eraser") { removeImage(id); return true; }
+                return false;
+              }}
+            />
+          ))}
+
           {blocks.map(b => (
             <Block
               key={b.id}
@@ -3015,6 +3161,7 @@ function App() {
 
       <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON} />
       <input ref={mdRef} type="file" accept=".md,.markdown,.txt" style={{display:"none"}} onChange={importMarkdown} />
+      <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={(e) => { const f = e.target.files[0]; if (f) addImageFromBlob(f, null); e.target.value = ""; }} />
     </>
   );
 }
