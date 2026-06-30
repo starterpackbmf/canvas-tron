@@ -2791,11 +2791,7 @@ function App() {
                     stroke={strokeVal}
                     data-stroke={p.color}
                     strokeWidth={isSel ? 4 : 2.2}
-                    style={{
-                      filter: isSel
-                        ? `drop-shadow(0 0 8px #fff) drop-shadow(0 0 6px ${p.toColor || p.color})`
-                        : `drop-shadow(0 0 4px ${p.fromColor || p.color}) drop-shadow(0 0 4px ${p.toColor || p.color})`,
-                    }}
+                    style={{ filter: isSel ? "drop-shadow(0 0 3px #fff)" : "none" }}
                   />
                   {/* Energy beam running source → target. Two layers, both using
                       the edge's own gradient so even the GLOW follows the degradê:
@@ -2816,11 +2812,7 @@ function App() {
                   {p.arrowD && (
                     <path
                       d={p.arrowD}
-                      style={{
-                        fill: p.toColor || p.color,
-                        stroke: "none",
-                        filter: `drop-shadow(0 0 4px ${p.toColor || p.color})`,
-                      }}
+                      style={{ fill: p.toColor || p.color, stroke: "none" }}
                     />
                   )}
                   {/* Short stub — visible when collapsed */}
@@ -2828,7 +2820,7 @@ function App() {
                     d={p.stubD}
                     className={"stub " + (p.collapsed ? "" : "gone")}
                     stroke={p.color}
-                    style={{ filter: `drop-shadow(0 0 6px ${p.color})` }}
+                    style={{ filter: "none" }}
                   />
                   {/* Invisible thick hit area — click selects, drag bends the line */}
                   <path
