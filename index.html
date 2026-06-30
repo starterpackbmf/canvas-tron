@@ -289,30 +289,17 @@
   }
   .block .body{color:#dcefff;outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;text-align:center;font-size:var(--body-size,13px)}
 
-  /* ===== block roles (hierarquia: papel define tamanho/peso/forma, não a cor) ===== */
-  /* kicker = rótulo discreto do papel no topo do bloco, pra bater o olho */
-  .block .role-kicker{
-    font-size:var(--kicker-size,9px);letter-spacing:1.6px;text-transform:uppercase;
-    font-weight:700;color:var(--bc);opacity:.65;text-align:center;margin-bottom:4px;
-    text-shadow:0 0 6px currentColor;
+  /* ===== block shapes (forma por bloco) =====
+     Retângulo/arredondado/pílula/elipse = só border-radius (borda+glow normais).
+     Losango/hexágono = SVG "skin" atrás do conteúdo; a caixa fica transparente
+     e o glow vai pelo drop-shadow do SVG (segue a silhueta). */
+  .block.shaped-skin{
+    background:transparent !important;border:none !important;box-shadow:none !important;
+    padding:18px 26px; /* mais respiro pras bordas inclinadas */
   }
-  /* glow tiers — peso visual diferente por importância */
-  .block.role-g{box-shadow:0 0 28px rgba(var(--bc-rgb),.5),inset 0 0 26px rgba(var(--bc-rgb),.1)}
-  .block.role-s{box-shadow:0 0 9px rgba(var(--bc-rgb),.22),inset 0 0 14px rgba(var(--bc-rgb),.04);opacity:.94}
-  .block.role-italic .body{font-style:italic}
-  /* selected sempre vence os tiers acima */
-  .block.role-g.selected,.block.role-s.selected{
-    box-shadow:0 0 0 2px rgba(var(--bc-rgb),.9),0 0 24px rgba(var(--bc-rgb),.7),inset 0 0 22px rgba(var(--bc-rgb),.12);
-  }
-  /* botões de papel na barra de seleção */
-  .role-btn{
-    padding:5px 9px;background:transparent;color:var(--white);
-    border:1px solid rgba(0,240,255,.25);border-radius:5px;
-    font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;
-    cursor:pointer;white-space:nowrap;transition:all .12s ease;
-  }
-  .role-btn:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 8px rgba(0,240,255,.3)}
-  .role-btn.active{background:rgba(0,240,255,.15);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 10px rgba(0,240,255,.4)}
+  .block-skin{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible}
+  /* conteúdo acima do skin */
+  .block.shaped-skin > .title,.block.shaped-skin > .body{position:relative;z-index:1}
   .block [contenteditable="true"]{background:rgba(var(--bc-rgb),.06);border-radius:3px;padding:2px 4px;margin:-2px -4px;cursor:text}
   .block [data-placeholder]:empty::before{
     content:attr(data-placeholder);
@@ -577,17 +564,17 @@ const PRESET_COLORS = [
   "#ff3b5c", // red
   "#e9fbff", // white
 ];
-// Papéis de bloco → hierarquia visual. Cada papel define TAMANHO + tipografia +
-// peso/glow (NÃO a cor — a cor continua manual). 3 tiers de glow: g/m/s.
-const BLOCK_ROLES = [
-  { key:"principal",  label:"Principal",  full:"Conceito Principal", w:330, h:150, kicker:11, title:18,   body:15,   weight:800, bw:2.6, glow:"g" },
-  { key:"conceito",   label:"Conceito",   full:"Conceito",           w:280, h:118, kicker:9,  title:14,   body:14,   weight:760, bw:1.8, glow:"m" },
-  { key:"explicacao", label:"Explicação", full:"Explicação",         w:240, h:92,  kicker:9,  title:11,   body:13,   weight:700, bw:1.2, glow:"m" },
-  { key:"exemplo",    label:"Exemplo",    full:"Exemplo",            w:220, h:84,  kicker:9,  title:10,   body:12.5, weight:600, bw:1,   glow:"s", italic:true },
-  { key:"regra",      label:"Regra",      full:"Regra prática",      w:235, h:86,  kicker:9,  title:11,   body:13,   weight:760, bw:1.4, glow:"m" },
-  { key:"erro",       label:"Erro",       full:"Erro comum",         w:205, h:74,  kicker:9,  title:10,   body:12,   weight:650, bw:1,   glow:"s" },
+// Formas de bloco. radius* = via CSS border-radius (mantém borda+glow normais).
+// skin = forma angular desenhada por SVG atrás do conteúdo (losango/hexágono).
+const SHAPES = [
+  { key:"rect",    glyph:"▭", title:"Retângulo",       radius:"6px"   },
+  { key:"rounded", glyph:"▢", title:"Arredondado",     radius:"16px"  },
+  { key:"pill",    glyph:"⬭", title:"Pílula",          radius:"999px" },
+  { key:"ellipse", glyph:"◯", title:"Elipse / círculo", radius:"50%"  },
+  { key:"diamond", glyph:"◇", title:"Losango",         skin:"diamond", points:"50,2 98,50 50,98 2,50" },
+  { key:"hexagon", glyph:"⬡", title:"Hexágono",        skin:"hexagon", points:"27,3 73,3 98,50 73,97 27,97 2,50" },
 ];
-const ROLE_BY_KEY = Object.fromEntries(BLOCK_ROLES.map(r => [r.key, r]));
+const SHAPE_BY_KEY = Object.fromEntries(SHAPES.map(s => [s.key, s]));
 
 const hexToRgb = (hex) => {
   const h = hex.replace("#","");
@@ -839,23 +826,21 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   }, [editingBody]);
 
   const color = block.color || DEFAULT_COLOR;
-  const roleDef = block.role ? ROLE_BY_KEY[block.role] : null;
+  const shapeDef = SHAPE_BY_KEY[block.shape] || SHAPE_BY_KEY.rect;
+  const useSkin = !!shapeDef.skin;
+  const skinGlow = (selected || focused || lit)
+    ? `drop-shadow(0 0 11px ${color}) drop-shadow(0 0 4px ${color})`
+    : `drop-shadow(0 0 5px ${color})`;
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${roleDef ? "role-"+roleDef.glow : ""} ${roleDef && roleDef.italic ? "role-italic" : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
         minHeight: (block.h || 80) + "px",
         "--bc": color, "--bc-rgb": hexToRgb(color),
-        ...(roleDef ? {
-          "--title-size": roleDef.title + "px",
-          "--body-size": roleDef.body + "px",
-          "--title-weight": roleDef.weight,
-          "--kicker-size": roleDef.kicker + "px",
-          "--bw": roleDef.bw + "px",
-        } : {}),
+        ...(shapeDef.radius ? { borderRadius: shapeDef.radius } : {}),
       }}
       onMouseDown={(e) => {
         if (e.target.classList.contains("port")) return;
@@ -873,7 +858,20 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
         else setEditingBody(true);
       }}
     >
-      {roleDef && <div className="role-kicker">{roleDef.full}</div>}
+      {useSkin && (
+        <svg className="block-skin" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon
+            points={shapeDef.points}
+            style={{
+              fill: "rgba(5,14,28,.9)",
+              stroke: color,
+              strokeWidth: selected ? 2.4 : 1.6,
+              vectorEffect: "non-scaling-stroke",
+              filter: skinGlow,
+            }}
+          />
+        </svg>
+      )}
       {editingTitle ? (
         <div
           ref={titleRef}
@@ -1231,14 +1229,12 @@ function App() {
     setStrokes(p => p.map(s => selection.has(s.id) ? { ...s, color } : s));
     setNotes(p => p.map(n => selection.has(n.id) ? { ...n, color } : n));
   }, [selection]);
-  // Aplica (ou limpa) o papel nos blocos selecionados. O papel define o
-  // tamanho/peso/glow; a cor permanece a que o usuário escolheu.
-  const setBlockRole = useCallback((key) => {
-    const r = key ? ROLE_BY_KEY[key] : null;
+  // Aplica a forma nos blocos selecionados (retângulo = volta ao padrão).
+  const setBlockShape = useCallback((shape) => {
     setBlocks(p => p.map(b => {
       if (!selection.has(b.id)) return b;
-      if (!r) { const { role, ...rest } = b; return rest; } // limpar papel (mantém tamanho atual)
-      return { ...b, role: key, w: r.w, h: r.h };
+      if (shape === "rect") { const { shape: _drop, ...rest } = b; return rest; }
+      return { ...b, shape };
     }));
   }, [selection]);
   const setSelectedStrokeWidth = useCallback((width) => {
@@ -2514,21 +2510,21 @@ function App() {
               </label>
             </div>
             {hasBlockSel && (() => {
-              const selRole = blocks.find(b => selection.has(b.id))?.role;
+              const selShape = blocks.find(b => selection.has(b.id))?.shape || "rect";
               return (
                 <>
                   <div className="vsep"/>
                   <div className="group">
-                    <span className="lbl">Papel</span>
-                    {BLOCK_ROLES.map(r => (
+                    <span className="lbl">Forma</span>
+                    {SHAPES.map(s => (
                       <button
-                        key={r.key}
-                        className={`role-btn ${selRole === r.key ? "active" : ""}`}
-                        onClick={() => setBlockRole(r.key)}
-                        title={r.full + " — define tamanho e peso (a cor continua sua)"}
-                      >{r.label}</button>
+                        key={s.key}
+                        className={`shape-btn ${selShape === s.key ? "active" : ""}`}
+                        onClick={() => setBlockShape(s.key)}
+                        title={s.title}
+                        style={{ fontSize: 17, lineHeight: 1 }}
+                      >{s.glyph}</button>
                     ))}
-                    <button className="role-btn" onClick={() => setBlockRole(null)} title="Sem papel (padrão)">—</button>
                   </div>
                 </>
               );
