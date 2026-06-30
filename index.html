@@ -730,6 +730,24 @@ const strokeToPath = (s) => {
     if (!s.points || s.points.length < 2) return "";
     return "M " + s.points.map(p => `${p.x} ${p.y}`).join(" L ");
   }
+  // polyline: liga os pontos por segmentos retos + setinha aberta no fim
+  if (t === "polyline") {
+    if (!s.points || s.points.length < 2) return "";
+    let d = "M " + s.points.map(p => `${p.x} ${p.y}`).join(" L ");
+    if (s.arrow !== false) {
+      const p2 = s.points[s.points.length - 1], p1 = s.points[s.points.length - 2];
+      const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+      const len = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const head = Math.min(15, len * 0.6);
+      if (head > 1) {
+        const spread = 0.5;
+        const ax = p2.x - head * Math.cos(ang - spread), ay = p2.y - head * Math.sin(ang - spread);
+        const bx = p2.x - head * Math.cos(ang + spread), by = p2.y - head * Math.sin(ang + spread);
+        d += ` M ${ax} ${ay} L ${p2.x} ${p2.y} L ${bx} ${by}`;
+      }
+    }
+    return d;
+  }
   if (!s.p1 || !s.p2) return "";
   const { p1, p2 } = s;
   if (t === "line") {
@@ -1464,6 +1482,7 @@ function App() {
   // and by pressing ON an existing stroke while a drawing tool is active — so a
   // new rabisco can start right where the previous one ended).
   const beginDrawAt = useCallback((clientX, clientY) => {
+    if (drawShape === "polyline") { addPolyPoint(clientX, clientY); return; }
     const wp = screenToWorld(clientX, clientY);
     const base = { id: uid(), type: drawShape, x: 0, y: 0, color: drawColor, width: drawWidth };
     if ((drawShape === "rect" || drawShape === "ellipse") && fillOn) {
@@ -1472,7 +1491,38 @@ function App() {
     }
     if (drawShape === "freehand") setDrawing({ ...base, points: [{ x: wp.x, y: wp.y }] });
     else setDrawing({ ...base, p1: { x: wp.x, y: wp.y }, p2: { x: wp.x, y: wp.y } });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screenToWorld, drawShape, drawColor, drawWidth, fillOn, fillColor, fillOpacity]);
+
+  /* ----- polyline (linha de pontos com seta — clique pra ligar) ----- */
+  const drawingRef = useRef(null);
+  useEffect(() => { drawingRef.current = drawing; });
+  // adiciona um ponto: o ponto "vivo" (último, segue o mouse) vira fixo e nasce outro vivo
+  const addPolyPoint = useCallback((clientX, clientY) => {
+    const wp = screenToWorld(clientX, clientY);
+    setDrawing(d => {
+      if (d && d.type === "polyline") {
+        return { ...d, points: [...d.points.slice(0, -1), { x: wp.x, y: wp.y }, { x: wp.x, y: wp.y }] };
+      }
+      return { id: uid(), type: "polyline", x: 0, y: 0, color: drawColor, width: drawWidth, arrow: true,
+               points: [{ x: wp.x, y: wp.y }, { x: wp.x, y: wp.y }] };
+    });
+  }, [screenToWorld, drawColor, drawWidth]);
+  // finaliza: tira o ponto vivo, remove duplicados do final (duplo-clique) e comita
+  const finishPolyline = useCallback(() => {
+    const d = drawingRef.current;
+    if (!d || d.type !== "polyline") return;
+    let pts = d.points.slice(0, -1);
+    pts = pts.filter((p, i) => i === 0 || Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > 4);
+    if (pts.length >= 2) setStrokes(prev => [...prev, { ...d, points: pts }]);
+    setDrawing(null);
+  }, []);
+  // se trocar de ferramenta/forma no meio, finaliza a linha em andamento
+  useEffect(() => {
+    if (drawingRef.current && drawingRef.current.type === "polyline" && !(tool === "draw" && drawShape === "polyline")) {
+      finishPolyline();
+    }
+  }, [tool, drawShape, finishPolyline]);
 
   /* ----- update ----- */
   const updateBlock = useCallback((id, patch) => {
@@ -1876,6 +1926,10 @@ function App() {
             if (dx*dx + dy*dy < 4) return d;
             return { ...d, points: [...d.points, wp] };
           }
+          // polyline: o ponto "vivo" (último) acompanha o cursor (rubber-band)
+          if (d.type === "polyline") {
+            return { ...d, points: [...d.points.slice(0, -1), wp] };
+          }
           // Shift-constrained (square/circle/straight line) when Shift is held
           let p2 = wp;
           if (e.shiftKey && (d.type === "rect" || d.type === "ellipse")) {
@@ -1988,8 +2042,8 @@ function App() {
       resizeRef.current = null;
       panRef.current = false;
       if (wsRef.current) wsRef.current.classList.remove("panning");
-      if (drawing) {
-        // Commit the stroke if it has enough data
+      if (drawing && drawing.type !== "polyline") {
+        // Commit the stroke if it has enough data (polyline finaliza por Enter/duplo-clique)
         let ok = false;
         if (drawing.type === "freehand") {
           ok = drawing.points && drawing.points.length >= 2;
@@ -2014,6 +2068,10 @@ function App() {
   useEffect(() => {
     const onKey = (e) => {
       if (document.activeElement && document.activeElement.isContentEditable) return;
+      // finaliza a linha de pontos com Enter ou Esc
+      if (drawingRef.current && drawingRef.current.type === "polyline") {
+        if (e.key === "Enter" || e.key === "Escape") { e.preventDefault(); finishPolyline(); return; }
+      }
       const mod = e.ctrlKey || e.metaKey;
       if (mod) {
         const k = e.key.toLowerCase();
@@ -2044,7 +2102,7 @@ function App() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [deleteSelection, clearSelection, undo, redo, duplicateSelection, present, goToPresent, enterPresent, exitPresent]);
+  }, [deleteSelection, clearSelection, undo, redo, duplicateSelection, present, goToPresent, enterPresent, exitPresent, finishPolyline]);
 
   /* ----- wheel zoom ----- */
   const onWheel = useCallback((e) => {
@@ -2661,6 +2719,9 @@ function App() {
             <button className={`shape-btn ${drawShape==="arrow"?"active":""}`} onClick={() => setDrawShape("arrow")} title="Seta (Shift = 45°)">
               <svg viewBox="0 0 24 24"><line x1="4" y1="20" x2="20" y2="4"/><polyline points="20,12 20,4 12,4"/></svg>
             </button>
+            <button className={`shape-btn ${drawShape==="polyline"?"active":""}`} onClick={() => setDrawShape("polyline")} title="Linha de pontos com seta — clique pra ligar os pontos; Enter ou duplo-clique finaliza">
+              <svg viewBox="0 0 24 24"><polyline points="3,20 8,13 12,16 17,6"/><polyline points="13,6 17,6 17,10"/></svg>
+            </button>
             <button className={`shape-btn ${drawShape==="rect"?"active":""}`} onClick={() => setDrawShape("rect")} title="Retângulo (Shift = quadrado)">
               <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
             </button>
@@ -2890,6 +2951,8 @@ function App() {
         className={`workspace ${tool === "block" ? "tool-block" : ""} ${tool === "note" ? "tool-note" : ""} ${tool === "draw" && drawShape !== "eraser" ? "tool-draw" : ""} ${tool === "draw" && drawShape === "eraser" ? "tool-eraser" : ""}`}
         onMouseDown={onWorkspaceDown}
         onDoubleClick={(e) => {
+          // duplo-clique finaliza a linha de pontos em andamento
+          if (drawing && drawing.type === "polyline") { finishPolyline(); return; }
           // Double-click on empty canvas creates a new block
           if (tool !== "select") return;
           if (e.target !== wsRef.current && !e.target.classList.contains("world") && e.target.tagName !== "svg") return;
