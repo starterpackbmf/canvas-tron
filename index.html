@@ -2118,43 +2118,67 @@ function App() {
     });
   };
 
-  /* ----- export PNG (rasterize the whole map) ----- */
+  /* ----- export PNG (híbrido) -----
+     html2canvas é instável com SVG (as ligações somiam). Aqui as linhas, setas
+     e desenhos são pintados NA MÃO num <canvas> via Path2D (renderiza SVG path
+     de forma confiável); o html2canvas cuida só da camada HTML (blocos/notas/
+     imagens, que ele já renderiza bem). As duas são compostas. */
   const exportPNG = () => {
     const h2c = window.html2canvas;
     if (!h2c) { alert("A biblioteca de imagem ainda está carregando — tente de novo em instantes."); return; }
     const ws = wsRef.current;
     if (!ws) return;
-    fitAll(); // frame everything first so the capture includes the full map
+    fitAll(); // enquadra tudo antes de capturar
     setTimeout(() => {
+      const v = viewRef.current;
+      const W = window.innerWidth, H = window.innerHeight, S = 2;
+      const out = document.createElement("canvas");
+      out.width = Math.round(W * S); out.height = Math.round(H * S);
+      const ctx = out.getContext("2d");
+      ctx.fillStyle = "#030612"; ctx.fillRect(0, 0, out.width, out.height);
+      // aplica a mesma transformação da tela (escala 2 p/ qualidade)
+      const worldTransform = () => { ctx.setTransform(S, 0, 0, S, 0, 0); ctx.translate(v.x, v.y); ctx.scale(v.scale, v.scale); };
+      // 1) ligações + setas (atrás dos blocos)
+      worldTransform();
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      edgePaths.forEach(p => {
+        try {
+          if (p.collapsed) {
+            if (p.stubD) { ctx.strokeStyle = p.color; ctx.lineWidth = 2.6; ctx.stroke(new Path2D(p.stubD)); }
+            return;
+          }
+          ctx.strokeStyle = p.color; ctx.lineWidth = 2.2;
+          if (p.curveD) ctx.stroke(new Path2D(p.curveD));
+          if (p.arrowD) { ctx.fillStyle = p.toColor || p.color; ctx.fill(new Path2D(p.arrowD)); }
+        } catch {}
+      });
+      // 2) camada HTML (blocos/notas/imagens) — SVG escondido, fundo transparente
       h2c(ws, {
-        backgroundColor: "#030612", scale: 2, logging: false, useCORS: true,
-        // html2canvas não renderiza gradiente url(#...), drop-shadow nem
-        // mix-blend-mode — sem isso as ligações somem. Normaliza o clone:
+        backgroundColor: null, scale: S, logging: false, useCORS: true,
         onclone: (doc) => {
-          doc.querySelectorAll(".edges path").forEach(pth => {
-            pth.style.filter = "none";
-            const s = pth.getAttribute("stroke") || "";
-            if (s.indexOf("url(") === 0) {
-              const solid = pth.getAttribute("data-stroke");
-              if (solid) pth.setAttribute("stroke", solid); // gradiente → cor sólida
-            }
-          });
-          // camadas decorativas (animadas / blend-mode) saem da imagem estática
-          doc.querySelectorAll(".edges .flow-glow,.edges .flow,.edges .flow-spark,.edges .pulse")
-             .forEach(el => el.remove());
-          // tira filtros de traços e das formas (losango/hexágono) pra não sumirem
-          doc.querySelectorAll(".strokes path,.block-skin polygon")
-             .forEach(el => { el.style.filter = "none"; });
+          doc.querySelectorAll(".edges,.strokes,.bg-particles").forEach(el => el.remove());
+          doc.querySelectorAll(".block-skin polygon").forEach(el => { el.style.filter = "none"; });
         },
-      })
-        .then(canvas => {
-          const a = document.createElement("a");
-          a.href = canvas.toDataURL("image/png");
-          a.download = "canvas-tron.png";
-          a.click();
-        })
-        .catch(err => { console.error(err); alert("Falha ao exportar PNG: " + err.message); });
-    }, 200);
+      }).then(layer => {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(layer, 0, 0);
+        // 3) desenhos à mão livre por cima (ficam na frente dos blocos)
+        worldTransform();
+        ctx.lineCap = "round"; ctx.lineJoin = "round";
+        strokes.forEach(s => {
+          const d = strokeToPath(s); if (!d) return;
+          try {
+            const path = new Path2D(d);
+            ctx.save(); ctx.translate(s.x || 0, s.y || 0);
+            if (s.fill) { ctx.fillStyle = `rgba(${hexToRgb(s.fill)},${s.fillOpacity ?? 1})`; ctx.fill(path); }
+            ctx.strokeStyle = s.color || DEFAULT_COLOR; ctx.lineWidth = s.width || 3; ctx.stroke(path);
+            ctx.restore();
+          } catch {}
+        });
+        const a = document.createElement("a");
+        a.href = out.toDataURL("image/png"); a.download = "canvas-tron.png"; a.click();
+      }).catch(err => { console.error(err); alert("Falha ao exportar PNG: " + err.message); });
+    }, 250);
   };
 
   /* ----- export / import ----- */
