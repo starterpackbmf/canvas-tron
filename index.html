@@ -490,6 +490,49 @@
     background:currentColor;box-shadow:0 0 8px currentColor;cursor:pointer;
   }
   .pct{color:var(--cyan);font-size:10px;font-weight:700;min-width:30px;text-align:right}
+
+  /* ===== holofote (spotlight no modo edição — sem mover a câmera) ===== */
+  .world.spotlight .block:not(.lit):not(.hidden){
+    opacity:.4;filter:saturate(.85);
+    transition:opacity .3s ease,filter .3s ease;
+  }
+  .world.spotlight .block.lit{
+    box-shadow:
+      0 0 0 2px rgba(var(--bc-rgb),.9),
+      0 0 42px rgba(var(--bc-rgb),.85),
+      0 0 90px rgba(var(--bc-rgb),.4),
+      inset 0 0 26px rgba(var(--bc-rgb),.15);
+    z-index:3;
+  }
+
+  /* ===== breadcrumb (caminho raiz → nó atual) ===== */
+  .breadcrumb{
+    position:fixed;top:64px;left:16px;z-index:9;
+    display:flex;align-items:center;flex-wrap:wrap;gap:1px;max-width:44vw;
+    padding:6px 10px;border-radius:8px;
+    background:rgba(5,12,24,.82);border:1px solid rgba(0,240,255,.25);
+    backdrop-filter:blur(8px);font-size:11px;
+    animation:fadein-bc .15s ease;
+  }
+  @keyframes fadein-bc{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  .breadcrumb .crumb{
+    color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:4px;
+    white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;
+    transition:all .12s ease;
+  }
+  .breadcrumb .crumb:hover{color:var(--cyan);background:rgba(0,240,255,.08)}
+  .breadcrumb .crumb.current{color:var(--cyan);font-weight:700;text-shadow:0 0 8px rgba(0,240,255,.5)}
+  .breadcrumb .bc-sep{color:var(--muted);opacity:.45;font-size:10px;padding:0 1px}
+
+  /* ===== minimap ===== */
+  .minimap{
+    position:fixed;right:14px;bottom:44px;z-index:9;
+    background:rgba(3,8,18,.85);border:1px solid rgba(0,240,255,.3);
+    border-radius:8px;box-shadow:0 0 22px rgba(0,0,0,.5);
+    backdrop-filter:blur(6px);overflow:hidden;cursor:crosshair;
+    line-height:0;
+  }
+  .minimap .mm-view{fill:rgba(0,240,255,.10);stroke:var(--cyan);stroke-width:1.5}
 </style>
 </head>
 <body>
@@ -710,7 +753,7 @@ const bezierMidpoint = (a, b) => {
 };
 
 /* ================== Block ================== */
-function Block({ block, selected, hidden, focused, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange, onMeasure }) {
+function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange, onMeasure }) {
   const elRef = useRef(null);
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
@@ -800,7 +843,7 @@ function Block({ block, selected, hidden, focused, pendingEditRef, onSelect, onS
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${roleDef ? "role-"+roleDef.glow : ""} ${roleDef && roleDef.italic ? "role-italic" : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${roleDef ? "role-"+roleDef.glow : ""} ${roleDef && roleDef.italic ? "role-italic" : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
@@ -1028,6 +1071,9 @@ function App() {
   const [present, setPresent] = useState(false);
   const [focusId, setFocusId] = useState(null);
   const [focusIdx, setFocusIdx] = useState(0);
+  // Holofote (spotlight no modo edição) + minimapa
+  const [spotlight, setSpotlight] = useState(false);
+  const [showMinimap, setShowMinimap] = useState(true);
 
   // refs for imperative drag/connect state
   const dragRef = useRef(null);
@@ -2163,6 +2209,59 @@ function App() {
     };
   }).filter(Boolean);
 
+  /* ----- breadcrumb: caminho raiz → nó atual ----- */
+  const buildCrumbs = (id) => {
+    const chain = [];
+    const seen = new Set();
+    let cur = id;
+    while (cur && !seen.has(cur)) {
+      seen.add(cur);
+      const b = blocksById.get(cur);
+      if (!b) break;
+      chain.unshift(b);
+      const parent = edges.find(e => e.to.id === cur && !hiddenBlockIds.has(e.from.id));
+      cur = parent ? parent.from.id : null;
+    }
+    return chain;
+  };
+  const crumbNodeId = present ? focusId : (selection.size === 1 ? [...selection][0] : null);
+  const crumbs = (crumbNodeId && blocksById.has(crumbNodeId)) ? buildCrumbs(crumbNodeId) : [];
+  const crumbText = (b) => {
+    const t = (b.title || "").replace(/<[^>]*>/g, "").trim();
+    return t || "(sem título)";
+  };
+
+  /* ----- minimap data ----- */
+  const mmData = (() => {
+    if (!showMinimap || present) return null;
+    const vis = blocks.filter(b => !hiddenBlockIds.has(b.id));
+    if (!vis.length) return null;
+    const vw = window.innerWidth / view.scale, vh = window.innerHeight / view.scale;
+    const vx = -view.x / view.scale, vy = -view.y / view.scale;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    vis.forEach(b => {
+      const w = (sizes[b.id]?.w) || b.w || 240, h = (sizes[b.id]?.h) || b.h || 80;
+      minX = Math.min(minX, b.x); minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + w); maxY = Math.max(maxY, b.y + h);
+    });
+    // include the viewport so the "você está aqui" box is always on the map
+    minX = Math.min(minX, vx); minY = Math.min(minY, vy);
+    maxX = Math.max(maxX, vx + vw); maxY = Math.max(maxY, vy + vh);
+    const pad = 70; minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+    const bw = maxX - minX, bh = maxY - minY;
+    const MM_W = 190, MM_H = 130;
+    const sc = Math.min(MM_W / bw, MM_H / bh);
+    return { vis, minX, minY, sc, W: bw * sc, H: bh * sc, vx, vy, vw, vh };
+  })();
+  const mmJump = (e) => {
+    if (!mmData) return;
+    e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    const worldX = mmData.minX + (e.clientX - r.left) / mmData.sc;
+    const worldY = mmData.minY + (e.clientY - r.top) / mmData.sc;
+    setView(v => ({ ...v, x: window.innerWidth / 2 - worldX * v.scale, y: window.innerHeight / 2 - worldY * v.scale }));
+  };
+
   /* ----- render ----- */
   return (
     <>
@@ -2182,6 +2281,8 @@ function App() {
         <button className="tool" onClick={fitAll}>⊡ FIT</button>
         <button className="tool" onClick={() => setView({x:0,y:0,scale:1})}>1:1</button>
         <button className={`tool ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Liga/desliga o fluxo de energia nas conexões">⚡ FLUXO</button>
+        <button className={`tool ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado e escurece o resto (sem mover a câmera)">◎ HOLOFOTE</button>
+        <button className={`tool ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Mostra/esconde o minimapa">⊞ MINIMAPA</button>
         <button className="tool" onClick={enterPresent} title="Modo apresentação (P)">▶ APRESENTAR</button>
         <button className={`tool ${isFullscreen?"active":""}`} onClick={toggleFullscreen} title="Tela cheia">{isFullscreen ? "⤧ SAIR DA TELA CHEIA" : "⛶ TELA CHEIA"}</button>
         <div className="sep"/>
@@ -2201,6 +2302,31 @@ function App() {
           <button className="tool" onClick={() => goToPresent(focusIdx + 1)} title="Próximo (→ / espaço)">▶</button>
           <div className="sep"/>
           <button className="tool danger" onClick={exitPresent} title="Sair (Esc)">✕ SAIR</button>
+        </div>
+      )}
+
+      {crumbs.length >= 2 && (
+        <div className="breadcrumb">
+          {crumbs.map((b, i) => (
+            <React.Fragment key={b.id}>
+              {i > 0 && <span className="bc-sep">›</span>}
+              <span
+                className={`crumb ${i === crumbs.length - 1 ? "current" : ""}`}
+                style={i === crumbs.length - 1 ? { color: b.color } : undefined}
+                title={crumbText(b)}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  if (present) {
+                    const idx = presentOrderRef.current.findIndex(x => x.id === b.id);
+                    if (idx >= 0) goToPresent(idx);
+                  } else {
+                    selectOne(b.id);
+                    centerOnBlock(b);
+                  }
+                }}
+              >{crumbText(b)}</span>
+            </React.Fragment>
+          ))}
         </div>
       )}
 
@@ -2512,7 +2638,7 @@ function App() {
         }}
         onWheel={onWheel}
       >
-        <div className={`world ${present ? "present" : ""}`} style={{ transform:`translate(${view.x}px,${view.y}px) scale(${view.scale})` }}>
+        <div className={`world ${present ? "present" : ""} ${spotlight && !present ? "spotlight" : ""}`} style={{ transform:`translate(${view.x}px,${view.y}px) scale(${view.scale})` }}>
           {/* freehand strokes + shapes (z-index:5 → rendered IN FRONT of blocks) */}
           <svg className="strokes" xmlns="http://www.w3.org/2000/svg">
             {strokes.map(s => {
@@ -2701,6 +2827,7 @@ function App() {
               selected={selection.has(b.id)}
               hidden={hiddenBlockIds.has(b.id)}
               focused={present && b.id === focusId}
+              lit={spotlight && !present && selection.has(b.id)}
               pendingEditRef={pendingEditRef}
               onSelect={(id, additive) => { selectOne(id, additive); pulseFrom(id); }}
               onStartDrag={(e) => startDrag(e, b.id)}
@@ -2795,6 +2922,42 @@ function App() {
       <div className="hint">
         <b>B</b> bloco • <b>N</b> texto • <b>D</b> desenho • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>arrasta a linha</b> dobrar • <b>clica na linha</b> editar/estilo • <b>duplo-clique</b> editar • <b>Del</b> apagar
       </div>
+
+      {mmData && (
+        <div
+          className="minimap"
+          style={{ width: mmData.W, height: mmData.H }}
+          onMouseDown={mmJump}
+          onMouseMove={(e) => { if (e.buttons === 1) mmJump(e); }}
+          title="Minimapa — clique/arraste pra navegar"
+        >
+          <svg width={mmData.W} height={mmData.H}>
+            {mmData.vis.map(b => {
+              const w = (sizes[b.id]?.w) || b.w || 240, h = (sizes[b.id]?.h) || b.h || 80;
+              return (
+                <rect
+                  key={b.id}
+                  x={(b.x - mmData.minX) * mmData.sc}
+                  y={(b.y - mmData.minY) * mmData.sc}
+                  width={Math.max(2, w * mmData.sc)}
+                  height={Math.max(2, h * mmData.sc)}
+                  rx={1.5}
+                  fill={b.color || DEFAULT_COLOR}
+                  opacity={selection.has(b.id) ? 1 : 0.7}
+                />
+              );
+            })}
+            <rect
+              className="mm-view"
+              x={(mmData.vx - mmData.minX) * mmData.sc}
+              y={(mmData.vy - mmData.minY) * mmData.sc}
+              width={mmData.vw * mmData.sc}
+              height={mmData.vh * mmData.sc}
+              rx={2}
+            />
+          </svg>
+        </div>
+      )}
 
       <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON} />
       <input ref={mdRef} type="file" accept=".md,.markdown,.txt" style={{display:"none"}} onChange={importMarkdown} />
