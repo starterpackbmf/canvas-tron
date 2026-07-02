@@ -1617,7 +1617,7 @@ function App() {
   }, []);
   // Toggle the directional arrowhead on one connection
   const toggleEdgeArrow = useCallback((id) => {
-    setEdges(p => p.map(e => e.id === id ? { ...e, arrow: e.arrow === false } : e));
+    setEdges(p => p.map(e => e.id === id ? { ...e, arrow: e.arrow !== true } : e));
   }, []);
   // Remove one waypoint (double-click a bend handle); empty list → back to auto-route
   const removeWaypoint = useCallback((id, index) => {
@@ -2478,7 +2478,7 @@ function App() {
 
     // Directional arrowhead at the target end (on by default). Orient it along
     // the real travel direction into the port so it reads as "sai de A → vai pra B".
-    const arrow = e.arrow !== false;
+    const arrow = e.arrow === true; // padrão: só linha; seta é opt-in
     let arrowD = "";
     if (arrow) {
       let adx, ady;
