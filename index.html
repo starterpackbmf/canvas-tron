@@ -274,14 +274,26 @@
   }
   .collapse-badge-wrap:hover{transform:translate(-50%,-50%) scale(1.15)}
 
-  /* ===== ênfase (bloco em destaque, respirando de leve) ===== */
-  .block.emphasis{ animation:block-breathe 3.8s ease-in-out infinite; z-index:2; }
-  @keyframes block-breathe{
-    0%,100%{ box-shadow:0 0 10px rgba(var(--bc-rgb),.30),inset 0 0 18px rgba(var(--bc-rgb),.05); }
-    50%    { box-shadow:0 0 20px rgba(var(--bc-rgb),.55),inset 0 0 22px rgba(var(--bc-rgb),.10); }
+  /* ===== ênfase: contorno correndo (arco de luz dá a volta na borda) ===== */
+  @property --emph-ang{ syntax:"<angle>"; inherits:false; initial-value:0deg; }
+  .block.emphasis{ z-index:2; box-shadow:0 0 15px rgba(var(--bc-rgb),.4); }
+  .block.emphasis::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;padding:2px;
+    background:conic-gradient(from var(--emph-ang),
+      rgba(var(--bc-rgb),0) 0deg, rgba(var(--bc-rgb),0) 232deg,
+      rgba(var(--bc-rgb),.9) 300deg, rgba(255,255,255,.95) 322deg,
+      rgba(var(--bc-rgb),.9) 340deg, rgba(var(--bc-rgb),0) 360deg);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    mask-composite:exclude;
+    animation:emph-run 2.8s linear infinite;
+    pointer-events:none;
   }
+  @keyframes emph-run{ to{ --emph-ang:360deg; } }
   @media (prefers-reduced-motion: reduce){
-    .block.emphasis{ animation:none; box-shadow:0 0 18px rgba(var(--bc-rgb),.5); }
+    .block.emphasis::before{ animation:none; background:none; }
+    .block.emphasis{ box-shadow:0 0 22px rgba(var(--bc-rgb),.6); border-color:#fff; }
   }
 
   /* ===== blocks ===== */
