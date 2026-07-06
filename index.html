@@ -274,14 +274,14 @@
   }
   .collapse-badge-wrap:hover{transform:translate(-50%,-50%) scale(1.15)}
 
-  /* ===== ênfase (bloco em destaque, brilho pulsante) ===== */
-  .block.emphasis{ animation:block-pulse 1.7s ease-in-out infinite; z-index:2; }
-  @keyframes block-pulse{
-    0%,100%{ box-shadow:0 0 16px rgba(var(--bc-rgb),.45),inset 0 0 20px rgba(var(--bc-rgb),.08); }
-    50%    { box-shadow:0 0 36px rgba(var(--bc-rgb),1),0 0 70px rgba(var(--bc-rgb),.55),inset 0 0 28px rgba(var(--bc-rgb),.2); }
+  /* ===== ênfase (bloco em destaque, respirando de leve) ===== */
+  .block.emphasis{ animation:block-breathe 3.8s ease-in-out infinite; z-index:2; }
+  @keyframes block-breathe{
+    0%,100%{ box-shadow:0 0 10px rgba(var(--bc-rgb),.30),inset 0 0 18px rgba(var(--bc-rgb),.05); }
+    50%    { box-shadow:0 0 20px rgba(var(--bc-rgb),.55),inset 0 0 22px rgba(var(--bc-rgb),.10); }
   }
   @media (prefers-reduced-motion: reduce){
-    .block.emphasis{ animation:none; box-shadow:0 0 30px rgba(var(--bc-rgb),.85),0 0 60px rgba(var(--bc-rgb),.4); }
+    .block.emphasis{ animation:none; box-shadow:0 0 18px rgba(var(--bc-rgb),.5); }
   }
 
   /* ===== blocks ===== */
