@@ -1306,6 +1306,32 @@ function App() {
     return b;
   }, [selectOne]);
 
+  // espelhos pra listeners globais lerem estado atual sem re-inscrever
+  const blocksRef = useRef(blocks);
+  useEffect(() => { blocksRef.current = blocks; });
+  const selectionRef = useRef(selection);
+  useEffect(() => { selectionRef.current = selection; });
+  const editingBlockRef = useRef(null);
+  useEffect(() => { editingBlockRef.current = editingBodyId || editingTitleId; });
+
+  // cria um bloco FILHO ligado abaixo do pai (usado pelo Tab). Já entra em edição.
+  const createChildBlock = useCallback((parentId) => {
+    const parent = blocksRef.current.find(b => b.id === parentId);
+    if (!parent) return;
+    const w = parent.w || 240, h = parent.h || 80;
+    const CW = 200, CH = 70;
+    const id = uid();
+    const child = {
+      id, x: parent.x + w / 2 - CW / 2, y: parent.y + h + 90, w: CW, h: CH,
+      title: "", body: "", color: parent.color || DEFAULT_COLOR,
+    };
+    pendingEditRef.current = id;
+    setBlocks(p => [...p, child]);
+    setEdges(p => [...p, { id: uid(), from: { id: parentId, port: "bottom" }, to: { id, port: "top" } }]);
+    setSelection(new Set([id]));
+    setSelectedEdge(null);
+  }, []);
+
   const setBlockColor = useCallback((color) => {
     setBlocks(p => p.map(b => selection.has(b.id) ? { ...b, color } : b));
     setStrokes(p => p.map(s => selection.has(s.id) ? { ...s, color } : s));
@@ -2091,7 +2117,19 @@ function App() {
   /* ----- keyboard ----- */
   useEffect(() => {
     const onKey = (e) => {
-      if (document.activeElement && document.activeElement.isContentEditable) return;
+      const editingEl = (document.activeElement && document.activeElement.isContentEditable) ? document.activeElement : null;
+      // Tab: cria um bloco filho a partir do atual (editando OU só selecionado)
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const id = editingEl ? editingBlockRef.current
+                             : (selectionRef.current.size === 1 ? [...selectionRef.current][0] : null);
+        if (id && blocksRef.current.some(b => b.id === id)) {
+          if (editingEl) editingEl.blur();
+          createChildBlock(id);
+        }
+        return;
+      }
+      if (editingEl) return;
       // finaliza a linha de pontos com Enter ou Esc
       if (drawingRef.current && drawingRef.current.type === "polyline") {
         if (e.key === "Enter" || e.key === "Escape") { e.preventDefault(); finishPolyline(); return; }
@@ -2126,7 +2164,7 @@ function App() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [deleteSelection, clearSelection, undo, redo, duplicateSelection, present, goToPresent, enterPresent, exitPresent, finishPolyline]);
+  }, [deleteSelection, clearSelection, undo, redo, duplicateSelection, present, goToPresent, enterPresent, exitPresent, finishPolyline, createChildBlock]);
 
   /* ----- wheel zoom ----- */
   const onWheel = useCallback((e) => {
@@ -3290,7 +3328,7 @@ function App() {
 
       <div className="zoom">{Math.round(view.scale*100)}%</div>
       <div className="hint">
-        <b>B</b> bloco • <b>N</b> texto • <b>D</b> desenho • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>arrasta a linha</b> dobrar • <b>clica na linha</b> editar/estilo • <b>duplo-clique</b> editar • <b>Del</b> apagar
+        <b>B</b> bloco • <b>Tab</b> filho • <b>N</b> texto • <b>D</b> desenho • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>clica na linha</b> editar/estilo • <b>duplo-clique</b> editar • <b>Del</b> apagar
       </div>
 
       {mmData && (
