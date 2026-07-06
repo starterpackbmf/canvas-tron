@@ -1311,6 +1311,29 @@ function App() {
     setStrokes(p => p.map(s => selection.has(s.id) ? { ...s, color } : s));
     setNotes(p => p.map(n => selection.has(n.id) ? { ...n, color } : n));
   }, [selection]);
+  // Ramo de decisão: cria dois filhos "NÃO" (vermelho, esq.) e "SIM" (verde,
+  // dir.) já ligados abaixo de cada bloco selecionado. Acelera árvore de decisão.
+  const addYesNoBranch = useCallback(() => {
+    const parents = blocks.filter(b => selection.has(b.id));
+    if (!parents.length) return;
+    const newBlocks = [], newEdges = [], newSel = new Set();
+    const CW = 150, CH = 64, GAP_Y = 90, SPREAD = 170;
+    parents.forEach(b => {
+      const w = b.w || 240, h = b.h || 80;
+      const cx = b.x + w / 2, cy = b.y + h + GAP_Y;
+      const nao = { id: uid(), x: cx - SPREAD - CW / 2, y: cy, w: CW, h: CH, title: "NÃO", body: "", color: "#ff3b5c" };
+      const sim = { id: uid(), x: cx + SPREAD - CW / 2, y: cy, w: CW, h: CH, title: "SIM", body: "", color: "#00ff88" };
+      newBlocks.push(nao, sim);
+      newEdges.push({ id: uid(), from: { id: b.id, port: "bottom" }, to: { id: nao.id, port: "top" } });
+      newEdges.push({ id: uid(), from: { id: b.id, port: "bottom" }, to: { id: sim.id, port: "top" } });
+      newSel.add(nao.id); newSel.add(sim.id);
+    });
+    setBlocks(p => [...p, ...newBlocks]);
+    setEdges(p => [...p, ...newEdges]);
+    setSelection(newSel);
+    setSelectedEdge(null);
+  }, [blocks, selection]);
+
   // Aplica a forma nos blocos selecionados (retângulo = volta ao padrão).
   const setBlockShape = useCallback((shape) => {
     setBlocks(p => p.map(b => {
@@ -2850,6 +2873,13 @@ function App() {
                         <svg viewBox="0 0 24 24"><path d="M5 5 L19 19 M19 5 L5 19"/></svg>
                       </button>
                     )}
+                  </div>
+                  <div className="vsep"/>
+                  <div className="group">
+                    <span className="lbl">Ramo</span>
+                    <button className="shape-btn" onClick={addYesNoBranch} title="Cria dois filhos ligados abaixo: NÃO (vermelho) e SIM (verde)">
+                      <svg viewBox="0 0 24 24"><path d="M12 3 V9 M12 9 L5 15 M12 9 L19 15"/><circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="18" r="2.4"/></svg>
+                    </button>
                   </div>
                 </>
               );
