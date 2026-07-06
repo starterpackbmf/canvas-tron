@@ -1196,25 +1196,24 @@ function App() {
   }, [blocks]);
 
   /* ----- hidden blocks (from collapsed edges) ----- */
-  // Subtree collapse: each collapsed edge literally hides the subtree on the
-  // "far" side of the clicked port (no multi-parent protection — if the user
-  // collapsed it, it goes away).
-  const addDescendants = useCallback((startId, out) => {
+  // Recolher esconde TUDO do lado de lá da porta clicada. A varredura é
+  // NÃO-direcional: parte do nó "far" e usa o nó clicado ("near") como
+  // barreira. Assim funciona qualquer que seja a direção em que as ligações
+  // foram desenhadas (o bug antigo só puxava a subárvore se as setas fossem
+  // pai→filho; com direções misturadas, recolhia só o primeiro nó).
+  const collectFarSide = useCallback((barrierId, startId, out) => {
+    if (startId === barrierId) return;
     const q = [startId];
     while (q.length) {
       const cur = q.shift();
-      if (out.has(cur)) continue;
+      if (cur === barrierId || out.has(cur)) continue;
       out.add(cur);
-      edges.forEach(e => { if (e.from.id === cur) q.push(e.to.id); });
-    }
-  }, [edges]);
-  const addAncestors = useCallback((startId, out) => {
-    const q = [startId];
-    while (q.length) {
-      const cur = q.shift();
-      if (out.has(cur)) continue;
-      out.add(cur);
-      edges.forEach(e => { if (e.to.id === cur) q.push(e.from.id); });
+      edges.forEach(e => {
+        let other = null;
+        if (e.from.id === cur) other = e.to.id;
+        else if (e.to.id === cur) other = e.from.id;
+        if (other != null && other !== barrierId && !out.has(other)) q.push(other);
+      });
     }
   }, [edges]);
 
@@ -1224,30 +1223,23 @@ function App() {
     const nearIds = new Set();
     edges.forEach(e => {
       if (!e.collapsed) return;
-      if (e.collapseDir === "backward") nearIds.add(e.to.id);
-      else nearIds.add(e.from.id);
-    });
-    edges.forEach(e => {
-      if (!e.collapsed) return;
-      if (e.collapseDir === "backward") addAncestors(e.from.id, hidden);
-      else addDescendants(e.to.id, hidden);
+      const near = e.collapseDir === "backward" ? e.to.id : e.from.id;
+      const far  = e.collapseDir === "backward" ? e.from.id : e.to.id;
+      nearIds.add(near);
+      collectFarSide(near, far, hidden);
     });
     nearIds.forEach(id => hidden.delete(id));
     return hidden;
-  }, [blocks, edges, addDescendants, addAncestors]);
+  }, [blocks, edges, collectFarSide]);
 
   /* ----- count of blocks hidden by a single collapsed edge ----- */
   const collapsedCount = useCallback((e) => {
+    const near = e.collapseDir === "backward" ? e.to.id : e.from.id;
+    const far  = e.collapseDir === "backward" ? e.from.id : e.to.id;
     const out = new Set();
-    if (e.collapseDir === "backward") {
-      addAncestors(e.from.id, out);
-      out.delete(e.to.id);
-    } else {
-      addDescendants(e.to.id, out);
-      out.delete(e.from.id);
-    }
+    collectFarSide(near, far, out);
     return out.size;
-  }, [addDescendants, addAncestors]);
+  }, [collectFarSide]);
 
   const toggleEdgeCollapse = useCallback((edgeId) => {
     setEdges(p => p.map(e => e.id === edgeId ? { ...e, collapsed: !e.collapsed } : e));
