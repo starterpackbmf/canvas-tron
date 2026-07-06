@@ -16,6 +16,7 @@
   });
 </script>
 <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root{
     --bg:#030612; --bg-2:#050a1a;
@@ -584,6 +585,64 @@
     line-height:0;padding:4px;
   }
   .minimap .mm-view{fill:rgba(0,240,255,.10);stroke:var(--cyan);stroke-width:1.5}
+
+  /* ===== cloud panel (Supabase) ===== */
+  .cloud-overlay{
+    position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;
+    background:rgba(2,5,12,.6);backdrop-filter:blur(3px);animation:fadein .15s ease;
+  }
+  .cloud-panel{
+    width:min(560px,92vw);max-height:86vh;display:flex;flex-direction:column;
+    background:linear-gradient(180deg,rgba(9,19,34,.97),rgba(5,12,24,.97));
+    border:1px solid rgba(0,240,255,.28);border-radius:14px;
+    box-shadow:0 24px 70px rgba(0,0,0,.6),0 0 40px rgba(0,240,255,.12),inset 0 1px 0 rgba(255,255,255,.06);
+    color:var(--white);overflow:hidden;
+  }
+  .cloud-head{
+    display:flex;align-items:center;gap:10px;padding:14px 16px;
+    border-bottom:1px solid rgba(0,240,255,.18);
+  }
+  .cloud-head h3{margin:0;font-size:14px;letter-spacing:1px;text-transform:uppercase;color:var(--cyan);text-shadow:0 0 8px rgba(0,240,255,.4);flex:1}
+  .cloud-x{cursor:pointer;color:var(--muted);font-size:20px;line-height:1;padding:2px 6px;border-radius:6px}
+  .cloud-x:hover{color:var(--danger);background:rgba(255,59,92,.1)}
+  .cloud-body{padding:14px 16px;overflow:auto}
+  .cloud-body input[type=text],.cloud-body input[type=password]{
+    width:100%;padding:9px 11px;margin:5px 0;box-sizing:border-box;
+    background:rgba(2,6,14,.7);color:var(--white);
+    border:1px solid rgba(0,240,255,.25);border-radius:8px;font-size:13px;outline:none;
+  }
+  .cloud-body input:focus{border-color:var(--cyan);box-shadow:0 0 10px rgba(0,240,255,.25)}
+  .cloud-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-top:8px}
+  .cloud-btn{
+    display:inline-flex;align-items:center;gap:6px;padding:8px 14px;
+    background:rgba(0,240,255,.14);color:var(--cyan);
+    border:1px solid var(--cyan);border-radius:8px;font-size:12px;font-weight:700;
+    letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .12s ease;
+  }
+  .cloud-btn:hover{background:rgba(0,240,255,.24);box-shadow:0 0 14px rgba(0,240,255,.4)}
+  .cloud-btn.ghost{background:transparent;color:var(--muted);border-color:rgba(0,240,255,.2)}
+  .cloud-btn.ghost:hover{color:var(--cyan);border-color:var(--cyan);box-shadow:none}
+  .cloud-btn.danger{background:transparent;border-color:rgba(255,59,92,.4);color:var(--danger)}
+  .cloud-btn.danger:hover{background:rgba(255,59,92,.14);box-shadow:0 0 12px rgba(255,59,92,.3)}
+  .cloud-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .cloud-saverow{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+  .cloud-saverow input{flex:1;margin:0}
+  .cloud-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .cloud-item{
+    display:flex;align-items:center;gap:8px;padding:9px 11px;
+    background:rgba(0,240,255,.04);border:1px solid rgba(0,240,255,.14);border-radius:9px;
+    transition:all .12s ease;
+  }
+  .cloud-item:hover{border-color:rgba(0,240,255,.4);background:rgba(0,240,255,.08)}
+  .cloud-item.current{border-color:var(--cyan);box-shadow:inset 0 0 0 1px rgba(0,240,255,.3)}
+  .cloud-item .nm{flex:1;font-size:13px;font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cloud-item .dt{font-size:10px;color:var(--muted)}
+  .cloud-ic{cursor:pointer;color:var(--muted);padding:3px 6px;border-radius:6px;font-size:13px}
+  .cloud-ic:hover{color:var(--cyan);background:rgba(0,240,255,.1)}
+  .cloud-ic.del:hover{color:var(--danger);background:rgba(255,59,92,.1)}
+  .cloud-status{font-size:11px;color:var(--muted);margin-top:10px;min-height:14px}
+  .cloud-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:10px;background:rgba(0,240,255,.04);border:1px solid rgba(0,240,255,.12);border-radius:8px;padding:10px}
+  .cloud-note code{color:var(--cyan);font-size:10px;background:rgba(0,240,255,.08);padding:1px 4px;border-radius:3px}
 </style>
 </head>
 <body>
@@ -1128,6 +1187,143 @@ function ImageNode({ image, selected, onSelect, onStartDrag, onStartResize, onDe
   );
 }
 
+/* ================== CloudPanel (Supabase) ================== */
+function CloudPanel({ client, cfg, onSaveCfg, onClearCfg, getDoc, loadDoc, cloudDoc, setCloudDoc, onClose }) {
+  const [showCfg, setShowCfg] = useState(!cfg || !client);
+  const [url, setUrl] = useState(cfg?.url || "");
+  const [key, setKey] = useState(cfg?.key || "");
+  const [secret, setSecret] = useState(cfg?.secret || "");
+  const [maps, setMaps] = useState([]);
+  const [status, setStatus] = useState("");
+  const [name, setName] = useState(cloudDoc.name || "");
+
+  useEffect(() => { setName(cloudDoc.name || ""); }, [cloudDoc.name]);
+
+  const refresh = useCallback(async () => {
+    if (!client) return;
+    setStatus("Carregando…");
+    const { data, error } = await client.from("canvas_maps").select("id,name,updated_at").order("updated_at", { ascending: false });
+    if (error) { setStatus("Erro: " + error.message); return; }
+    setMaps(data || []); setStatus("");
+  }, [client]);
+
+  useEffect(() => { if (client && !showCfg) refresh(); }, [client, showCfg, refresh]);
+
+  const save = async () => {
+    if (!client) return;
+    const nm = (name || "").trim() || "Sem título";
+    setStatus("Salvando…");
+    const doc = getDoc();
+    let res;
+    if (cloudDoc.id) {
+      res = await client.from("canvas_maps").update({ name: nm, data: doc, updated_at: new Date().toISOString() }).eq("id", cloudDoc.id).select("id").single();
+    } else {
+      res = await client.from("canvas_maps").insert({ name: nm, data: doc }).select("id").single();
+    }
+    if (res.error) { setStatus("Erro: " + res.error.message); return; }
+    setCloudDoc({ id: res.data.id, name: nm });
+    setStatus("Salvo ✓"); refresh();
+  };
+
+  const saveAsNew = async () => {
+    if (!client) return;
+    const nm = (name || "").trim() || "Sem título";
+    setStatus("Salvando cópia…");
+    const res = await client.from("canvas_maps").insert({ name: nm, data: getDoc() }).select("id").single();
+    if (res.error) { setStatus("Erro: " + res.error.message); return; }
+    setCloudDoc({ id: res.data.id, name: nm });
+    setStatus("Cópia salva ✓"); refresh();
+  };
+
+  const open = async (m) => {
+    if (!client) return;
+    setStatus("Abrindo…");
+    const { data, error } = await client.from("canvas_maps").select("data,name").eq("id", m.id).single();
+    if (error) { setStatus("Erro: " + error.message); return; }
+    loadDoc(data.data || {});
+    setCloudDoc({ id: m.id, name: data.name });
+    onClose();
+  };
+
+  const novo = () => {
+    loadDoc({ blocks: [], notes: [], strokes: [], images: [], edges: [], view: { x: 20, y: 20, scale: 1 } });
+    setCloudDoc({ id: null, name: "" });
+    onClose();
+  };
+
+  const rename = async (m) => {
+    const nn = prompt("Novo nome:", m.name); if (nn == null) return;
+    const nm = nn.trim() || "Sem título";
+    await client.from("canvas_maps").update({ name: nm }).eq("id", m.id);
+    if (cloudDoc.id === m.id) setCloudDoc({ id: m.id, name: nm });
+    refresh();
+  };
+  const del = async (m) => {
+    if (!confirm(`Excluir "${m.name}"? (não dá pra desfazer)`)) return;
+    await client.from("canvas_maps").delete().eq("id", m.id);
+    if (cloudDoc.id === m.id) setCloudDoc({ id: null, name: "" });
+    refresh();
+  };
+
+  const fmt = (s) => { try { return new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
+  const noSDK = typeof window.supabase === "undefined";
+
+  return (
+    <div className="cloud-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="cloud-panel">
+        <div className="cloud-head">
+          <h3>☁ Nuvem</h3>
+          {client && !showCfg && <span className="cloud-btn ghost" onClick={() => setShowCfg(true)}>⚙ Projeto</span>}
+          <span className="cloud-x" onClick={onClose}>×</span>
+        </div>
+
+        {showCfg ? (
+          <div className="cloud-body">
+            {noSDK && <div className="cloud-status">⚠ SDK do Supabase não carregou (checa a conexão e recarrega).</div>}
+            <div className="cloud-lbl">Project URL</div>
+            <input type="text" placeholder="https://xxxx.supabase.co" value={url} onChange={(e) => setUrl(e.target.value)} />
+            <div className="cloud-lbl">anon public key</div>
+            <input type="text" placeholder="eyJhbGci…" value={key} onChange={(e) => setKey(e.target.value)} />
+            <div className="cloud-lbl">Senha (a mesma que você pôs no SQL)</div>
+            <input type="password" placeholder="sua senha" value={secret} onChange={(e) => setSecret(e.target.value)} />
+            <div className="cloud-row" style={{ marginTop: 12 }}>
+              <button className="cloud-btn" onClick={() => { if (url.trim() && key.trim() && secret) { onSaveCfg({ url: url.trim(), key: key.trim(), secret }); setShowCfg(false); } }}>Conectar</button>
+              {cfg && <button className="cloud-btn danger" onClick={() => { onClearCfg(); setUrl(""); setKey(""); setSecret(""); }}>Desconectar</button>}
+            </div>
+            <div className="cloud-note">
+              Crie um projeto no Supabase, rode o SQL da tabela <code>canvas_maps</code> (com a sua senha), e cole aqui a <code>URL</code> + a <code>anon key</code> (Settings → API). Tudo fica salvo só neste navegador.
+            </div>
+          </div>
+        ) : (
+          <div className="cloud-body">
+            <div className="cloud-saverow">
+              <input type="text" placeholder="Nome do mapa" value={name} onChange={(e) => setName(e.target.value)} />
+              <button className="cloud-btn" onClick={save}>{cloudDoc.id ? "Salvar" : "Salvar"}</button>
+            </div>
+            <div className="cloud-row">
+              {cloudDoc.id && <button className="cloud-btn ghost" onClick={saveAsNew}>Salvar como novo</button>}
+              <button className="cloud-btn ghost" onClick={novo}>＋ Novo mapa</button>
+              <button className="cloud-btn ghost" onClick={refresh}>↻ Atualizar</button>
+            </div>
+            <div className="cloud-list">
+              {maps.map((m) => (
+                <div key={m.id} className={`cloud-item ${cloudDoc.id === m.id ? "current" : ""}`}>
+                  <span className="nm" onClick={() => open(m)} title="Abrir">{m.name || "(sem nome)"}</span>
+                  <span className="dt">{fmt(m.updated_at)}</span>
+                  <span className="cloud-ic" onClick={() => rename(m)} title="Renomear">✎</span>
+                  <span className="cloud-ic del" onClick={() => del(m)} title="Excluir">🗑</span>
+                </div>
+              ))}
+              {!maps.length && <div className="cloud-status">Nenhum mapa salvo ainda. Dá um nome e clica em Salvar.</div>}
+            </div>
+            <div className="cloud-status">{status}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ================== App ================== */
 function App() {
   const [tool, setTool] = useState("select");
@@ -1191,6 +1387,27 @@ function App() {
   // Holofote (spotlight no modo edição) + minimapa
   const [spotlight, setSpotlight] = useState(false);
   const [showMinimap, setShowMinimap] = useState(false);
+  // ----- nuvem (Supabase) -----
+  const [cloudCfg, setCloudCfg] = useState(() => { try { return JSON.parse(localStorage.getItem("canvas-tron:cloud") || "null"); } catch { return null; } });
+  const [cloudOpen, setCloudOpen] = useState(false);
+  const [cloudDoc, setCloudDoc] = useState({ id: null, name: "" });
+  const cloudClient = useMemo(() => {
+    if (!cloudCfg || typeof window.supabase === "undefined") return null;
+    try { return window.supabase.createClient(cloudCfg.url, cloudCfg.key, { auth: { persistSession: false }, global: { headers: { "x-canvas-secret": cloudCfg.secret } } }); }
+    catch { return null; }
+  }, [cloudCfg]);
+  const saveCloudCfg = useCallback((c) => { setCloudCfg(c); try { localStorage.setItem("canvas-tron:cloud", JSON.stringify(c)); } catch {} }, []);
+  const clearCloudCfg = useCallback(() => { setCloudCfg(null); try { localStorage.removeItem("canvas-tron:cloud"); } catch {} }, []);
+  const getDoc = useCallback(() => ({ blocks, notes, strokes, images, edges, view, flow }), [blocks, notes, strokes, images, edges, view, flow]);
+  const loadDoc = useCallback((d) => {
+    if (!d) return;
+    bumpNidFromData(d);
+    setBlocks(d.blocks || []); setNotes(d.notes || []); setStrokes(d.strokes || []);
+    setImages(d.images || []); setEdges(d.edges || []);
+    if (d.view) setView(d.view);
+    if (typeof d.flow === "boolean") setFlow(d.flow);
+    setSelection(new Set()); setSelectedEdge(null);
+  }, []);
 
   // refs for imperative drag/connect state
   const dragRef = useRef(null);
@@ -2708,6 +2925,7 @@ function App() {
         <button className="ic" onClick={enterPresent} title="Apresentar (P)">▶</button>
         <button className={`ic ${isFullscreen?"active":""}`} onClick={toggleFullscreen} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>{isFullscreen ? "⤧" : "⛶"}</button>
         <div className="dvr"/>
+        <button className={`ic ${cloudDoc.id ? "active" : ""}`} onClick={() => setCloudOpen(true)} title={cloudDoc.id ? `Nuvem — ${cloudDoc.name}` : "Nuvem (salvar/abrir no Supabase)"}>☁</button>
         <button className="ic" onClick={exportJSON} title="Salvar (.json)">⤓</button>
         <button className="ic" onClick={() => fileRef.current.click()} title="Carregar (.json)">⤒</button>
         <button className="ic" onClick={() => mdRef.current.click()} title="Importar Markdown (.md) — cria blocos dos títulos #/##/###">📥</button>
@@ -3445,6 +3663,20 @@ function App() {
             />
           </svg>
         </div>
+      )}
+
+      {cloudOpen && (
+        <CloudPanel
+          client={cloudClient}
+          cfg={cloudCfg}
+          onSaveCfg={saveCloudCfg}
+          onClearCfg={clearCloudCfg}
+          getDoc={getDoc}
+          loadDoc={loadDoc}
+          cloudDoc={cloudDoc}
+          setCloudDoc={setCloudDoc}
+          onClose={() => setCloudOpen(false)}
+        />
       )}
 
       <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON} />
