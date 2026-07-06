@@ -253,7 +253,15 @@
     transition:box-shadow .15s ease;
   }
   .collapse-badge:hover{box-shadow:0 0 18px currentColor,inset 0 0 10px rgba(255,255,255,.1)}
-  .collapse-badge .icon{font-size:14px;line-height:1;margin-top:-1px}
+  .collapse-badge .icon{font-size:11px;line-height:1}
+  /* badge com nome do próximo bloco: cresce com o texto, mas com teto + reticências */
+  .collapse-badge.named{
+    max-width:180px;text-transform:uppercase;letter-spacing:.4px;
+    color:currentColor;
+  }
+  .collapse-badge.named .badge-txt{
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
   @keyframes badge-pop{
     0%  {opacity:0;transform:translate(-50%,-50%) scale(0) rotate(-90deg)}
     60% {opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(10deg)}
@@ -2484,25 +2492,35 @@ function App() {
     const dir2 = PORT_DIR[e.to.port]   || { x:-1, y: 0 };
 
     if (e.collapsed) {
-      // Draw a stub sprouting from the CLICKED (near) port
+      // Draw a stub sprouting from the CLICKED (near) port, apontando na direção
+      // do bloco filho oculto — assim vertentes diferentes (SIM/NÃO) se abrem em
+      // leque em vez de sobrepor. O badge mostra o NOME do próximo bloco.
       const backward = e.collapseDir === "backward";
       const nearBlock   = backward ? b : a;
+      const farBlock    = backward ? a : b;
       const nearPort    = backward ? e.to.port : e.from.port;
       const nearHidden  = backward ? targetHidden : sourceHidden;
       if (nearHidden) return null;
       const p1 = portWorldPos(a, e.from.port, sa);
       const p2 = portWorldPos(b, e.to.port, sb);
       const nearPos = backward ? p2 : p1;
-      const dir = PORT_DIR[nearPort] || { x: 1, y: 0 };
+      const fsz = backward ? sa : sb;
+      const fw = fsz?.w ?? farBlock.w ?? 240, fh = fsz?.h ?? farBlock.h ?? 80;
+      const fcx = farBlock.x + fw / 2, fcy = farBlock.y + fh / 2;
+      let dx = fcx - nearPos.x, dy = fcy - nearPos.y;
+      const dl = Math.hypot(dx, dy);
+      const dir = dl > 6 ? { x: dx / dl, y: dy / dl } : (PORT_DIR[nearPort] || { x: 0, y: 1 });
       const stubEnd = { x: nearPos.x + dir.x * STUB_LEN, y: nearPos.y + dir.y * STUB_LEN };
+      const label = (farBlock.title || "").replace(/<[^>]*>/g, "").trim();
       return {
         id: e.id,
         curveD: orthogonalPath(p1, dir1, p2, dir2),
         stubD: `M ${nearPos.x} ${nearPos.y} L ${stubEnd.x} ${stubEnd.y}`,
         stubEnd,
-        color: nearBlock.color || DEFAULT_COLOR,
+        color: farBlock.color || nearBlock.color || DEFAULT_COLOR,
         collapsed: true,
         count: collapsedCount(e),
+        label,
       };
     }
 
@@ -3202,10 +3220,10 @@ function App() {
               className="collapse-badge-wrap"
               style={{ left: p.stubEnd.x, top: p.stubEnd.y, color: p.color }}
               onMouseDown={(e) => { e.stopPropagation(); toggleEdgeCollapse(p.id); }}
-              title="Expandir"
+              title={p.label ? `Expandir: ${p.label}` : "Expandir"}
             >
-              <div className="collapse-badge" style={{ color: p.color }}>
-                <span className="icon">+</span>{p.count}
+              <div className={`collapse-badge ${p.label ? "named" : ""}`} style={{ color: p.color }}>
+                <span className="icon">▸</span><span className="badge-txt">{p.label || ("+" + p.count)}</span>
               </div>
             </div>
           ))}
