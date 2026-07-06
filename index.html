@@ -657,6 +657,13 @@ const uid = () => "n" + (_nid++);
 
 /* ---- persistence (autosave) ---- */
 const LS_KEY = "canvas-tron:autosave";
+
+/* ---- Supabase (login + mapas na nuvem) ---- */
+const SUPA_URL = "https://rgmugavizfdpddpwmubv.supabase.co";
+const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnbXVnYXZpemZkcGRkcHdtdWJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMTA5NDIsImV4cCI6MjA5NzY4Njk0Mn0.MTp1KN-lt1MB2nkUhqxSQFL97-cUEFN14Lmx4UIKZKY";
+const supa = (typeof window !== "undefined" && window.supabase)
+  ? window.supabase.createClient(SUPA_URL, SUPA_ANON)
+  : null;
 const loadSaved = () => {
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -1187,30 +1194,42 @@ function ImageNode({ image, selected, onSelect, onStartDrag, onStartResize, onDe
   );
 }
 
-/* ================== CloudPanel (Supabase) ================== */
-function CloudPanel({ client, cfg, onSaveCfg, onClearCfg, getDoc, loadDoc, cloudDoc, setCloudDoc, onClose }) {
-  const [showCfg, setShowCfg] = useState(!cfg || !client);
-  const [url, setUrl] = useState(cfg?.url || "");
-  const [key, setKey] = useState(cfg?.key || "");
-  const [secret, setSecret] = useState(cfg?.secret || "");
+/* ================== CloudPanel (Supabase — login + mapas) ================== */
+function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, onClose }) {
   const [maps, setMaps] = useState([]);
   const [status, setStatus] = useState("");
   const [name, setName] = useState(cloudDoc.name || "");
+  // login
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
 
   useEffect(() => { setName(cloudDoc.name || ""); }, [cloudDoc.name]);
 
   const refresh = useCallback(async () => {
-    if (!client) return;
+    if (!client || !session) return;
     setStatus("Carregando…");
     const { data, error } = await client.from("canvas_maps").select("id,name,updated_at").order("updated_at", { ascending: false });
     if (error) { setStatus("Erro: " + error.message); return; }
     setMaps(data || []); setStatus("");
-  }, [client]);
+  }, [client, session]);
 
-  useEffect(() => { if (client && !showCfg) refresh(); }, [client, showCfg, refresh]);
+  useEffect(() => { if (session) refresh(); }, [session, refresh]);
+
+  const login = async () => {
+    if (!client) return;
+    setStatus("Entrando…");
+    const { error } = await client.auth.signInWithPassword({ email: email.trim(), password: pass });
+    setStatus(error ? "Erro: " + error.message : "");
+  };
+  const signup = async () => {
+    if (!client) return;
+    setStatus("Criando conta…");
+    const { error } = await client.auth.signUp({ email: email.trim(), password: pass });
+    setStatus(error ? "Erro: " + error.message : "Conta criada — se pedir confirmação, cheque seu email e depois entre.");
+  };
+  const logout = async () => { await client.auth.signOut(); setMaps([]); };
 
   const save = async () => {
-    if (!client) return;
     const nm = (name || "").trim() || "Sem título";
     setStatus("Salvando…");
     const doc = getDoc();
@@ -1224,9 +1243,7 @@ function CloudPanel({ client, cfg, onSaveCfg, onClearCfg, getDoc, loadDoc, cloud
     setCloudDoc({ id: res.data.id, name: nm });
     setStatus("Salvo ✓"); refresh();
   };
-
   const saveAsNew = async () => {
-    if (!client) return;
     const nm = (name || "").trim() || "Sem título";
     setStatus("Salvando cópia…");
     const res = await client.from("canvas_maps").insert({ name: nm, data: getDoc() }).select("id").single();
@@ -1234,9 +1251,7 @@ function CloudPanel({ client, cfg, onSaveCfg, onClearCfg, getDoc, loadDoc, cloud
     setCloudDoc({ id: res.data.id, name: nm });
     setStatus("Cópia salva ✓"); refresh();
   };
-
   const open = async (m) => {
-    if (!client) return;
     setStatus("Abrindo…");
     const { data, error } = await client.from("canvas_maps").select("data,name").eq("id", m.id).single();
     if (error) { setStatus("Erro: " + error.message); return; }
@@ -1244,13 +1259,11 @@ function CloudPanel({ client, cfg, onSaveCfg, onClearCfg, getDoc, loadDoc, cloud
     setCloudDoc({ id: m.id, name: data.name });
     onClose();
   };
-
   const novo = () => {
     loadDoc({ blocks: [], notes: [], strokes: [], images: [], edges: [], view: { x: 20, y: 20, scale: 1 } });
     setCloudDoc({ id: null, name: "" });
     onClose();
   };
-
   const rename = async (m) => {
     const nn = prompt("Novo nome:", m.name); if (nn == null) return;
     const nm = nn.trim() || "Sem título";
@@ -1266,39 +1279,37 @@ function CloudPanel({ client, cfg, onSaveCfg, onClearCfg, getDoc, loadDoc, cloud
   };
 
   const fmt = (s) => { try { return new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
-  const noSDK = typeof window.supabase === "undefined";
 
   return (
     <div className="cloud-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="cloud-panel">
         <div className="cloud-head">
           <h3>☁ Nuvem</h3>
-          {client && !showCfg && <span className="cloud-btn ghost" onClick={() => setShowCfg(true)}>⚙ Projeto</span>}
+          {session && <span className="cloud-btn ghost" onClick={logout} title={session.user?.email}>Sair</span>}
           <span className="cloud-x" onClick={onClose}>×</span>
         </div>
 
-        {showCfg ? (
+        {!client ? (
+          <div className="cloud-body"><div className="cloud-status">⚠ SDK do Supabase não carregou — recarrega a página.</div></div>
+        ) : !session ? (
           <div className="cloud-body">
-            {noSDK && <div className="cloud-status">⚠ SDK do Supabase não carregou (checa a conexão e recarrega).</div>}
-            <div className="cloud-lbl">Project URL</div>
-            <input type="text" placeholder="https://xxxx.supabase.co" value={url} onChange={(e) => setUrl(e.target.value)} />
-            <div className="cloud-lbl">anon public key</div>
-            <input type="text" placeholder="eyJhbGci…" value={key} onChange={(e) => setKey(e.target.value)} />
-            <div className="cloud-lbl">Senha (a mesma que você pôs no SQL)</div>
-            <input type="password" placeholder="sua senha" value={secret} onChange={(e) => setSecret(e.target.value)} />
+            <div className="cloud-lbl">Email</div>
+            <input type="text" placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <div className="cloud-lbl">Senha</div>
+            <input type="password" placeholder="senha" value={pass} onChange={(e) => setPass(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") login(); }} />
             <div className="cloud-row" style={{ marginTop: 12 }}>
-              <button className="cloud-btn" onClick={() => { if (url.trim() && key.trim() && secret) { onSaveCfg({ url: url.trim(), key: key.trim(), secret }); setShowCfg(false); } }}>Conectar</button>
-              {cfg && <button className="cloud-btn danger" onClick={() => { onClearCfg(); setUrl(""); setKey(""); setSecret(""); }}>Desconectar</button>}
+              <button className="cloud-btn" onClick={login}>Entrar</button>
+              <button className="cloud-btn ghost" onClick={signup}>Criar conta</button>
             </div>
-            <div className="cloud-note">
-              Crie um projeto no Supabase, rode o SQL da tabela <code>canvas_maps</code> (com a sua senha), e cole aqui a <code>URL</code> + a <code>anon key</code> (Settings → API). Tudo fica salvo só neste navegador.
-            </div>
+            <div className="cloud-status">{status}</div>
+            <div className="cloud-note">É a mesma conta do seu app de notas (mesmo projeto). Logou aqui, seus mapas te seguem em qualquer navegador ou celular.</div>
           </div>
         ) : (
           <div className="cloud-body">
             <div className="cloud-saverow">
               <input type="text" placeholder="Nome do mapa" value={name} onChange={(e) => setName(e.target.value)} />
-              <button className="cloud-btn" onClick={save}>{cloudDoc.id ? "Salvar" : "Salvar"}</button>
+              <button className="cloud-btn" onClick={save}>Salvar</button>
             </div>
             <div className="cloud-row">
               {cloudDoc.id && <button className="cloud-btn ghost" onClick={saveAsNew}>Salvar como novo</button>}
@@ -1387,17 +1398,16 @@ function App() {
   // Holofote (spotlight no modo edição) + minimapa
   const [spotlight, setSpotlight] = useState(false);
   const [showMinimap, setShowMinimap] = useState(false);
-  // ----- nuvem (Supabase) -----
-  const [cloudCfg, setCloudCfg] = useState(() => { try { return JSON.parse(localStorage.getItem("canvas-tron:cloud") || "null"); } catch { return null; } });
+  // ----- nuvem (Supabase, login email+senha) -----
   const [cloudOpen, setCloudOpen] = useState(false);
   const [cloudDoc, setCloudDoc] = useState({ id: null, name: "" });
-  const cloudClient = useMemo(() => {
-    if (!cloudCfg || typeof window.supabase === "undefined") return null;
-    try { return window.supabase.createClient(cloudCfg.url, cloudCfg.key, { auth: { persistSession: false }, global: { headers: { "x-canvas-secret": cloudCfg.secret } } }); }
-    catch { return null; }
-  }, [cloudCfg]);
-  const saveCloudCfg = useCallback((c) => { setCloudCfg(c); try { localStorage.setItem("canvas-tron:cloud", JSON.stringify(c)); } catch {} }, []);
-  const clearCloudCfg = useCallback(() => { setCloudCfg(null); try { localStorage.removeItem("canvas-tron:cloud"); } catch {} }, []);
+  const [session, setSession] = useState(null);
+  useEffect(() => {
+    if (!supa) return;
+    supa.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: sub } = supa.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
   const getDoc = useCallback(() => ({ blocks, notes, strokes, images, edges, view, flow }), [blocks, notes, strokes, images, edges, view, flow]);
   const loadDoc = useCallback((d) => {
     if (!d) return;
@@ -3667,10 +3677,8 @@ function App() {
 
       {cloudOpen && (
         <CloudPanel
-          client={cloudClient}
-          cfg={cloudCfg}
-          onSaveCfg={saveCloudCfg}
-          onClearCfg={clearCloudCfg}
+          client={supa}
+          session={session}
           getDoc={getDoc}
           loadDoc={loadDoc}
           cloudDoc={cloudDoc}
