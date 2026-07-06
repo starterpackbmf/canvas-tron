@@ -1656,6 +1656,19 @@ function App() {
     }));
   }, []);
 
+  // Recolhe UMA conexão só (um ramo). Esconde sempre o lado de baixo (mais
+  // longe da raiz numa árvore top-down), independente da direção da ligação.
+  const collapseEdgeById = useCallback((id) => {
+    setEdges(p => p.map(e => {
+      if (e.id !== id) return e;
+      if (e.collapsed) return { ...e, collapsed: false };
+      const a = blocksById.get(e.from.id), b = blocksById.get(e.to.id);
+      if (!a || !b) return e;
+      const dir = a.y <= b.y ? "forward" : "backward"; // esconde o bloco mais embaixo
+      return { ...e, collapsed: true, collapseDir: dir };
+    }));
+  }, [blocksById]);
+
   /* ----- connection path editing ----- */
   // Cycle the routing style of one connection: curva → ortogonal → reta
   const cycleEdgeStyle = useCallback((id) => {
@@ -3196,6 +3209,11 @@ function App() {
                         pts: p.pts,
                       };
                     }}
+                    onDoubleClick={(ev) => {
+                      // duplo-clique na conexão recolhe só esse ramo
+                      ev.stopPropagation();
+                      if (!p.collapsed) { edgeEditRef.current = null; collapseEdgeById(p.id); setSelectedEdge(null); }
+                    }}
                   />
                 </g>
               );
@@ -3316,6 +3334,12 @@ function App() {
                   title="Mostrar/ocultar a setinha de direção"
                   onMouseDown={(e) => { e.stopPropagation(); toggleEdgeArrow(p.id); }}
                 >{p.arrow ? "➤ SETA" : "⊘ SETA"}</div>
+                <div
+                  className="edge-style-btn"
+                  style={{ left: p.mid.x, top: p.mid.y + 48, color: p.toColor || p.color, transform: `translate(-50%,-50%) ${inv}` }}
+                  title="Recolher só este ramo (esconde o lado de baixo)"
+                  onMouseDown={(e) => { e.stopPropagation(); collapseEdgeById(p.id); setSelectedEdge(null); }}
+                >⊟ RECOLHER</div>
                 {[["from", p.p1, p.fromColor], ["to", p.p2, p.toColor]].map(([end, pos, col]) => (
                   <div
                     key={end}
