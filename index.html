@@ -274,6 +274,16 @@
   }
   .collapse-badge-wrap:hover{transform:translate(-50%,-50%) scale(1.15)}
 
+  /* ===== ênfase (bloco em destaque, brilho pulsante) ===== */
+  .block.emphasis{ animation:block-pulse 1.7s ease-in-out infinite; z-index:2; }
+  @keyframes block-pulse{
+    0%,100%{ box-shadow:0 0 16px rgba(var(--bc-rgb),.45),inset 0 0 20px rgba(var(--bc-rgb),.08); }
+    50%    { box-shadow:0 0 36px rgba(var(--bc-rgb),1),0 0 70px rgba(var(--bc-rgb),.55),inset 0 0 28px rgba(var(--bc-rgb),.2); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .block.emphasis{ animation:none; box-shadow:0 0 30px rgba(var(--bc-rgb),.85),0 0 60px rgba(var(--bc-rgb),.4); }
+  }
+
   /* ===== blocks ===== */
   .block{
     --bc:#00f0ff;
@@ -894,7 +904,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
@@ -1367,6 +1377,15 @@ function App() {
     setSelection(newSel);
     setSelectedEdge(null);
   }, [blocks, selection]);
+
+  // Liga/desliga a ênfase (brilho pulsante) nos blocos selecionados.
+  const toggleBlockEmphasis = useCallback(() => {
+    setBlocks(p => p.map(b => {
+      if (!selection.has(b.id)) return b;
+      if (b.emphasis) { const { emphasis, ...rest } = b; return rest; }
+      return { ...b, emphasis: true };
+    }));
+  }, [selection]);
 
   // Aplica a forma nos blocos selecionados (retângulo = volta ao padrão).
   const setBlockShape = useCallback((shape) => {
@@ -2948,6 +2967,13 @@ function App() {
                     <span className="lbl">Ramo</span>
                     <button className="shape-btn" onClick={addYesNoBranch} title="Cria dois filhos ligados abaixo: NÃO (vermelho) e SIM (verde)">
                       <svg viewBox="0 0 24 24"><path d="M12 3 V9 M12 9 L5 15 M12 9 L19 15"/><circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="18" r="2.4"/></svg>
+                    </button>
+                  </div>
+                  <div className="vsep"/>
+                  <div className="group">
+                    <span className="lbl">Ênfase</span>
+                    <button className={`shape-btn ${selBlock && selBlock.emphasis ? "active" : ""}`} onClick={toggleBlockEmphasis} title="Destaca o bloco com um brilho pulsante">
+                      <svg viewBox="0 0 24 24"><path d="M12 2 L14.2 9.8 L22 12 L14.2 14.2 L12 22 L9.8 14.2 L2 12 L9.8 9.8 Z"/></svg>
                     </button>
                   </div>
                 </>
