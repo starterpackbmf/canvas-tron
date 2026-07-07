@@ -684,6 +684,44 @@
     letter-spacing:.5px;text-transform:uppercase;cursor:pointer;outline:none;
   }
   .attr-addrow option{background:#0a1626;color:var(--white);text-transform:none;font-weight:400}
+
+  /* ===== dock lateral da tabela (paleta) ===== */
+  .attr-dock{
+    position:fixed;top:0;right:0;bottom:0;width:320px;z-index:20;
+    display:flex;flex-direction:column;
+    background:linear-gradient(180deg,rgba(9,19,34,.96),rgba(5,12,24,.96));
+    border-left:1px solid rgba(0,240,255,.25);
+    box-shadow:-14px 0 40px rgba(0,0,0,.5);
+    backdrop-filter:blur(14px) saturate(1.2);
+    animation:dock-in .18s ease;
+  }
+  @keyframes dock-in{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+  .attr-dock-head{display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(0,240,255,.16)}
+  .attr-dock-head h3{margin:0;flex:1;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--cyan);text-shadow:0 0 8px rgba(0,240,255,.4)}
+  .attr-dock-hint{font-size:11px;color:var(--muted);padding:8px 14px;border-bottom:1px solid rgba(0,240,255,.1)}
+  .attr-dock-hint.on{color:var(--cyan)}
+  .attr-dock-body{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:12px}
+  .attr-col{background:rgba(0,240,255,.04);border:1px solid rgba(0,240,255,.14);border-radius:10px;padding:9px 10px}
+  .attr-col-head{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+  .attr-col-name{flex:1;background:transparent;border:none;border-bottom:1px solid rgba(0,240,255,.25);color:var(--cyan);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;outline:none;padding:2px 0}
+  .attr-col-name:focus{border-bottom-color:var(--cyan)}
+  .attr-cells{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px;min-height:6px}
+  .attr-cell{
+    display:inline-flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;
+    background:rgba(5,14,28,.8);border:1px solid rgba(0,240,255,.3);color:var(--white);
+    padding:4px 6px 4px 10px;border-radius:14px;transition:all .12s ease;
+  }
+  .attr-cell:hover{border-color:var(--cyan);background:rgba(0,240,255,.14);box-shadow:0 0 10px rgba(0,240,255,.3)}
+  .attr-cell:active{transform:translateY(1px)}
+  .attr-cell i{font-style:normal;color:var(--muted);font-size:13px;line-height:1}
+  .attr-cell i:hover{color:var(--danger)}
+  .attr-addval{
+    width:100%;box-sizing:border-box;background:rgba(2,6,14,.6);color:var(--white);
+    border:1px solid rgba(0,240,255,.2);border-radius:7px;font-size:12px;padding:6px 9px;outline:none;
+  }
+  .attr-addval:focus{border-color:var(--cyan)}
+  .attr-dock-foot{padding:10px 14px;border-top:1px solid rgba(0,240,255,.16)}
+  .attr-dock-status{font-size:11px;color:var(--cyan);min-height:16px;margin-bottom:8px}
   /* mini-resumo dentro do bloco */
   .block .attr-line{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:7px}
   .block .attr-tag{
@@ -1412,80 +1450,79 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
   );
 }
 
-/* ================== AttrsPanel (grade editável de atributos) ================== */
-function AttrsPanel({ blocks, selectedIds, onPatchRow, onFocusBlock, onClose }) {
+/* ================== AttrTable (paleta lateral: colunas → valores → aplica) ========= */
+function AttrTable({ cols, setCols, selCount, blocks, onApply, onClearCol, onClose }) {
   const strip = (t) => (t || "").replace(/<[^>]*>/g, "").trim();
-  const [extraRows, setExtraRows] = useState([]);
-  // linhas = blocos com atributos, ou selecionados agora, ou adicionados pelo ＋ Produto
-  const rowBlocks = blocks.filter(b => normAttrs(b.attrs).length || (selectedIds || []).includes(b.id) || extraRows.includes(b.id));
-  const unionCols = [...new Set(rowBlocks.flatMap(b => normAttrs(b.attrs).map(r => r.k)).filter(Boolean))];
-  const [extraCols, setExtraCols] = useState([]);
-  const cols = [...new Set([...unionCols, ...extraCols])];
+  const [status, setStatus] = useState("");
+  const [adding, setAdding] = useState({});
 
-  const valOf = (b, col) => { const r = normAttrs(b.attrs).find(x => x.k === col); return r ? r.v : ""; };
-  const setCell = (b, col, v) => {
-    const rows = normAttrs(b.attrs).slice();
-    const i = rows.findIndex(x => x.k === col);
-    if (i >= 0) rows[i] = { k: col, v };
-    else rows.push({ k: col, v });
-    onPatchRow(b.id, rows);
+  const addCol = () => setCols([...cols, { name: "Nova coluna", values: [] }]);
+  const renameCol = (i, name) => setCols(cols.map((c, j) => j === i ? { ...c, name } : c));
+  const removeCol = (i) => setCols(cols.filter((_, j) => j !== i));
+  const addVal = (i, v) => { v = (v || "").trim(); if (!v) return; setCols(cols.map((c, j) => (j === i && !c.values.includes(v)) ? { ...c, values: [...c.values, v] } : c)); };
+  const removeVal = (i, v) => setCols(cols.map((c, j) => j === i ? { ...c, values: c.values.filter(x => x !== v) } : c));
+
+  const clickVal = (colName, v) => {
+    if (!selCount) { setStatus("Selecione um ou mais blocos primeiro"); return; }
+    onApply(colName, v);
+    setStatus(`${colName} = "${v}" → ${selCount} bloco${selCount > 1 ? "s" : ""}`);
   };
-  const addCol = () => { const n = (prompt("Nome do atributo (nova coluna):") || "").trim(); if (n && !cols.includes(n)) setExtraCols([...extraCols, n]); };
+  const clearCol = (colName) => {
+    if (!selCount) { setStatus("Selecione blocos pra limpar"); return; }
+    onClearCol(colName);
+    setStatus(`${colName} removido de ${selCount} bloco${selCount > 1 ? "s" : ""}`);
+  };
 
-  const tableRows = rowBlocks.map(b => ({ produto: strip(b.title) || "(sem título)", cells: cols.map(c => valOf(b, c)) }));
+  // export a partir dos atributos já nos blocos
+  const allCols = [...new Set(blocks.flatMap(b => normAttrs(b.attrs).map(r => r.k)).filter(Boolean))];
+  const rows = blocks.filter(b => normAttrs(b.attrs).length).map(b => { const m = {}; normAttrs(b.attrs).forEach(r => { if (r.k) m[r.k] = r.v; }); return { produto: strip(b.title) || "(sem título)", cells: allCols.map(c => m[c] || "") }; });
   const downloadCSV = () => {
     const esc = (s) => `"${String(s).replace(/"/g, '""')}"`;
-    const csv = [["Produto", ...cols].map(esc).join(","), ...tableRows.map(r => [r.produto, ...r.cells].map(esc).join(","))].join("\n");
+    const csv = [["Produto", ...allCols].map(esc).join(","), ...rows.map(r => [r.produto, ...r.cells].map(esc).join(","))].join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
     const el = document.createElement("a"); el.href = URL.createObjectURL(blob); el.download = "atribuicoes.csv"; el.click();
   };
   const copyJSON = () => {
-    const obj = tableRows.map(r => Object.assign({ produto: r.produto }, Object.fromEntries(cols.map((c, j) => [c, r.cells[j]]))));
+    const obj = rows.map(r => Object.assign({ produto: r.produto }, Object.fromEntries(allCols.map((c, j) => [c, r.cells[j]]))));
     try { navigator.clipboard.writeText(JSON.stringify(obj, null, 2)); } catch {}
   };
 
   return (
-    <div className="cloud-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="cloud-panel" style={{ width: "min(940px,96vw)" }}>
-        <div className="cloud-head">
-          <h3>◆ Atributos dos produtos</h3>
-          <span className="cloud-x" onClick={onClose}>×</span>
-        </div>
-        <div className="cloud-body">
-          <div className="cloud-row" style={{ marginBottom: 10 }}>
-            <select className="attr-addrow" value="" onChange={(e) => { if (e.target.value) { setExtraRows([...extraRows, e.target.value]); } }}>
-              <option value="">＋ Produto…</option>
-              {blocks.filter(b => !rowBlocks.includes(b) && strip(b.title)).map(b => <option key={b.id} value={b.id}>{strip(b.title)}</option>)}
-            </select>
-            <button className="cloud-btn" onClick={addCol}>＋ Coluna</button>
-            <button className="cloud-btn ghost" onClick={downloadCSV}>⤓ CSV</button>
-            <button className="cloud-btn ghost" onClick={copyJSON}>Copiar JSON</button>
-          </div>
-          {!rowBlocks.length ? (
-            <div className="cloud-status">Nenhum produto na tabela. Fecha, seleciona um ou mais blocos (Shift+clique) e abre os Atributos — eles entram como linhas.</div>
-          ) : (
-            <div style={{ overflow: "auto" }}>
-              <table className="attr-table editable">
-                <thead>
-                  <tr><th>Produto</th>{cols.map(c => <th key={c}>{c}</th>)}<th className="addc" onClick={addCol} title="Adicionar coluna">＋</th></tr>
-                </thead>
-                <tbody>
-                  {rowBlocks.map(b => (
-                    <tr key={b.id}>
-                      <td className="prod"><span className="prod-nm">{strip(b.title) || "(sem título)"}</span><span className="cloud-ic" title="Ir pro bloco" onClick={() => onFocusBlock(b.id)}>↗</span></td>
-                      {cols.map(c => (
-                        <td key={c}><input className="cell" value={valOf(b, c)} placeholder="—" onChange={(e) => setCell(b, c, e.target.value)} /></td>
-                      ))}
-                      <td></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+    <div className="attr-dock" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="attr-dock-head">
+        <h3>▦ Tabela</h3>
+        <span className="cloud-x" onClick={onClose}>×</span>
+      </div>
+      <div className={`attr-dock-hint ${selCount ? "on" : ""}`}>
+        {selCount ? `${selCount} bloco${selCount > 1 ? "s" : ""} selecionado${selCount > 1 ? "s" : ""} — clique num valor pra aplicar` : "Selecione blocos no mapa e clique num valor"}
+      </div>
+      <div className="attr-dock-body">
+        {cols.map((c, i) => (
+          <div className="attr-col" key={i}>
+            <div className="attr-col-head">
+              <input className="attr-col-name" value={c.name} onChange={(e) => renameCol(i, e.target.value)} />
+              <span className="cloud-ic" title="Limpar esse atributo dos blocos selecionados" onClick={() => clearCol(c.name)}>⊘</span>
+              <span className="cloud-ic del" title="Remover coluna" onClick={() => removeCol(i)}>🗑</span>
             </div>
-          )}
-          <div className="cloud-note">
-            <b>Shift+clique</b> em vários blocos antes de abrir pra colocar todos na tabela de uma vez · digite direto nas células · <b>＋ Coluna</b> cria um atributo novo · célula vazia remove aquele atributo do produto.
+            <div className="attr-cells">
+              {c.values.map(v => (
+                <span key={v} className="attr-cell" onClick={() => clickVal(c.name, v)} title="Clique pra aplicar aos blocos selecionados">
+                  {v}<i onClick={(e) => { e.stopPropagation(); removeVal(i, v); }}>×</i>
+                </span>
+              ))}
+            </div>
+            <input className="attr-addval" placeholder="+ valor + Enter" value={adding[i] || ""}
+              onChange={(e) => setAdding({ ...adding, [i]: e.target.value })}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addVal(i, adding[i]); setAdding({ ...adding, [i]: "" }); } }} />
           </div>
+        ))}
+        <button className="cloud-btn" style={{ width: "100%", marginTop: 8 }} onClick={addCol}>＋ Coluna</button>
+      </div>
+      <div className="attr-dock-foot">
+        <div className="attr-dock-status">{status}</div>
+        <div className="cloud-row">
+          <button className="cloud-btn ghost" onClick={downloadCSV}>⤓ CSV</button>
+          <button className="cloud-btn ghost" onClick={copyJSON}>JSON</button>
         </div>
       </div>
     </div>
@@ -1559,6 +1596,8 @@ function App() {
   const [cloudOpen, setCloudOpen] = useState(false);
   const [cloudDoc, setCloudDoc] = useState({ id: null, name: "" });
   const [attrsOpen, setAttrsOpen] = useState(false);
+  // paleta de colunas/valores (por mapa) — só um helper pra aplicar valores nos blocos
+  const [attrCols, setAttrCols] = useState(() => saved?.attrCols ?? []);
   const [session, setSession] = useState(null);
   useEffect(() => {
     if (!supa) return;
@@ -1566,15 +1605,37 @@ function App() {
     const { data: sub } = supa.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
-  const getDoc = useCallback(() => ({ blocks, notes, strokes, images, edges, view, flow }), [blocks, notes, strokes, images, edges, view, flow]);
+  const getDoc = useCallback(() => ({ blocks, notes, strokes, images, edges, view, flow, attrCols }), [blocks, notes, strokes, images, edges, view, flow, attrCols]);
   const loadDoc = useCallback((d) => {
     if (!d) return;
     bumpNidFromData(d);
     setBlocks(d.blocks || []); setNotes(d.notes || []); setStrokes(d.strokes || []);
     setImages(d.images || []); setEdges(d.edges || []);
+    setAttrCols(d.attrCols || []);
     if (d.view) setView(d.view);
     if (typeof d.flow === "boolean") setFlow(d.flow);
     setSelection(new Set()); setSelectedEdge(null);
+  }, []);
+
+  // aplica um valor da paleta aos blocos selecionados (col = nome do atributo)
+  const applyAttr = useCallback((colName, value) => {
+    const ids = selectionRef.current; if (!ids || !ids.size) return;
+    setBlocks(p => p.map(b => {
+      if (!ids.has(b.id)) return b;
+      const rows = normAttrs(b.attrs).slice();
+      const i = rows.findIndex(r => r.k === colName);
+      if (i >= 0) rows[i] = { k: colName, v: value }; else rows.push({ k: colName, v: value });
+      return { ...b, attrs: rows };
+    }));
+  }, []);
+  const clearAttrCol = useCallback((colName) => {
+    const ids = selectionRef.current; if (!ids || !ids.size) return;
+    setBlocks(p => p.map(b => {
+      if (!ids.has(b.id)) return b;
+      const rows = normAttrs(b.attrs).filter(r => r.k !== colName);
+      if (rows.length) return { ...b, attrs: rows };
+      const { attrs: _d, ...rest } = b; return rest;
+    }));
   }, []);
 
   // refs for imperative drag/connect state
@@ -1774,18 +1835,6 @@ function App() {
     setSelection(newSel);
     setSelectedEdge(null);
   }, [blocks, selection]);
-
-  // Grava (limpo) os atributos livres de um bloco; se tudo vazio, remove o attrs.
-  const patchBlockAttrs = useCallback((id, rows) => {
-    const clean = (rows || [])
-      .map(r => ({ k: (r.k || "").trim(), v: (r.v || "").trim() }))
-      .filter(r => r.k || r.v);
-    setBlocks(p => p.map(b => {
-      if (b.id !== id) return b;
-      if (clean.length) return { ...b, attrs: clean };
-      const { attrs: _drop, ...rest } = b; return rest;
-    }));
-  }, []);
 
   // Liga/desliga a ênfase (brilho pulsante) nos blocos selecionados.
   const toggleBlockEmphasis = useCallback(() => {
@@ -2128,6 +2177,7 @@ function App() {
     setStrokes(d.strokes || []);
     setImages(d.images || []);
     setEdges(d.edges || []);
+    setAttrCols(d.attrCols || []);
     setSelection(new Set());
     setSelectedEdge(null);
   }, []);
@@ -2135,7 +2185,7 @@ function App() {
   // Record content changes into history, debounced so a whole drag/edit
   // collapses into a single undo step.
   useEffect(() => {
-    const snap = JSON.stringify({ blocks, notes, strokes, images, edges });
+    const snap = JSON.stringify({ blocks, notes, strokes, images, edges, attrCols });
     pendingSnapRef.current = snap;
     if (lastSnapRef.current === null) { lastSnapRef.current = snap; return; }
     if (restoringRef.current) { restoringRef.current = false; lastSnapRef.current = snap; return; }
@@ -2149,7 +2199,7 @@ function App() {
       h.future = [];
       lastSnapRef.current = pendingSnapRef.current;
     }, 350);
-  }, [blocks, notes, strokes, images, edges]);
+  }, [blocks, notes, strokes, images, edges, attrCols]);
 
   const undo = useCallback(() => {
     clearTimeout(histTimerRef.current);
@@ -2221,10 +2271,10 @@ function App() {
   /* ----- autosave to localStorage (debounced) ----- */
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem(LS_KEY, JSON.stringify({ blocks, notes, strokes, images, edges, view, flow })); } catch {}
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ blocks, notes, strokes, images, edges, view, flow, attrCols })); } catch {}
     }, 500);
     return () => clearTimeout(t);
-  }, [blocks, notes, strokes, images, edges, view, flow]);
+  }, [blocks, notes, strokes, images, edges, view, flow, attrCols]);
 
   /* ----- smooth camera tween + center-on-block (used by presentation) ----- */
   const tweenView = useCallback((target, dur = 440) => {
@@ -3860,11 +3910,13 @@ function App() {
       )}
 
       {attrsOpen && (
-        <AttrsPanel
+        <AttrTable
+          cols={attrCols}
+          setCols={setAttrCols}
+          selCount={selection.size}
           blocks={blocks}
-          selectedIds={[...selection]}
-          onPatchRow={patchBlockAttrs}
-          onFocusBlock={(id) => { selectOne(id); const b = blocks.find(x => x.id === id); if (b) centerOnBlock(b); setAttrsOpen(false); }}
+          onApply={applyAttr}
+          onClearCol={clearAttrCol}
           onClose={() => setAttrsOpen(false)}
         />
       )}
