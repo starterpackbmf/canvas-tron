@@ -713,6 +713,9 @@
   }
   .attr-cell:hover{border-color:var(--cyan);background:rgba(0,240,255,.14);box-shadow:0 0 10px rgba(0,240,255,.3)}
   .attr-cell:active{transform:translateY(1px)}
+  /* valor já aplicado a todos os selecionados */
+  .attr-cell.on{background:rgba(0,240,255,.22);border-color:var(--cyan);color:var(--cyan);font-weight:700;box-shadow:0 0 10px rgba(0,240,255,.35)}
+  .attr-cell.on::before{content:"✓ ";font-size:10px}
   .attr-cell i{font-style:normal;color:var(--muted);font-size:13px;line-height:1}
   .attr-cell i:hover{color:var(--danger)}
   .attr-addval{
@@ -1183,14 +1186,17 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
       {(() => {
         const rs = normAttrs(block.attrs).filter(r => r.k || r.v);
         if (!rs.length) return null;
+        // agrupa valores por atributo (Tier: Elite, Sala)
+        const groups = [];
+        rs.forEach(r => { const g = groups.find(x => x.k === r.k); if (g) g.vs.push(r.v); else groups.push({ k: r.k, vs: [r.v] }); });
         return (
           <div className="attr-line">
-            {rs.slice(0, 3).map((r, i) => (
-              <span key={i} className={`attr-tag ${/^tier$/i.test(r.k) ? "tier" : ""}`}>
-                {r.k ? <b>{r.k}:</b> : null} {r.v}
+            {groups.slice(0, 3).map((g, i) => (
+              <span key={i} className={`attr-tag ${/^tier$/i.test(g.k) ? "tier" : ""}`}>
+                {g.k ? <b>{g.k}:</b> : null} {g.vs.join(", ")}
               </span>
             ))}
-            {rs.length > 3 && <span className="attr-tag">+{rs.length - 3}</span>}
+            {groups.length > 3 && <span className="attr-tag">+{groups.length - 3}</span>}
           </div>
         );
       })()}
@@ -1451,10 +1457,13 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
 }
 
 /* ================== AttrTable (paleta lateral: colunas → valores → aplica) ========= */
-function AttrTable({ cols, setCols, selCount, blocks, onApply, onClearCol, onClose }) {
+function AttrTable({ cols, setCols, selBlocks, blocks, onApply, onClearCol, onClose }) {
   const strip = (t) => (t || "").replace(/<[^>]*>/g, "").trim();
   const [status, setStatus] = useState("");
   const [adding, setAdding] = useState({});
+  const selCount = selBlocks.length;
+  // valor está "aplicado" se TODOS os blocos selecionados já o têm (destaca o chip)
+  const applied = (colName, v) => selCount > 0 && selBlocks.every(b => normAttrs(b.attrs).some(r => r.k === colName && r.v === v));
 
   const addCol = () => setCols([...cols, { name: "Nova coluna", values: [] }]);
   const renameCol = (i, name) => setCols(cols.map((c, j) => j === i ? { ...c, name } : c));
@@ -1473,9 +1482,12 @@ function AttrTable({ cols, setCols, selCount, blocks, onApply, onClearCol, onClo
     setStatus(`${colName} removido de ${selCount} bloco${selCount > 1 ? "s" : ""}`);
   };
 
-  // export a partir dos atributos já nos blocos
+  // export a partir dos atributos já nos blocos (agrupa múltiplos valores por coluna)
   const allCols = [...new Set(blocks.flatMap(b => normAttrs(b.attrs).map(r => r.k)).filter(Boolean))];
-  const rows = blocks.filter(b => normAttrs(b.attrs).length).map(b => { const m = {}; normAttrs(b.attrs).forEach(r => { if (r.k) m[r.k] = r.v; }); return { produto: strip(b.title) || "(sem título)", cells: allCols.map(c => m[c] || "") }; });
+  const rows = blocks.filter(b => normAttrs(b.attrs).length).map(b => {
+    const m = {}; normAttrs(b.attrs).forEach(r => { if (r.k) (m[r.k] = m[r.k] || []).push(r.v); });
+    return { produto: strip(b.title) || "(sem título)", cells: allCols.map(c => (m[c] || []).join(", ")) };
+  });
   const downloadCSV = () => {
     const esc = (s) => `"${String(s).replace(/"/g, '""')}"`;
     const csv = [["Produto", ...allCols].map(esc).join(","), ...rows.map(r => [r.produto, ...r.cells].map(esc).join(","))].join("\n");
@@ -1506,7 +1518,7 @@ function AttrTable({ cols, setCols, selCount, blocks, onApply, onClearCol, onClo
             </div>
             <div className="attr-cells">
               {c.values.map(v => (
-                <span key={v} className="attr-cell" onClick={() => clickVal(c.name, v)} title="Clique pra aplicar aos blocos selecionados">
+                <span key={v} className={`attr-cell ${applied(c.name, v) ? "on" : ""}`} onClick={() => clickVal(c.name, v)} title="Clique pra aplicar/tirar dos blocos selecionados">
                   {v}<i onClick={(e) => { e.stopPropagation(); removeVal(i, v); }}>×</i>
                 </span>
               ))}
@@ -1617,15 +1629,19 @@ function App() {
     setSelection(new Set()); setSelectedEdge(null);
   }, []);
 
-  // aplica um valor da paleta aos blocos selecionados (col = nome do atributo)
+  // aplica/tira um valor da paleta nos blocos selecionados (toggle, multi-valor:
+  // a mesma coluna aceita vários valores). Se TODOS já têm, remove; senão adiciona.
   const applyAttr = useCallback((colName, value) => {
     const ids = selectionRef.current; if (!ids || !ids.size) return;
+    const sel = blocksRef.current.filter(b => ids.has(b.id));
+    const allHave = sel.length > 0 && sel.every(b => normAttrs(b.attrs).some(r => r.k === colName && r.v === value));
     setBlocks(p => p.map(b => {
       if (!ids.has(b.id)) return b;
-      const rows = normAttrs(b.attrs).slice();
-      const i = rows.findIndex(r => r.k === colName);
-      if (i >= 0) rows[i] = { k: colName, v: value }; else rows.push({ k: colName, v: value });
-      return { ...b, attrs: rows };
+      let rows = normAttrs(b.attrs).slice();
+      const has = rows.some(r => r.k === colName && r.v === value);
+      if (allHave) { if (has) rows = rows.filter(r => !(r.k === colName && r.v === value)); }
+      else { if (!has) rows.push({ k: colName, v: value }); }
+      return rows.length ? { ...b, attrs: rows } : (() => { const { attrs: _d, ...rest } = b; return rest; })();
     }));
   }, []);
   const clearAttrCol = useCallback((colName) => {
@@ -3913,7 +3929,7 @@ function App() {
         <AttrTable
           cols={attrCols}
           setCols={setAttrCols}
-          selCount={selection.size}
+          selBlocks={blocks.filter(b => selection.has(b.id))}
           blocks={blocks}
           onApply={applyAttr}
           onClearCol={clearAttrCol}
