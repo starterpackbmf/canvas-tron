@@ -664,6 +664,20 @@
   .attr-row{display:flex;gap:8px;align-items:center;margin:5px 0}
   .attr-row .attr-k{flex:0 0 40%;margin:0}
   .attr-row .attr-v{flex:1;margin:0}
+  /* grade editável */
+  .attr-table.editable td{padding:2px}
+  .attr-table.editable td.prod{padding:6px 9px;white-space:nowrap;font-weight:600;display:flex;align-items:center;gap:6px}
+  .attr-table.editable .prod-nm{max-width:200px;overflow:hidden;text-overflow:ellipsis}
+  .attr-table.editable th.addc{cursor:pointer;color:var(--cyan);text-align:center;width:28px}
+  .attr-table.editable th.addc:hover{background:rgba(0,240,255,.12)}
+  .attr-table .cell{
+    width:100%;min-width:120px;box-sizing:border-box;background:transparent;
+    border:1px solid transparent;border-radius:4px;color:var(--white);
+    padding:6px 8px;font-size:12px;outline:none;font-family:inherit;
+  }
+  .attr-table .cell::placeholder{color:rgba(255,255,255,.2)}
+  .attr-table .cell:hover{border-color:rgba(0,240,255,.18)}
+  .attr-table .cell:focus{border-color:var(--cyan);background:rgba(2,6,14,.7)}
   /* mini-resumo dentro do bloco */
   .block .attr-line{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:7px}
   .block .attr-tag{
@@ -1392,27 +1406,26 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
   );
 }
 
-/* ================== AttrsPanel (atributos livres do produto) ================== */
-function AttrsPanel({ block, blocks, onPatch, onClose }) {
-  const [rows, setRows] = useState(() => { const r = normAttrs(block.attrs); return r.length ? r : [{ k: "", v: "" }]; });
-  const [showTable, setShowTable] = useState(false);
-
-  useEffect(() => { onPatch(rows); /* eslint-disable-next-line */ }, [rows]);
-
+/* ================== AttrsPanel (grade editável de atributos) ================== */
+function AttrsPanel({ blocks, selectedIds, onPatchRow, onFocusBlock, onClose }) {
   const strip = (t) => (t || "").replace(/<[^>]*>/g, "").trim();
-  const title = strip(block.title) || "(sem título)";
-  const setRow = (i, patch) => setRows(rows.map((r, j) => j === i ? { ...r, ...patch } : r));
-  const addRow = () => setRows([...rows, { k: "", v: "" }]);
-  const delRow = (i) => setRows(rows.filter((_, j) => j !== i));
+  // linhas = blocos com atributos OU selecionados agora (pra "botar todos", Shift+clica antes de abrir)
+  const rowBlocks = blocks.filter(b => normAttrs(b.attrs).length || (selectedIds || []).includes(b.id));
+  const unionCols = [...new Set(rowBlocks.flatMap(b => normAttrs(b.attrs).map(r => r.k)).filter(Boolean))];
+  const [extraCols, setExtraCols] = useState([]);
+  const cols = [...new Set([...unionCols, ...extraCols])];
 
-  // sugestões de NOME de atributo (o que já foi usado em qualquer bloco)
-  const allKeys = [...new Set(blocks.flatMap(b => normAttrs(b.attrs).map(r => r.k)).filter(Boolean))];
+  const valOf = (b, col) => { const r = normAttrs(b.attrs).find(x => x.k === col); return r ? r.v : ""; };
+  const setCell = (b, col, v) => {
+    const rows = normAttrs(b.attrs).slice();
+    const i = rows.findIndex(x => x.k === col);
+    if (i >= 0) rows[i] = { k: col, v };
+    else rows.push({ k: col, v });
+    onPatchRow(b.id, rows);
+  };
+  const addCol = () => { const n = (prompt("Nome do atributo (nova coluna):") || "").trim(); if (n && !cols.includes(n)) setExtraCols([...extraCols, n]); };
 
-  // tabela: uma coluna por atributo que existir em algum bloco
-  const withAttrs = blocks.map(b => ({ title: strip(b.title) || "(sem título)", rows: normAttrs(b.attrs) })).filter(x => x.rows.some(r => r.k || r.v));
-  const cols = [...new Set(withAttrs.flatMap(x => x.rows.map(r => r.k)).filter(Boolean))];
-  const tableRows = withAttrs.map(x => { const m = {}; x.rows.forEach(r => { if (r.k) m[r.k] = r.v; }); return { produto: x.title, cells: cols.map(c => m[c] || "") }; });
-
+  const tableRows = rowBlocks.map(b => ({ produto: strip(b.title) || "(sem título)", cells: cols.map(c => valOf(b, c)) }));
   const downloadCSV = () => {
     const esc = (s) => `"${String(s).replace(/"/g, '""')}"`;
     const csv = [["Produto", ...cols].map(esc).join(","), ...tableRows.map(r => [r.produto, ...r.cells].map(esc).join(","))].join("\n");
@@ -1426,46 +1439,43 @@ function AttrsPanel({ block, blocks, onPatch, onClose }) {
 
   return (
     <div className="cloud-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="cloud-panel" style={{ width: "min(660px,94vw)" }}>
+      <div className="cloud-panel" style={{ width: "min(940px,96vw)" }}>
         <div className="cloud-head">
-          <h3>◆ {showTable ? "Tabela de atributos" : "Atributos — " + title}</h3>
-          <span className="cloud-btn ghost" onClick={() => setShowTable(s => !s)}>{showTable ? "← Editar" : "📋 Tabela"}</span>
+          <h3>◆ Atributos dos produtos</h3>
           <span className="cloud-x" onClick={onClose}>×</span>
         </div>
-
-        {showTable ? (
-          <div className="cloud-body">
-            <div className="cloud-row" style={{ marginBottom: 10 }}>
-              <button className="cloud-btn" onClick={downloadCSV}>⤓ Baixar CSV</button>
-              <button className="cloud-btn ghost" onClick={copyJSON}>Copiar JSON</button>
-            </div>
+        <div className="cloud-body">
+          <div className="cloud-row" style={{ marginBottom: 10 }}>
+            <button className="cloud-btn" onClick={addCol}>＋ Coluna</button>
+            <button className="cloud-btn ghost" onClick={downloadCSV}>⤓ CSV</button>
+            <button className="cloud-btn ghost" onClick={copyJSON}>Copiar JSON</button>
+          </div>
+          {!rowBlocks.length ? (
+            <div className="cloud-status">Nenhum produto na tabela. Fecha, seleciona um ou mais blocos (Shift+clique) e abre os Atributos — eles entram como linhas.</div>
+          ) : (
             <div style={{ overflow: "auto" }}>
-              <table className="attr-table">
-                <thead><tr><th>Produto</th>{cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+              <table className="attr-table editable">
+                <thead>
+                  <tr><th>Produto</th>{cols.map(c => <th key={c}>{c}</th>)}<th className="addc" onClick={addCol} title="Adicionar coluna">＋</th></tr>
+                </thead>
                 <tbody>
-                  {tableRows.map((r, i) => (<tr key={i}><td>{r.produto}</td>{r.cells.map((c, j) => <td key={j}>{c}</td>)}</tr>))}
-                  {!tableRows.length && <tr><td colSpan={cols.length + 1} style={{ color: "var(--muted)" }}>Nenhum bloco com atributos ainda.</td></tr>}
+                  {rowBlocks.map(b => (
+                    <tr key={b.id}>
+                      <td className="prod"><span className="prod-nm">{strip(b.title) || "(sem título)"}</span><span className="cloud-ic" title="Ir pro bloco" onClick={() => onFocusBlock(b.id)}>↗</span></td>
+                      {cols.map(c => (
+                        <td key={c}><input className="cell" value={valOf(b, c)} placeholder="—" onChange={(e) => setCell(b, c, e.target.value)} /></td>
+                      ))}
+                      <td></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
+          )}
+          <div className="cloud-note">
+            <b>Shift+clique</b> em vários blocos antes de abrir pra colocar todos na tabela de uma vez · digite direto nas células · <b>＋ Coluna</b> cria um atributo novo · célula vazia remove aquele atributo do produto.
           </div>
-        ) : (
-          <div className="cloud-body">
-            <div className="cloud-lbl">Adicione os atributos que quiser (nome → valor)</div>
-            {rows.map((r, i) => (
-              <div className="attr-row" key={i}>
-                <input list="attr-keys" className="attr-k" placeholder="atributo (ex: Tier, Curso, Feature…)" value={r.k} onChange={(e) => setRow(i, { k: e.target.value })} />
-                <input className="attr-v" placeholder="valor" value={r.v} onChange={(e) => setRow(i, { v: e.target.value })}
-                  onKeyDown={(e) => { if (e.key === "Enter" && i === rows.length - 1) { e.preventDefault(); addRow(); } }} />
-                <span className="cloud-ic del" onClick={() => delRow(i)} title="Remover">🗑</span>
-              </div>
-            ))}
-            <datalist id="attr-keys">{allKeys.map(k => <option key={k} value={k} />)}</datalist>
-            <div className="cloud-row" style={{ marginTop: 10 }}>
-              <button className="cloud-btn" onClick={addRow}>＋ Adicionar atributo</button>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -3835,11 +3845,15 @@ function App() {
         </div>
       )}
 
-      {attrsOpen && (() => {
-        const ab = blocks.find(b => selection.has(b.id));
-        if (!ab) return null;
-        return <AttrsPanel block={ab} blocks={blocks} onPatch={(attrs) => patchBlockAttrs(ab.id, attrs)} onClose={() => setAttrsOpen(false)} />;
-      })()}
+      {attrsOpen && (
+        <AttrsPanel
+          blocks={blocks}
+          selectedIds={[...selection]}
+          onPatchRow={patchBlockAttrs}
+          onFocusBlock={(id) => { selectOne(id); const b = blocks.find(x => x.id === id); if (b) centerOnBlock(b); setAttrsOpen(false); }}
+          onClose={() => setAttrsOpen(false)}
+        />
+      )}
 
       {cloudOpen && (
         <CloudPanel
