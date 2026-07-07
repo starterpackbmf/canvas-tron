@@ -2545,7 +2545,11 @@ function App() {
   /* ----- keyboard ----- */
   useEffect(() => {
     const onKey = (e) => {
-      const editingEl = (document.activeElement && document.activeElement.isContentEditable) ? document.activeElement : null;
+      const ae = document.activeElement;
+      // digitando num campo de formulário (painéis: atributos, nuvem, etc.) →
+      // não dispara atalho nenhum (era o bug do "P" abrir apresentação)
+      if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.tagName === "SELECT")) return;
+      const editingEl = (ae && ae.isContentEditable) ? ae : null;
       // Tab: cria um bloco filho a partir do atual (editando OU só selecionado)
       if (e.key === "Tab") {
         e.preventDefault();
