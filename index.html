@@ -678,6 +678,12 @@
   .attr-table .cell::placeholder{color:rgba(255,255,255,.2)}
   .attr-table .cell:hover{border-color:rgba(0,240,255,.18)}
   .attr-table .cell:focus{border-color:var(--cyan);background:rgba(2,6,14,.7)}
+  .attr-addrow{
+    padding:8px 12px;background:rgba(0,240,255,.14);color:var(--cyan);
+    border:1px solid var(--cyan);border-radius:8px;font-size:12px;font-weight:700;
+    letter-spacing:.5px;text-transform:uppercase;cursor:pointer;outline:none;
+  }
+  .attr-addrow option{background:#0a1626;color:var(--white);text-transform:none;font-weight:400}
   /* mini-resumo dentro do bloco */
   .block .attr-line{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:7px}
   .block .attr-tag{
@@ -1409,8 +1415,9 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
 /* ================== AttrsPanel (grade editável de atributos) ================== */
 function AttrsPanel({ blocks, selectedIds, onPatchRow, onFocusBlock, onClose }) {
   const strip = (t) => (t || "").replace(/<[^>]*>/g, "").trim();
-  // linhas = blocos com atributos OU selecionados agora (pra "botar todos", Shift+clica antes de abrir)
-  const rowBlocks = blocks.filter(b => normAttrs(b.attrs).length || (selectedIds || []).includes(b.id));
+  const [extraRows, setExtraRows] = useState([]);
+  // linhas = blocos com atributos, ou selecionados agora, ou adicionados pelo ＋ Produto
+  const rowBlocks = blocks.filter(b => normAttrs(b.attrs).length || (selectedIds || []).includes(b.id) || extraRows.includes(b.id));
   const unionCols = [...new Set(rowBlocks.flatMap(b => normAttrs(b.attrs).map(r => r.k)).filter(Boolean))];
   const [extraCols, setExtraCols] = useState([]);
   const cols = [...new Set([...unionCols, ...extraCols])];
@@ -1446,6 +1453,10 @@ function AttrsPanel({ blocks, selectedIds, onPatchRow, onFocusBlock, onClose }) 
         </div>
         <div className="cloud-body">
           <div className="cloud-row" style={{ marginBottom: 10 }}>
+            <select className="attr-addrow" value="" onChange={(e) => { if (e.target.value) { setExtraRows([...extraRows, e.target.value]); } }}>
+              <option value="">＋ Produto…</option>
+              {blocks.filter(b => !rowBlocks.includes(b) && strip(b.title)).map(b => <option key={b.id} value={b.id}>{strip(b.title)}</option>)}
+            </select>
             <button className="cloud-btn" onClick={addCol}>＋ Coluna</button>
             <button className="cloud-btn ghost" onClick={downloadCSV}>⤓ CSV</button>
             <button className="cloud-btn ghost" onClick={copyJSON}>Copiar JSON</button>
@@ -3094,6 +3105,9 @@ function App() {
         <button className={`ic ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Minimapa">⊞</button>
         <button className={`ic ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Fluxo de energia nas conexões">⚡</button>
         <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>
+        <button className={`ic ${attrsOpen?"active":""}`} onClick={() => setAttrsOpen(o => !o)} title="Tabela de atributos (produtos)">
+          <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9 h18 M3 14.5 h18 M9 4 v16"/></svg>
+        </button>
         <div className="dvr"/>
         <button className="ic" onClick={enterPresent} title="Apresentar (P)">▶</button>
         <button className={`ic ${isFullscreen?"active":""}`} onClick={toggleFullscreen} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>{isFullscreen ? "⤧" : "⛶"}</button>
