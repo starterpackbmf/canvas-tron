@@ -660,7 +660,10 @@
   .attr-chip i:hover{color:var(--danger)}
   .attr-table{width:100%;border-collapse:collapse;font-size:12px}
   .attr-table th,.attr-table td{border:1px solid rgba(0,240,255,.14);padding:6px 9px;text-align:left;vertical-align:top}
-  .attr-table th{color:var(--cyan);text-transform:uppercase;font-size:10px;letter-spacing:.5px;background:rgba(0,240,255,.05)}
+  .attr-table th{color:var(--cyan);text-transform:uppercase;font-size:10px;letter-spacing:.5px;background:rgba(0,240,255,.05);white-space:nowrap}
+  .attr-row{display:flex;gap:8px;align-items:center;margin:5px 0}
+  .attr-row .attr-k{flex:0 0 40%;margin:0}
+  .attr-row .attr-v{flex:1;margin:0}
   /* mini-resumo dentro do bloco */
   .block .attr-line{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:7px}
   .block .attr-tag{
@@ -730,6 +733,21 @@ const SHAPES = [
   { key:"hexagon", glyph:"⬡", title:"Hexágono",        skin:"hexagon", points:"27,3 73,3 98,50 73,97 27,97 2,50" },
 ];
 const SHAPE_BY_KEY = Object.fromEntries(SHAPES.map(s => [s.key, s]));
+
+// Atributos livres do bloco: array de { k, v }. Migra o formato fixo antigo.
+const normAttrs = (attrs) => {
+  if (Array.isArray(attrs)) return attrs;
+  if (attrs && typeof attrs === "object") {
+    const out = [];
+    if (attrs.tier) out.push({ k: "Tier", v: attrs.tier });
+    if (attrs.features && attrs.features.length) out.push({ k: "Features", v: attrs.features.join(", ") });
+    if (attrs.courses && attrs.courses.length) out.push({ k: "Cursos", v: attrs.courses.join(", ") });
+    if (attrs.role) out.push({ k: "Role", v: attrs.role });
+    if (attrs.notes) out.push({ k: "Notas", v: attrs.notes });
+    return out;
+  }
+  return [];
+};
 
 const hexToRgb = (hex) => {
   const h = hex.replace("#","");
@@ -1104,13 +1122,20 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
           />
         )
       )}
-      {block.attrs && (block.attrs.tier || (block.attrs.features||[]).length || (block.attrs.courses||[]).length) ? (
-        <div className="attr-line">
-          {block.attrs.tier && <span className="attr-tag tier">{block.attrs.tier}</span>}
-          {(block.attrs.features||[]).length > 0 && <span className="attr-tag">{block.attrs.features.length} feat</span>}
-          {(block.attrs.courses||[]).length > 0 && <span className="attr-tag">{block.attrs.courses.length} curso{block.attrs.courses.length>1?"s":""}</span>}
-        </div>
-      ) : null}
+      {(() => {
+        const rs = normAttrs(block.attrs).filter(r => r.k || r.v);
+        if (!rs.length) return null;
+        return (
+          <div className="attr-line">
+            {rs.slice(0, 3).map((r, i) => (
+              <span key={i} className={`attr-tag ${/^tier$/i.test(r.k) ? "tier" : ""}`}>
+                {r.k ? <b>{r.k}:</b> : null} {r.v}
+              </span>
+            ))}
+            {rs.length > 3 && <span className="attr-tag">+{rs.length - 3}</span>}
+          </div>
+        );
+      })()}
       <div className="del" onMouseDown={(e) => { e.stopPropagation(); onDelete(block.id); }}>×</div>
       {["top","right","bottom","left"].map(p => (
         <div key={p} className={`port ${p}`} data-port={p}
@@ -1367,50 +1392,43 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
   );
 }
 
-/* ================== AttrsPanel (atributos do produto) ================== */
+/* ================== AttrsPanel (atributos livres do produto) ================== */
 function AttrsPanel({ block, blocks, onPatch, onClose }) {
-  const a = block.attrs || {};
-  const [tier, setTier] = useState(a.tier || "");
-  const [role, setRole] = useState(a.role || "");
-  const [notes, setNotes] = useState(a.notes || "");
-  const [features, setFeatures] = useState(a.features || []);
-  const [courses, setCourses] = useState(a.courses || []);
-  const [featIn, setFeatIn] = useState("");
-  const [courseIn, setCourseIn] = useState("");
+  const [rows, setRows] = useState(() => { const r = normAttrs(block.attrs); return r.length ? r : [{ k: "", v: "" }]; });
   const [showTable, setShowTable] = useState(false);
 
-  // persiste (limpo) sempre que algum campo muda
-  useEffect(() => {
-    onPatch({ tier, role, notes, features, courses });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tier, role, notes, features, courses]);
+  useEffect(() => { onPatch(rows); /* eslint-disable-next-line */ }, [rows]);
 
   const strip = (t) => (t || "").replace(/<[^>]*>/g, "").trim();
-  const TIERS = ["FREE", "SALA", "ELITE", "MENTORADO", "IMORTAL"];
   const title = strip(block.title) || "(sem título)";
-  const allFeat = [...new Set(blocks.flatMap(b => b.attrs?.features || []))];
-  const allCourse = [...new Set(blocks.flatMap(b => b.attrs?.courses || []))];
+  const setRow = (i, patch) => setRows(rows.map((r, j) => j === i ? { ...r, ...patch } : r));
+  const addRow = () => setRows([...rows, { k: "", v: "" }]);
+  const delRow = (i) => setRows(rows.filter((_, j) => j !== i));
 
-  const addFeat = () => { const v = featIn.trim(); if (v && !features.includes(v)) setFeatures([...features, v]); setFeatIn(""); };
-  const addCourse = () => { const v = courseIn.trim(); if (v && !courses.includes(v)) setCourses([...courses, v]); setCourseIn(""); };
+  // sugestões de NOME de atributo (o que já foi usado em qualquer bloco)
+  const allKeys = [...new Set(blocks.flatMap(b => normAttrs(b.attrs).map(r => r.k)).filter(Boolean))];
 
-  const rows = blocks
-    .filter(b => b.attrs && (b.attrs.tier || b.attrs.role || (b.attrs.features || []).length || (b.attrs.courses || []).length))
-    .map(b => ({ produto: strip(b.title) || "(sem título)", tier: b.attrs.tier || "", features: (b.attrs.features || []).join("; "), cursos: (b.attrs.courses || []).join("; "), role: b.attrs.role || "" }));
+  // tabela: uma coluna por atributo que existir em algum bloco
+  const withAttrs = blocks.map(b => ({ title: strip(b.title) || "(sem título)", rows: normAttrs(b.attrs) })).filter(x => x.rows.some(r => r.k || r.v));
+  const cols = [...new Set(withAttrs.flatMap(x => x.rows.map(r => r.k)).filter(Boolean))];
+  const tableRows = withAttrs.map(x => { const m = {}; x.rows.forEach(r => { if (r.k) m[r.k] = r.v; }); return { produto: x.title, cells: cols.map(c => m[c] || "") }; });
+
   const downloadCSV = () => {
     const esc = (s) => `"${String(s).replace(/"/g, '""')}"`;
-    const csv = [["Produto", "Tier", "Features", "Cursos", "Role"].join(","),
-      ...rows.map(r => [r.produto, r.tier, r.features, r.cursos, r.role].map(esc).join(","))].join("\n");
+    const csv = [["Produto", ...cols].map(esc).join(","), ...tableRows.map(r => [r.produto, ...r.cells].map(esc).join(","))].join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
     const el = document.createElement("a"); el.href = URL.createObjectURL(blob); el.download = "atribuicoes.csv"; el.click();
   };
-  const copyJSON = () => { try { navigator.clipboard.writeText(JSON.stringify(rows, null, 2)); } catch {} };
+  const copyJSON = () => {
+    const obj = tableRows.map(r => Object.assign({ produto: r.produto }, Object.fromEntries(cols.map((c, j) => [c, r.cells[j]]))));
+    try { navigator.clipboard.writeText(JSON.stringify(obj, null, 2)); } catch {}
+  };
 
   return (
     <div className="cloud-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="cloud-panel" style={{ width: "min(640px,94vw)" }}>
+      <div className="cloud-panel" style={{ width: "min(660px,94vw)" }}>
         <div className="cloud-head">
-          <h3>◆ {showTable ? "Tabela de atribuições" : "Atributos — " + title}</h3>
+          <h3>◆ {showTable ? "Tabela de atributos" : "Atributos — " + title}</h3>
           <span className="cloud-btn ghost" onClick={() => setShowTable(s => !s)}>{showTable ? "← Editar" : "📋 Tabela"}</span>
           <span className="cloud-x" onClick={onClose}>×</span>
         </div>
@@ -1423,45 +1441,29 @@ function AttrsPanel({ block, blocks, onPatch, onClose }) {
             </div>
             <div style={{ overflow: "auto" }}>
               <table className="attr-table">
-                <thead><tr><th>Produto</th><th>Tier</th><th>Features</th><th>Cursos</th><th>Role</th></tr></thead>
+                <thead><tr><th>Produto</th>{cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
                 <tbody>
-                  {rows.map((r, i) => (<tr key={i}><td>{r.produto}</td><td>{r.tier}</td><td>{r.features}</td><td>{r.cursos}</td><td>{r.role}</td></tr>))}
-                  {!rows.length && <tr><td colSpan={5} style={{ color: "var(--muted)" }}>Nenhum bloco com atributos ainda.</td></tr>}
+                  {tableRows.map((r, i) => (<tr key={i}><td>{r.produto}</td>{r.cells.map((c, j) => <td key={j}>{c}</td>)}</tr>))}
+                  {!tableRows.length && <tr><td colSpan={cols.length + 1} style={{ color: "var(--muted)" }}>Nenhum bloco com atributos ainda.</td></tr>}
                 </tbody>
               </table>
             </div>
           </div>
         ) : (
           <div className="cloud-body">
-            <div className="cloud-lbl">Tier</div>
-            <div className="cloud-row">
-              {TIERS.map(t => (
-                <button key={t} className={`cloud-btn ${tier === t ? "" : "ghost"}`} style={{ padding: "5px 10px" }} onClick={() => setTier(tier === t ? "" : t)}>{t}</button>
-              ))}
+            <div className="cloud-lbl">Adicione os atributos que quiser (nome → valor)</div>
+            {rows.map((r, i) => (
+              <div className="attr-row" key={i}>
+                <input list="attr-keys" className="attr-k" placeholder="atributo (ex: Tier, Curso, Feature…)" value={r.k} onChange={(e) => setRow(i, { k: e.target.value })} />
+                <input className="attr-v" placeholder="valor" value={r.v} onChange={(e) => setRow(i, { v: e.target.value })}
+                  onKeyDown={(e) => { if (e.key === "Enter" && i === rows.length - 1) { e.preventDefault(); addRow(); } }} />
+                <span className="cloud-ic del" onClick={() => delRow(i)} title="Remover">🗑</span>
+              </div>
+            ))}
+            <datalist id="attr-keys">{allKeys.map(k => <option key={k} value={k} />)}</datalist>
+            <div className="cloud-row" style={{ marginTop: 10 }}>
+              <button className="cloud-btn" onClick={addRow}>＋ Adicionar atributo</button>
             </div>
-            <input type="text" placeholder="ou tier personalizado" value={TIERS.includes(tier) ? "" : tier} onChange={(e) => setTier(e.target.value)} />
-
-            <div className="cloud-lbl">Features liberadas</div>
-            {features.length > 0 && <div className="attr-chips">{features.map(f => (<span key={f} className="attr-chip">{f}<i onClick={() => setFeatures(features.filter(x => x !== f))}>×</i></span>))}</div>}
-            <div className="cloud-row">
-              <input list="feat-sug" type="text" placeholder="feature + Enter" value={featIn} onChange={(e) => setFeatIn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addFeat(); } }} style={{ flex: 1 }} />
-              <button className="cloud-btn ghost" onClick={addFeat}>Add</button>
-            </div>
-            <datalist id="feat-sug">{allFeat.map(f => <option key={f} value={f} />)}</datalist>
-
-            <div className="cloud-lbl">Cursos liberados</div>
-            {courses.length > 0 && <div className="attr-chips">{courses.map(c => (<span key={c} className="attr-chip">{c}<i onClick={() => setCourses(courses.filter(x => x !== c))}>×</i></span>))}</div>}
-            <div className="cloud-row">
-              <input list="course-sug" type="text" placeholder="curso + Enter" value={courseIn} onChange={(e) => setCourseIn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCourse(); } }} style={{ flex: 1 }} />
-              <button className="cloud-btn ghost" onClick={addCourse}>Add</button>
-            </div>
-            <datalist id="course-sug">{allCourse.map(c => <option key={c} value={c} />)}</datalist>
-
-            <div className="cloud-lbl">Role atribuída</div>
-            <input type="text" placeholder="ex: aluno_sala" value={role} onChange={(e) => setRole(e.target.value)} />
-
-            <div className="cloud-lbl">Notas</div>
-            <textarea className="attr-notes" placeholder="observações…" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         )}
       </div>
@@ -1752,17 +1754,14 @@ function App() {
     setSelectedEdge(null);
   }, [blocks, selection]);
 
-  // Grava (limpo) os atributos de um bloco; se tudo vazio, remove o attrs.
-  const patchBlockAttrs = useCallback((id, attrs) => {
-    const clean = {};
-    if (attrs.tier && attrs.tier.trim()) clean.tier = attrs.tier.trim();
-    if (attrs.role && attrs.role.trim()) clean.role = attrs.role.trim();
-    if (attrs.notes && attrs.notes.trim()) clean.notes = attrs.notes;
-    if (attrs.features && attrs.features.length) clean.features = attrs.features;
-    if (attrs.courses && attrs.courses.length) clean.courses = attrs.courses;
+  // Grava (limpo) os atributos livres de um bloco; se tudo vazio, remove o attrs.
+  const patchBlockAttrs = useCallback((id, rows) => {
+    const clean = (rows || [])
+      .map(r => ({ k: (r.k || "").trim(), v: (r.v || "").trim() }))
+      .filter(r => r.k || r.v);
     setBlocks(p => p.map(b => {
       if (b.id !== id) return b;
-      if (Object.keys(clean).length) return { ...b, attrs: clean };
+      if (clean.length) return { ...b, attrs: clean };
       const { attrs: _drop, ...rest } = b; return rest;
     }));
   }, []);
