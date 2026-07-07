@@ -644,6 +644,30 @@
   .cloud-status{font-size:11px;color:var(--muted);margin-top:10px;min-height:14px}
   .cloud-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:10px;background:rgba(0,240,255,.04);border:1px solid rgba(0,240,255,.12);border-radius:8px;padding:10px}
   .cloud-note code{color:var(--cyan);font-size:10px;background:rgba(0,240,255,.08);padding:1px 4px;border-radius:3px}
+  .cloud-body textarea.attr-notes{
+    width:100%;box-sizing:border-box;min-height:56px;resize:vertical;margin:5px 0;
+    background:rgba(2,6,14,.7);color:var(--white);border:1px solid rgba(0,240,255,.25);
+    border-radius:8px;font-size:13px;padding:9px 11px;outline:none;font-family:inherit;
+  }
+  .cloud-body textarea.attr-notes:focus{border-color:var(--cyan);box-shadow:0 0 10px rgba(0,240,255,.25)}
+  .attr-chips{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0}
+  .attr-chip{
+    display:inline-flex;align-items:center;gap:5px;font-size:11px;
+    background:rgba(0,240,255,.1);border:1px solid rgba(0,240,255,.3);color:var(--white);
+    padding:3px 5px 3px 9px;border-radius:12px;
+  }
+  .attr-chip i{cursor:pointer;font-style:normal;color:var(--muted);font-size:13px;line-height:1}
+  .attr-chip i:hover{color:var(--danger)}
+  .attr-table{width:100%;border-collapse:collapse;font-size:12px}
+  .attr-table th,.attr-table td{border:1px solid rgba(0,240,255,.14);padding:6px 9px;text-align:left;vertical-align:top}
+  .attr-table th{color:var(--cyan);text-transform:uppercase;font-size:10px;letter-spacing:.5px;background:rgba(0,240,255,.05)}
+  /* mini-resumo dentro do bloco */
+  .block .attr-line{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:7px}
+  .block .attr-tag{
+    font-size:9px;text-transform:uppercase;letter-spacing:.4px;padding:1px 6px;border-radius:8px;
+    border:1px solid rgba(var(--bc-rgb),.4);color:var(--bc);opacity:.9;
+  }
+  .block .attr-tag.tier{background:rgba(var(--bc-rgb),.16);font-weight:700}
 </style>
 </head>
 <body>
@@ -1080,6 +1104,13 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
           />
         )
       )}
+      {block.attrs && (block.attrs.tier || (block.attrs.features||[]).length || (block.attrs.courses||[]).length) ? (
+        <div className="attr-line">
+          {block.attrs.tier && <span className="attr-tag tier">{block.attrs.tier}</span>}
+          {(block.attrs.features||[]).length > 0 && <span className="attr-tag">{block.attrs.features.length} feat</span>}
+          {(block.attrs.courses||[]).length > 0 && <span className="attr-tag">{block.attrs.courses.length} curso{block.attrs.courses.length>1?"s":""}</span>}
+        </div>
+      ) : null}
       <div className="del" onMouseDown={(e) => { e.stopPropagation(); onDelete(block.id); }}>×</div>
       {["top","right","bottom","left"].map(p => (
         <div key={p} className={`port ${p}`} data-port={p}
@@ -1336,6 +1367,108 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
   );
 }
 
+/* ================== AttrsPanel (atributos do produto) ================== */
+function AttrsPanel({ block, blocks, onPatch, onClose }) {
+  const a = block.attrs || {};
+  const [tier, setTier] = useState(a.tier || "");
+  const [role, setRole] = useState(a.role || "");
+  const [notes, setNotes] = useState(a.notes || "");
+  const [features, setFeatures] = useState(a.features || []);
+  const [courses, setCourses] = useState(a.courses || []);
+  const [featIn, setFeatIn] = useState("");
+  const [courseIn, setCourseIn] = useState("");
+  const [showTable, setShowTable] = useState(false);
+
+  // persiste (limpo) sempre que algum campo muda
+  useEffect(() => {
+    onPatch({ tier, role, notes, features, courses });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tier, role, notes, features, courses]);
+
+  const strip = (t) => (t || "").replace(/<[^>]*>/g, "").trim();
+  const TIERS = ["FREE", "SALA", "ELITE", "MENTORADO", "IMORTAL"];
+  const title = strip(block.title) || "(sem título)";
+  const allFeat = [...new Set(blocks.flatMap(b => b.attrs?.features || []))];
+  const allCourse = [...new Set(blocks.flatMap(b => b.attrs?.courses || []))];
+
+  const addFeat = () => { const v = featIn.trim(); if (v && !features.includes(v)) setFeatures([...features, v]); setFeatIn(""); };
+  const addCourse = () => { const v = courseIn.trim(); if (v && !courses.includes(v)) setCourses([...courses, v]); setCourseIn(""); };
+
+  const rows = blocks
+    .filter(b => b.attrs && (b.attrs.tier || b.attrs.role || (b.attrs.features || []).length || (b.attrs.courses || []).length))
+    .map(b => ({ produto: strip(b.title) || "(sem título)", tier: b.attrs.tier || "", features: (b.attrs.features || []).join("; "), cursos: (b.attrs.courses || []).join("; "), role: b.attrs.role || "" }));
+  const downloadCSV = () => {
+    const esc = (s) => `"${String(s).replace(/"/g, '""')}"`;
+    const csv = [["Produto", "Tier", "Features", "Cursos", "Role"].join(","),
+      ...rows.map(r => [r.produto, r.tier, r.features, r.cursos, r.role].map(esc).join(","))].join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const el = document.createElement("a"); el.href = URL.createObjectURL(blob); el.download = "atribuicoes.csv"; el.click();
+  };
+  const copyJSON = () => { try { navigator.clipboard.writeText(JSON.stringify(rows, null, 2)); } catch {} };
+
+  return (
+    <div className="cloud-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="cloud-panel" style={{ width: "min(640px,94vw)" }}>
+        <div className="cloud-head">
+          <h3>◆ {showTable ? "Tabela de atribuições" : "Atributos — " + title}</h3>
+          <span className="cloud-btn ghost" onClick={() => setShowTable(s => !s)}>{showTable ? "← Editar" : "📋 Tabela"}</span>
+          <span className="cloud-x" onClick={onClose}>×</span>
+        </div>
+
+        {showTable ? (
+          <div className="cloud-body">
+            <div className="cloud-row" style={{ marginBottom: 10 }}>
+              <button className="cloud-btn" onClick={downloadCSV}>⤓ Baixar CSV</button>
+              <button className="cloud-btn ghost" onClick={copyJSON}>Copiar JSON</button>
+            </div>
+            <div style={{ overflow: "auto" }}>
+              <table className="attr-table">
+                <thead><tr><th>Produto</th><th>Tier</th><th>Features</th><th>Cursos</th><th>Role</th></tr></thead>
+                <tbody>
+                  {rows.map((r, i) => (<tr key={i}><td>{r.produto}</td><td>{r.tier}</td><td>{r.features}</td><td>{r.cursos}</td><td>{r.role}</td></tr>))}
+                  {!rows.length && <tr><td colSpan={5} style={{ color: "var(--muted)" }}>Nenhum bloco com atributos ainda.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="cloud-body">
+            <div className="cloud-lbl">Tier</div>
+            <div className="cloud-row">
+              {TIERS.map(t => (
+                <button key={t} className={`cloud-btn ${tier === t ? "" : "ghost"}`} style={{ padding: "5px 10px" }} onClick={() => setTier(tier === t ? "" : t)}>{t}</button>
+              ))}
+            </div>
+            <input type="text" placeholder="ou tier personalizado" value={TIERS.includes(tier) ? "" : tier} onChange={(e) => setTier(e.target.value)} />
+
+            <div className="cloud-lbl">Features liberadas</div>
+            {features.length > 0 && <div className="attr-chips">{features.map(f => (<span key={f} className="attr-chip">{f}<i onClick={() => setFeatures(features.filter(x => x !== f))}>×</i></span>))}</div>}
+            <div className="cloud-row">
+              <input list="feat-sug" type="text" placeholder="feature + Enter" value={featIn} onChange={(e) => setFeatIn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addFeat(); } }} style={{ flex: 1 }} />
+              <button className="cloud-btn ghost" onClick={addFeat}>Add</button>
+            </div>
+            <datalist id="feat-sug">{allFeat.map(f => <option key={f} value={f} />)}</datalist>
+
+            <div className="cloud-lbl">Cursos liberados</div>
+            {courses.length > 0 && <div className="attr-chips">{courses.map(c => (<span key={c} className="attr-chip">{c}<i onClick={() => setCourses(courses.filter(x => x !== c))}>×</i></span>))}</div>}
+            <div className="cloud-row">
+              <input list="course-sug" type="text" placeholder="curso + Enter" value={courseIn} onChange={(e) => setCourseIn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCourse(); } }} style={{ flex: 1 }} />
+              <button className="cloud-btn ghost" onClick={addCourse}>Add</button>
+            </div>
+            <datalist id="course-sug">{allCourse.map(c => <option key={c} value={c} />)}</datalist>
+
+            <div className="cloud-lbl">Role atribuída</div>
+            <input type="text" placeholder="ex: aluno_sala" value={role} onChange={(e) => setRole(e.target.value)} />
+
+            <div className="cloud-lbl">Notas</div>
+            <textarea className="attr-notes" placeholder="observações…" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ================== App ================== */
 function App() {
   const [tool, setTool] = useState("select");
@@ -1402,6 +1535,7 @@ function App() {
   // ----- nuvem (Supabase, login email+senha) -----
   const [cloudOpen, setCloudOpen] = useState(false);
   const [cloudDoc, setCloudDoc] = useState({ id: null, name: "" });
+  const [attrsOpen, setAttrsOpen] = useState(false);
   const [session, setSession] = useState(null);
   useEffect(() => {
     if (!supa) return;
@@ -1617,6 +1751,21 @@ function App() {
     setSelection(newSel);
     setSelectedEdge(null);
   }, [blocks, selection]);
+
+  // Grava (limpo) os atributos de um bloco; se tudo vazio, remove o attrs.
+  const patchBlockAttrs = useCallback((id, attrs) => {
+    const clean = {};
+    if (attrs.tier && attrs.tier.trim()) clean.tier = attrs.tier.trim();
+    if (attrs.role && attrs.role.trim()) clean.role = attrs.role.trim();
+    if (attrs.notes && attrs.notes.trim()) clean.notes = attrs.notes;
+    if (attrs.features && attrs.features.length) clean.features = attrs.features;
+    if (attrs.courses && attrs.courses.length) clean.courses = attrs.courses;
+    setBlocks(p => p.map(b => {
+      if (b.id !== id) return b;
+      if (Object.keys(clean).length) return { ...b, attrs: clean };
+      const { attrs: _drop, ...rest } = b; return rest;
+    }));
+  }, []);
 
   // Liga/desliga a ênfase (brilho pulsante) nos blocos selecionados.
   const toggleBlockEmphasis = useCallback(() => {
@@ -3217,6 +3366,13 @@ function App() {
                       <svg viewBox="0 0 24 24"><path d="M12 2 L14.2 9.8 L22 12 L14.2 14.2 L12 22 L9.8 14.2 L2 12 L9.8 9.8 Z"/></svg>
                     </button>
                   </div>
+                  <div className="vsep"/>
+                  <div className="group">
+                    <span className="lbl">Atributos</span>
+                    <button className={`shape-btn ${selBlock && selBlock.attrs ? "active" : ""}`} onClick={() => setAttrsOpen(true)} title="Atributos do produto (tier, features, cursos) + exportar tabela">
+                      <svg viewBox="0 0 24 24"><path d="M4 7 h9 M4 12 h9 M4 17 h6"/><circle cx="18.5" cy="7" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/></svg>
+                    </button>
+                  </div>
                 </>
               );
             })()}
@@ -3675,6 +3831,12 @@ function App() {
           </svg>
         </div>
       )}
+
+      {attrsOpen && (() => {
+        const ab = blocks.find(b => selection.has(b.id));
+        if (!ab) return null;
+        return <AttrsPanel block={ab} blocks={blocks} onPatch={(attrs) => patchBlockAttrs(ab.id, attrs)} onClose={() => setAttrsOpen(false)} />;
+      })()}
 
       {cloudOpen && (
         <CloudPanel
