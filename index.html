@@ -1805,6 +1805,51 @@ function App() {
   useEffect(() => { selectionRef.current = selection; });
   const editingBlockRef = useRef(null);
   useEffect(() => { editingBlockRef.current = editingBodyId || editingTitleId; });
+  const notesRef = useRef(notes); useEffect(() => { notesRef.current = notes; });
+  const strokesRef = useRef(strokes); useEffect(() => { strokesRef.current = strokes; });
+  const imagesRef = useRef(images); useEffect(() => { imagesRef.current = images; });
+  const edgesRef = useRef(edges); useEffect(() => { edgesRef.current = edges; });
+  const clipboardRef = useRef(null); // cópia interna (fallback do clipboard do SO)
+  const pasteNRef = useRef(0);
+
+  // ----- copiar / colar (blocos, notas, desenhos, imagens) -----
+  const collectSelection = useCallback(() => {
+    const sel = selectionRef.current; if (!sel || !sel.size) return null;
+    const blks = blocksRef.current.filter(b => sel.has(b.id));
+    const nts = notesRef.current.filter(n => sel.has(n.id));
+    const strs = strokesRef.current.filter(s => sel.has(s.id));
+    const imgs = imagesRef.current.filter(im => sel.has(im.id));
+    const eds = edgesRef.current.filter(e => sel.has(e.from.id) && sel.has(e.to.id));
+    if (!blks.length && !nts.length && !strs.length && !imgs.length) return null;
+    return { blocks: blks, notes: nts, strokes: strs, images: imgs, edges: eds };
+  }, []);
+  const pasteData = useCallback((data) => {
+    if (!data) return;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const add = (x, y, w, h) => { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x + (w || 0)); maxY = Math.max(maxY, y + (h || 0)); };
+    (data.blocks || []).forEach(b => add(b.x, b.y, b.w || 240, b.h || 80));
+    (data.notes || []).forEach(n => add(n.x, n.y, 0, 0));
+    (data.images || []).forEach(im => add(im.x, im.y, im.w || 0, im.h || 0));
+    (data.strokes || []).forEach(s => { (s.points || []).forEach(p => add((s.x || 0) + p.x, (s.y || 0) + p.y, 0, 0)); if (s.p1) add((s.x || 0) + s.p1.x, (s.y || 0) + s.p1.y, 0, 0); if (s.p2) add((s.x || 0) + s.p2.x, (s.y || 0) + s.p2.y, 0, 0); });
+    if (!isFinite(minX)) { minX = minY = maxX = maxY = 0; }
+    const v = viewRef.current;
+    const cx = (-v.x + window.innerWidth / 2) / v.scale, cy = (-v.y + window.innerHeight / 2) / v.scale;
+    const n = (pasteNRef.current = (pasteNRef.current + 1) % 6);
+    const dx = cx - (minX + maxX) / 2 + n * 22, dy = cy - (minY + maxY) / 2 + n * 22;
+    const idMap = new Map(); const nb = [], nn = [], ns = [], ni = [], newSel = new Set();
+    (data.blocks || []).forEach(b => { const id = uid(); idMap.set(b.id, id); nb.push({ ...b, id, x: b.x + dx, y: b.y + dy }); newSel.add(id); });
+    (data.notes || []).forEach(o => { const id = uid(); nn.push({ ...o, id, x: o.x + dx, y: o.y + dy }); newSel.add(id); });
+    (data.strokes || []).forEach(o => { const id = uid(); ns.push({ ...o, id, x: (o.x || 0) + dx, y: (o.y || 0) + dy }); newSel.add(id); });
+    (data.images || []).forEach(o => { const id = uid(); ni.push({ ...o, id, x: o.x + dx, y: o.y + dy }); newSel.add(id); });
+    const ne = (data.edges || []).filter(e => idMap.has(e.from.id) && idMap.has(e.to.id)).map(e => ({ ...e, id: uid(), from: { ...e.from, id: idMap.get(e.from.id) }, to: { ...e.to, id: idMap.get(e.to.id) } }));
+    if (nb.length) setBlocks(p => [...p, ...nb]);
+    if (nn.length) setNotes(p => [...p, ...nn]);
+    if (ns.length) setStrokes(p => [...p, ...ns]);
+    if (ni.length) setImages(p => [...p, ...ni]);
+    if (ne.length) setEdges(p => [...p, ...ne]);
+    if (newSel.size) { setSelection(newSel); setSelectedEdge(null); }
+  }, []);
+
 
   // cria um bloco FILHO ligado abaixo do pai (usado pelo Tab). Já entra em edição.
   const createChildBlock = useCallback((parentId) => {
@@ -2001,9 +2046,11 @@ function App() {
   useEffect(() => { blockSelectedRef.current = blocks.some(b => selection.has(b.id)); });
   useEffect(() => {
     const onPaste = (e) => {
-      if (document.activeElement && document.activeElement.isContentEditable) return;
-      const items = e.clipboardData && e.clipboardData.items;
-      if (!items) return;
+      const a = document.activeElement;
+      if (a && (a.isContentEditable || a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT")) return;
+      const dt = e.clipboardData; if (!dt) return;
+      // 1) imagem no clipboard
+      const items = dt.items || [];
       for (let i = 0; i < items.length; i++) {
         if (items[i].type && items[i].type.indexOf("image/") === 0) {
           const blob = items[i].getAsFile();
@@ -2011,14 +2058,19 @@ function App() {
             e.preventDefault();
             if (blockSelectedRef.current) setBlockImageFromFile(blob);
             else addImageFromBlob(blob, null);
-            break;
+            return;
           }
         }
       }
+      // 2) blocos/desenhos copiados (nossos) — via texto do clipboard
+      const txt = dt.getData("text") || "";
+      if (txt.indexOf("CANVASTRON::") === 0) { e.preventDefault(); try { pasteData(JSON.parse(txt.slice(12))); } catch {} return; }
+      // 3) fallback: cópia interna (mesma sessão)
+      if (clipboardRef.current) { e.preventDefault(); pasteData(clipboardRef.current); }
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [addImageFromBlob, setBlockImageFromFile]);
+  }, [addImageFromBlob, setBlockImageFromFile, pasteData]);
 
   // Toggle the box/frame on the selected note(s)
   const toggleNoteFrame = useCallback(() => {
@@ -2098,6 +2150,17 @@ function App() {
     setEdges(p => p.filter(e => !selection.has(e.from.id) && !selection.has(e.to.id)));
     setSelection(new Set());
   }, [selection, selectedEdge]);
+
+  // Ctrl+C / Ctrl+X — copia a seleção pro clipboard (texto, funciona entre mapas/abas)
+  useEffect(() => {
+    const inField = () => { const a = document.activeElement; return a && (a.isContentEditable || a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT"); };
+    const write = (e) => { const d = collectSelection(); if (!d) return false; try { e.clipboardData.setData("text/plain", "CANVASTRON::" + JSON.stringify(d)); } catch {} clipboardRef.current = d; e.preventDefault(); return true; };
+    const onCopy = (e) => { if (inField()) return; write(e); };
+    const onCut = (e) => { if (inField()) return; if (write(e)) deleteSelection(); };
+    window.addEventListener("copy", onCopy);
+    window.addEventListener("cut", onCut);
+    return () => { window.removeEventListener("copy", onCopy); window.removeEventListener("cut", onCut); };
+  }, [collectSelection, deleteSelection]);
 
   const deleteBlock = useCallback((id) => {
     setBlocks(p => p.filter(b => b.id !== id));
