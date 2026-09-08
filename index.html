@@ -73,6 +73,9 @@
     position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10;
     display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:3px;
     padding:6px 9px;max-width:96vw;
+    /* left:50% deixa só metade da janela como largura disponível pro shrink-to-fit;
+       max-content faz a barra ocupar o que precisa (uma fileira) e só quebrar em tela estreita */
+    width:max-content;
     background:linear-gradient(180deg,rgba(9,19,34,.86),rgba(5,12,24,.86));
     border:1px solid rgba(0,240,255,.20);
     border-radius:13px;
@@ -98,6 +101,25 @@
   .ic .ic-svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
   /* divisória vertical entre grupos */
   .dvr{width:1px;height:20px;margin:0 5px;background:linear-gradient(transparent,rgba(0,240,255,.35),transparent)}
+  /* grupos da toolbar: fileira de ícones + rótulo curto embaixo (Criar · Editar · Ver · Arquivo) */
+  .toolbar{--tb-h:78px}
+  .toolbar .tb-group{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .toolbar .tb-row{display:flex;align-items:center;gap:3px}
+  .toolbar .tb-lbl{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:rgba(159,194,214,.55);line-height:1;user-select:none}
+  .toolbar .dvr{height:auto;align-self:stretch;margin:2px 6px}
+  /* Limpar tudo isolado: mais espaço, sempre com um toque de vermelho pra não confundir com Exportar */
+  .toolbar .tb-danger{margin-left:8px}
+  .toolbar .tb-danger .tb-lbl{color:rgba(255,59,92,.6)}
+  .toolbar .tb-danger .ic{color:rgba(255,59,92,.75);border-color:rgba(255,59,92,.25)}
+  /* botão "Limpar desenhos" da paleta de desenho */
+  .drawbar .clear-strokes{
+    display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;
+    background:transparent;color:#9fc2d6;font-size:11px;letter-spacing:.4px;white-space:nowrap;
+    border:1px solid rgba(255,59,92,.3);border-radius:8px;cursor:pointer;transition:all .12s ease;
+  }
+  .drawbar .clear-strokes svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .drawbar .clear-strokes:hover:not(:disabled){background:rgba(255,59,92,.12);border-color:var(--danger);color:var(--danger);box-shadow:0 0 12px rgba(255,59,92,.32)}
+  .drawbar .clear-strokes:disabled{opacity:.35;cursor:default}
   /* compat: barras antigas que ainda usam .tool/.sep herdam o visual novo */
   .tool{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;background:transparent;color:#9fc2d6;border:1px solid rgba(0,240,255,.22);border-radius:8px;font-size:12px;font-weight:600;letter-spacing:.5px;cursor:pointer;text-transform:uppercase;transition:all .14s ease}
   .tool:hover{background:rgba(0,240,255,.08);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 12px rgba(0,240,255,.3)}
@@ -116,7 +138,7 @@
 
   /* ===== drawing toolbar ===== */
   .drawbar{
-    position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:10;
+    position:fixed;top:86px;left:50%;transform:translateX(-50%);z-index:10;
     display:flex;flex-wrap:wrap;justify-content:center;gap:9px;align-items:center;
     max-width:96vw;
     padding:7px 11px;
@@ -165,7 +187,7 @@
 
   /* ===== color palette ===== */
   .palette{
-    position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:10;
+    position:fixed;top:86px;left:50%;transform:translateX(-50%);z-index:10;
     display:flex;gap:6px;align-items:center;
     padding:7px 11px;
     background:linear-gradient(180deg,rgba(9,19,34,.9),rgba(5,12,24,.9));
@@ -205,7 +227,8 @@
   .workspace{position:fixed;inset:0;z-index:1;cursor:default}
   .workspace.tool-block{cursor:crosshair}
   .workspace.tool-note{cursor:text}
-  .workspace.tool-draw{cursor:crosshair}
+  /* cursor de lápis no modo desenho: hotspot (3,21) = ponta do lápis */
+  .workspace.tool-draw{cursor:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z' fill='%235ee7ff' stroke='%23041018' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E") 3 21, crosshair}
   .workspace.tool-eraser{cursor:not-allowed}
   .workspace.tool-eraser .stroke-hit{cursor:not-allowed !important}
   .workspace.panning{cursor:grabbing}
@@ -998,6 +1021,18 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   const bodyRef = useRef(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingBody, setEditingBody] = useState(false);
+  // bloco recém-criado que ainda não recebeu conteúdo: se o usuário sair da
+  // edição sem digitar nada, ele some (não vira "TÍTULO" fantasma no mapa)
+  const freshRef = useRef(false);
+  const enterToBodyRef = useRef(false); // Enter no título → vai pro corpo, não é "saída"
+  const isEmptyHtml = (h) => !h || h.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "";
+  const discardIfEmpty = (titleHtml, bodyHtml) => {
+    if (!freshRef.current) return false;
+    if (block.image || normAttrs(block.attrs).some(r => r.k || r.v)) { freshRef.current = false; return false; }
+    if (!isEmptyHtml(titleHtml) || !isEmptyHtml(bodyHtml)) { freshRef.current = false; return false; }
+    onDelete?.(block.id);
+    return true;
+  };
 
   // Report the block's REAL rendered size up to the parent, so connections
   // anchor to the actual box (which grows with content / changes on resize)
@@ -1017,6 +1052,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   useEffect(() => {
     if (pendingEditRef && pendingEditRef.current === block.id) {
       pendingEditRef.current = null;
+      freshRef.current = true;
       setEditingTitle(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1135,6 +1171,8 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
             setEditingTitle(false);
             const html = e.currentTarget.innerHTML;
             const plain = e.currentTarget.textContent.trim();
+            if (enterToBodyRef.current) { enterToBodyRef.current = false; return; } // Enter já salvou e segue pro corpo
+            if (discardIfEmpty(plain ? html : "", block.body)) return;
             onChange(block.id, { title: plain ? html : "" });
           }}
           onKeyDown={(e) => {
@@ -1143,9 +1181,11 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
               e.preventDefault();
               const html = e.currentTarget.innerHTML;
               const plain = e.currentTarget.textContent.trim();
+              if (plain) freshRef.current = false;
+              enterToBodyRef.current = true;
               onChange(block.id, { title: plain ? html : "" });
               setEditingTitle(false);
-              setTimeout(() => setEditingBody(true), 0);
+              setTimeout(() => { setEditingBody(true); enterToBodyRef.current = false; }, 0);
             }
           }}
         />
@@ -1169,6 +1209,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
               setEditingBody(false);
               const html = e.currentTarget.innerHTML;
               const plain = e.currentTarget.textContent.trim();
+              if (discardIfEmpty(block.title, plain ? html : "")) return;
               onChange(block.id, { body: plain ? html : "" });
             }}
             onKeyDown={(e) => {
@@ -1562,8 +1603,11 @@ function App() {
   const [editingTitleId, setEditingTitleId] = useState(null);
   const [editingNoteId, setEditingNoteId] = useState(null);
   // Drawing tool settings
-  const [drawColor, setDrawColor] = useState("#ff9d00");
-  const [drawWidth, setDrawWidth] = useState(3);
+  // pincel lembra a última combinação (forma, espessura, cor) entre sessões:
+  // em aula você aperta D e já volta no que usou da última vez
+  const savedDraw = saved?.draw || {};
+  const [drawColor, setDrawColor] = useState(savedDraw.color || "#ff9d00");
+  const [drawWidth, setDrawWidth] = useState(savedDraw.width || 3);
   const [drawFontSize, setDrawFontSize] = useState(16);
   const [drawShape, setDrawShape] = useState("text"); // text|freehand|line|rect|ellipse|arrow|eraser
   const [noteFrame, setNoteFrame] = useState(true); // default: novas anotações têm moldura
@@ -1666,7 +1710,11 @@ function App() {
   const mdRef = useRef(null);
   const imgRef = useRef(null);
   const blockImgRef = useRef(null);
-  const lastDrawShapeRef = useRef("freehand"); // remembers the last drawing shape so "DESENHO" returns to it
+  // remembers the last drawing shape so "DESENHO" (botão ou tecla D) returns to it;
+  // restaurado do autosave, mas borracha/texto nunca viram "última forma"
+  const lastDrawShapeRef = useRef(
+    savedDraw.shape && !["text", "eraser"].includes(savedDraw.shape) ? savedDraw.shape : "freehand"
+  );
 
   // undo/redo history (snapshot stacks) + restore guard
   const histRef = useRef({ past: [], future: [] });
@@ -2350,10 +2398,11 @@ function App() {
   /* ----- autosave to localStorage (debounced) ----- */
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem(LS_KEY, JSON.stringify({ blocks, notes, strokes, images, edges, view, flow, attrCols })); } catch {}
+      const draw = { shape: lastDrawShapeRef.current, width: drawWidth, color: drawColor };
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ blocks, notes, strokes, images, edges, view, flow, attrCols, draw })); } catch {}
     }, 500);
     return () => clearTimeout(t);
-  }, [blocks, notes, strokes, images, edges, view, flow, attrCols]);
+  }, [blocks, notes, strokes, images, edges, view, flow, attrCols, drawShape, drawWidth, drawColor]);
 
   /* ----- smooth camera tween + center-on-block (used by presentation) ----- */
   const tweenView = useCallback((target, dur = 440) => {
@@ -2734,7 +2783,7 @@ function App() {
       if (e.key === "Delete" || e.key === "Backspace") deleteSelection();
       if (e.key === "b" || e.key === "B") setTool("block");
       if (e.key === "n" || e.key === "N") { clearSelection(); setTool("draw"); setDrawShape("text"); }
-      if (e.key === "d" || e.key === "D") { clearSelection(); setTool("draw"); setDrawShape("freehand"); }
+      if (e.key === "d" || e.key === "D") { clearSelection(); setTool("draw"); setDrawShape(lastDrawShapeRef.current); }
       if (e.key === "v" || e.key === "V") setTool("select");
       if (e.key === "p" || e.key === "P") enterPresent();
       if (e.key === "Escape") { clearSelection(); setTool("select"); }
@@ -2915,6 +2964,12 @@ function App() {
   const clearAll = () => {
     if (!confirm("Limpar todo o canvas?")) return;
     setBlocks([]); setNotes([]); setStrokes([]); setImages([]); setEdges([]); clearSelection();
+  };
+  // apaga só os rabiscos (pincel, formas, setas) e mantém o mapa; cai no histórico, Ctrl+Z desfaz
+  const clearStrokes = () => {
+    if (!strokes.length) return;
+    setStrokes([]);
+    setSelection(prev => { const n = new Set([...prev].filter(id => !strokes.some(s => s.id === id))); return n; });
   };
 
   /* ----- Markdown → mind map ----- */
@@ -3217,37 +3272,65 @@ function App() {
 
       {!present && (
       <div className="toolbar">
-        <button className={`ic ${tool==="select"?"active":""}`} onClick={() => setTool("select")} title="Selecionar / mover (V)">◉</button>
-        <button className={`ic ${tool==="block"?"active":""}`} onClick={() => setTool("block")} title="Bloco (B)">▭</button>
-        <button className={`ic ${tool==="draw" && drawShape==="text" ? "active":""}`} onClick={() => { clearSelection(); setTool("draw"); setDrawShape("text"); }} title="Texto / anotação (N)">
-          <svg viewBox="0 0 24 24" className="ic-svg"><path d="M6 6 H18 M12 6 V18 M9 18 H15"/></svg>
-        </button>
-        <button className={`ic ${tool==="draw" && drawShape!=="text" ? "active":""}`} onClick={() => { clearSelection(); setTool("draw"); if (drawShape==="text") setDrawShape(lastDrawShapeRef.current); }} title="Pincel, formas e borracha (D)">✐</button>
-        <button className="ic" onClick={() => imgRef.current.click()} title="Inserir imagem (ou cole com Ctrl+V)">
-          <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.4"/><path d="M21 15 l-5-5 -8 8"/></svg>
-        </button>
+        {/* CRIAR: ferramentas que colocam coisa no mapa */}
+        <div className="tb-group">
+          <div className="tb-row">
+            <button className={`ic ${tool==="select"?"active":""}`} onClick={() => setTool("select")} title="Selecionar / mover (V)">◉</button>
+            <button className={`ic ${tool==="block"?"active":""}`} onClick={() => setTool("block")} title="Bloco (B)">▭</button>
+            <button className={`ic ${tool==="draw" && drawShape==="text" ? "active":""}`} onClick={() => { clearSelection(); setTool("draw"); setDrawShape("text"); }} title="Texto / anotação (N)">
+              <svg viewBox="0 0 24 24" className="ic-svg"><path d="M6 6 H18 M12 6 V18 M9 18 H15"/></svg>
+            </button>
+            <button className={`ic ${tool==="draw" && drawShape!=="text" ? "active":""}`} onClick={() => { clearSelection(); setTool("draw"); if (drawShape==="text") setDrawShape(lastDrawShapeRef.current); }} title="Pincel, formas e borracha (D)">✐</button>
+            <button className="ic" onClick={() => imgRef.current.click()} title="Inserir imagem (ou cole com Ctrl+V)">
+              <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.4"/><path d="M21 15 l-5-5 -8 8"/></svg>
+            </button>
+            <button className="ic" onClick={() => mdRef.current.click()} title="Importar Markdown (.md): cada título #/##/### vira um bloco">📥</button>
+          </div>
+          <span className="tb-lbl">Criar</span>
+        </div>
         <div className="dvr"/>
-        <button className="ic" onClick={undo} title="Desfazer (Ctrl+Z)">↶</button>
-        <button className="ic" onClick={redo} title="Refazer (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
+        {/* EDITAR */}
+        <div className="tb-group">
+          <div className="tb-row">
+            <button className="ic" onClick={undo} title="Desfazer (Ctrl+Z)">↶</button>
+            <button className="ic" onClick={redo} title="Refazer (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
+          </div>
+          <span className="tb-lbl">Editar</span>
+        </div>
         <div className="dvr"/>
-        <button className="ic" onClick={fitAll} title="Enquadrar tudo">⊡</button>
-        <button className={`ic ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Minimapa">⊞</button>
-        <button className={`ic ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Fluxo de energia nas conexões">⚡</button>
-        <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>
-        <button className={`ic ${attrsOpen?"active":""}`} onClick={() => setAttrsOpen(o => !o)} title="Tabela de atributos (produtos)">
-          <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9 h18 M3 14.5 h18 M9 4 v16"/></svg>
-        </button>
+        {/* VER: toggles de visualização e apresentação */}
+        <div className="tb-group">
+          <div className="tb-row">
+            <button className="ic" onClick={fitAll} title="Enquadrar tudo">⊡</button>
+            <button className={`ic ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Minimapa">⊞</button>
+            <button className={`ic ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Fluxo de energia nas conexões">⚡</button>
+            <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>
+            <button className={`ic ${attrsOpen?"active":""}`} onClick={() => setAttrsOpen(o => !o)} title="Tabela de atributos (produtos)">
+              <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9 h18 M3 14.5 h18 M9 4 v16"/></svg>
+            </button>
+            <button className="ic" onClick={enterPresent} title="Apresentar (P)">▶</button>
+            <button className={`ic ${isFullscreen?"active":""}`} onClick={toggleFullscreen} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>{isFullscreen ? "⤧" : "⛶"}</button>
+          </div>
+          <span className="tb-lbl">Ver</span>
+        </div>
         <div className="dvr"/>
-        <button className="ic" onClick={enterPresent} title="Apresentar (P)">▶</button>
-        <button className={`ic ${isFullscreen?"active":""}`} onClick={toggleFullscreen} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>{isFullscreen ? "⤧" : "⛶"}</button>
-        <div className="dvr"/>
-        <button className={`ic ${cloudDoc.id ? "active" : ""}`} onClick={() => setCloudOpen(true)} title={cloudDoc.id ? `Nuvem — ${cloudDoc.name}` : "Nuvem (salvar/abrir no Supabase)"}>☁</button>
-        <button className="ic" onClick={exportJSON} title="Salvar (.json)">⤓</button>
-        <button className="ic" onClick={() => fileRef.current.click()} title="Carregar (.json)">⤒</button>
-        <button className="ic" onClick={() => mdRef.current.click()} title="Importar Markdown (.md) — cria blocos dos títulos #/##/###">📥</button>
-        <button className="ic" onClick={exportPNG} title="Exportar PNG">🖼</button>
-        <div className="dvr"/>
-        <button className="ic danger" onClick={clearAll} title="Limpar tudo">✕</button>
+        {/* ARQUIVO */}
+        <div className="tb-group">
+          <div className="tb-row">
+            <button className={`ic ${cloudDoc.id ? "active" : ""}`} onClick={() => setCloudOpen(true)} title={cloudDoc.id ? `Nuvem: ${cloudDoc.name}` : "Nuvem (salvar/abrir no Supabase)"}>☁</button>
+            <button className="ic" onClick={exportJSON} title="Salvar (.json)">⤓</button>
+            <button className="ic" onClick={() => fileRef.current.click()} title="Carregar (.json)">⤒</button>
+            <button className="ic" onClick={exportPNG} title="Exportar PNG">🖼</button>
+          </div>
+          <span className="tb-lbl">Arquivo</span>
+        </div>
+        {/* LIMPAR TUDO: isolado e sempre com um toque de vermelho, longe do Exportar */}
+        <div className="tb-group tb-danger">
+          <div className="tb-row">
+            <button className="ic danger" onClick={clearAll} title="Limpar tudo (apaga o mapa inteiro)">✕</button>
+          </div>
+          <span className="tb-lbl">Limpar</span>
+        </div>
       </div>
       )}
 
@@ -3436,6 +3519,14 @@ function App() {
               </div>
             </>
           )}
+          <div className="vsep"/>
+          <div className="group">
+            <button className="clear-strokes" onClick={clearStrokes} disabled={!strokes.length}
+              title={strokes.length ? `Apagar os ${strokes.length} desenhos e manter o mapa (Ctrl+Z desfaz)` : "Nenhum desenho no mapa"}>
+              <svg viewBox="0 0 24 24"><path d="M15 3 L21 9 L11 19 L5 19 L5 13 Z"/><line x1="3" y1="22" x2="21" y2="22"/></svg>
+              Limpar desenhos{strokes.length ? ` (${strokes.length})` : ""}
+            </button>
+          </div>
         </div>
       )}
 
