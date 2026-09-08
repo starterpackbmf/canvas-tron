@@ -11,6 +11,7 @@ Editor de mapa mental com estética Tron/Jarvis — blocos editáveis, conexões
 - **Apagar conexão** (clica na linha, Del)
 - **Criar bloco conectado** arrastando de uma porta pro vazio
 - **Anotação (texto)** e **Desenho** (pincel livre, linha, seta, retângulo, elipse, borracha) em ferramentas separadas
+- **Vincular desenho a bloco**: arraste da porta do bloco e solte em cima de um desenho (com vários traços selecionados, vincula todos). O desenho anda junto quando o bloco move, some quando o ramo recolhe, acende junto na apresentação e no holofote, e um fio tracejado na cor do bloco mostra o vínculo (clica no fio, Del desvincula)
 - **Moldura da anotação** opcional — toggle pra deixar só o texto, sem a caixa em volta
 - **Preenchimento** de retângulo e elipse — liga/desliga, com cor e opacidade ajustáveis (slider); editável também depois de desenhado
 - **Redimensionar blocos** pelas 4 alças de canto

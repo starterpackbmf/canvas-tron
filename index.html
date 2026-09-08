@@ -250,6 +250,12 @@
   }
   .strokes g.selected .stroke-line{filter:drop-shadow(0 0 6px currentColor) drop-shadow(0 0 12px currentColor)}
   .strokes g.selected .stroke-hit{stroke:rgba(255,255,255,.08)}
+  /* vínculo desenho↔bloco */
+  .strokes g{transition:opacity .28s ease}
+  .strokes g.hot .stroke-line{filter:drop-shadow(0 0 8px currentColor) drop-shadow(0 0 16px #fff)}
+  .strokes g.hot .stroke-hit{stroke:rgba(255,255,255,.14)}
+  .strokes g.hidden{opacity:0}
+  .strokes g.hidden .stroke-hit{pointer-events:none}
   .world{position:absolute;top:0;left:0;transform-origin:0 0;width:0;height:0}
   .edges{position:absolute;top:0;left:0;width:8000px;height:8000px;pointer-events:none;overflow:visible}
   .edges path{
@@ -259,6 +265,10 @@
   }
   .edges path.gone{opacity:0}
   .edges path.stub{stroke-width:2.6}
+  /* fio do vínculo desenho↔bloco */
+  .edges path.anchor{stroke-width:1.6;stroke-dasharray:5 5;opacity:.55;filter:drop-shadow(0 0 3px currentColor)}
+  .edges path.anchor.selected{opacity:1;stroke-width:2.2;filter:drop-shadow(0 0 6px currentColor) drop-shadow(0 0 12px currentColor)}
+  .edges path.anchor-hit{stroke:transparent;stroke-width:14}
   .edges path.preview{stroke:var(--orange);stroke-dasharray:6 4;filter:drop-shadow(0 0 4px rgba(255,157,0,.7));pointer-events:none}
 
   /* ===== collapse badge ===== */
@@ -522,7 +532,12 @@
   .world.present .block:not(.focused){opacity:.12;filter:blur(1.5px) saturate(.5)}
   .world.present .block.hidden{opacity:0}
   .world.present .note{opacity:.12;transition:opacity .4s ease}
-  .world.present .edges,.world.present .strokes{opacity:.22;transition:opacity .4s ease}
+  .world.present .edges{opacity:.22;transition:opacity .4s ease}
+  /* desenhos escurecem um a um, pra que o vinculado ao bloco em foco possa acender */
+  .world.present .strokes g{opacity:.22;transition:opacity .4s ease}
+  .world.present .strokes g.lit{opacity:1}
+  .world.present .strokes g.lit .stroke-line{filter:drop-shadow(0 0 6px currentColor) drop-shadow(0 0 14px currentColor)}
+  .world.present .strokes g.hidden{opacity:0}
   .block.focused{
     box-shadow:
       0 0 0 2px rgba(var(--bc-rgb),1),
@@ -577,6 +592,9 @@
       inset 0 0 26px rgba(var(--bc-rgb),.15);
     z-index:3;
   }
+  /* desenho vinculado a bloco fora do holofote apaga junto; vinculado ao bloco aceso, acende */
+  .world.spotlight .strokes g.anchored:not(.lit):not(.hidden){opacity:.4}
+  .world.spotlight .strokes g.lit .stroke-line{filter:drop-shadow(0 0 6px currentColor) drop-shadow(0 0 14px currentColor)}
 
   /* ===== breadcrumb (caminho raiz → nó atual) ===== */
   /* baixo-esquerda: fora da rota de todas as barras de cima (não embola mais) */
@@ -947,6 +965,20 @@ const nearestSegmentIndex = (pts, p) => {
 };
 
 // Compute an SVG path string for any stroke shape
+// Caixa envolvente de um traço em coordenadas do mundo (já com o deslocamento x/y).
+// Usada pelo vínculo desenho↔bloco pra saber onde a linha tracejada encosta.
+const strokeBBox = (s) => {
+  if (!s) return null;
+  const ox = s.x || 0, oy = s.y || 0;
+  let pts = [];
+  if (s.points && s.points.length) pts = s.points;
+  else if (s.p1 && s.p2) pts = [s.p1, s.p2];
+  if (!pts.length) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  pts.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); });
+  return { x: minX + ox, y: minY + oy, w: maxX - minX, h: maxY - minY };
+};
+
 const strokeToPath = (s) => {
   if (!s) return "";
   const t = s.type || "freehand";
@@ -1626,6 +1658,8 @@ function App() {
   ]));
   const [selection, setSelection] = useState(new Set());
   const [selectedEdge, setSelectedEdge] = useState(null);
+  // vínculo desenho↔bloco selecionado (id do traço); Del desvincula
+  const [selectedAnchor, setSelectedAnchor] = useState(null);
   const [view, setView] = useState(() => saved?.view ?? { x: 20, y: 20, scale: 1 });
   const [preview, setPreview] = useState(null); // {from:{x,y}, to:{x,y}}
   // Real (measured) rendered size of each block — id -> {w,h}. Reported by the
@@ -1834,6 +1868,7 @@ function App() {
   const clearSelection = useCallback(() => {
     setSelection(new Set());
     setSelectedEdge(null);
+    setSelectedAnchor(null);
   }, []);
 
   /* ----- resize ----- */
@@ -2207,14 +2242,21 @@ function App() {
       setSelectedEdge(null);
       return;
     }
+    // Del com o fio do vínculo selecionado: só desvincula, o desenho fica
+    if (selectedAnchor) {
+      setStrokes(p => p.map(s => s.id === selectedAnchor ? { ...s, anchorId: undefined, anchorPort: undefined } : s));
+      setSelectedAnchor(null);
+      return;
+    }
     if (selection.size === 0) return;
     setBlocks(p => p.filter(b => !selection.has(b.id)));
     setNotes(p => p.filter(n => !selection.has(n.id)));
-    setStrokes(p => p.filter(s => !selection.has(s.id)));
+    setStrokes(p => p.filter(s => !selection.has(s.id))
+      .map(s => (s.anchorId && selection.has(s.anchorId)) ? { ...s, anchorId: undefined, anchorPort: undefined } : s));
     setImages(p => p.filter(im => !selection.has(im.id)));
     setEdges(p => p.filter(e => !selection.has(e.from.id) && !selection.has(e.to.id)));
     setSelection(new Set());
-  }, [selection, selectedEdge]);
+  }, [selection, selectedEdge, selectedAnchor]);
 
   // Ctrl+C / Ctrl+X — copia a seleção pro clipboard (texto, funciona entre mapas/abas)
   useEffect(() => {
@@ -2230,6 +2272,8 @@ function App() {
   const deleteBlock = useCallback((id) => {
     setBlocks(p => p.filter(b => b.id !== id));
     setEdges(p => p.filter(e => e.from.id !== id && e.to.id !== id));
+    // desenhos vinculados ficam no mapa, só perdem o vínculo
+    setStrokes(p => p.map(s => s.anchorId === id ? { ...s, anchorId: undefined, anchorPort: undefined } : s));
     setSelection(prev => { const n = new Set(prev); n.delete(id); return n; });
   }, []);
 
@@ -2241,7 +2285,8 @@ function App() {
       const items = [];
       blocks.forEach(b => { if (sel.has(b.id)) items.push({ kind:"block", id:b.id, startX:b.x, startY:b.y }); });
       notes.forEach(n => { if (sel.has(n.id)) items.push({ kind:"note",  id:n.id, startX:n.x, startY:n.y }); });
-      strokes.forEach(s => { if (sel.has(s.id)) items.push({ kind:"stroke", id:s.id, startX:s.x, startY:s.y }); });
+      // traço selecionado OU vinculado a um bloco que está sendo arrastado anda junto
+      strokes.forEach(s => { if (sel.has(s.id) || (s.anchorId && sel.has(s.anchorId))) items.push({ kind:"stroke", id:s.id, startX:s.x||0, startY:s.y||0 }); });
       images.forEach(im => { if (sel.has(im.id)) items.push({ kind:"image", id:im.id, startX:im.x, startY:im.y }); });
       dragRef.current = { startMouse:{ x:e.clientX, y:e.clientY }, items };
       return sel;
@@ -2430,7 +2475,9 @@ function App() {
     strokes.forEach(s => {
       if (!selection.has(s.id)) return;
       const nid = uid();
-      newStrokes.push({ ...s, id: nid, x: (s.x || 0) + OFF, y: (s.y || 0) + OFF }); newSel.add(nid);
+      // vínculo só sobrevive se o bloco dono também foi duplicado (aponta pra cópia)
+      const anchorId = s.anchorId ? idMap.get(s.anchorId) : undefined;
+      newStrokes.push({ ...s, id: nid, x: (s.x || 0) + OFF, y: (s.y || 0) + OFF, anchorId, anchorPort: anchorId ? s.anchorPort : undefined }); newSel.add(nid);
     });
     images.forEach(im => {
       if (!selection.has(im.id)) return;
@@ -2620,6 +2667,9 @@ function App() {
         document.querySelectorAll(".port.hot").forEach(p => p.classList.remove("hot"));
         const el = document.elementFromPoint(e.clientX, e.clientY);
         if (el && el.classList.contains("port")) el.classList.add("hot");
+        // passando por cima de um desenho: acende ele pra mostrar que dá pra soltar ali
+        document.querySelectorAll(".strokes g.hot").forEach(g => g.classList.remove("hot"));
+        if (el && el.classList.contains("stroke-hit")) { const g = el.closest("g[data-id]"); if (g) g.classList.add("hot"); }
         return;
       }
       if (dragRef.current) {
@@ -2728,8 +2778,17 @@ function App() {
         // Drag → resolve drop target and create an edge
         const el = document.elementFromPoint(e.clientX, e.clientY);
         const portEl = (el && el.classList.contains("port")) ? el : null;
+        const strokeG = (el && el.classList.contains("stroke-hit")) ? el.closest("g[data-id]") : null;
         const { fromId, fromPort } = connectRef.current;
-        if (portEl) {
+        document.querySelectorAll(".strokes g.hot").forEach(g => g.classList.remove("hot"));
+        if (strokeG) {
+          // Soltou em cima de um desenho → vincula ao bloco de origem. Se o traço
+          // estiver dentro de uma seleção, vincula todos os traços selecionados
+          // (um gráfico rabiscado costuma ser vários traços).
+          const sid = strokeG.dataset.id;
+          const ids = selection.has(sid) ? new Set([...selection]) : new Set([sid]);
+          setStrokes(p => p.map(s => ids.has(s.id) ? { ...s, anchorId: fromId, anchorPort: fromPort } : s));
+        } else if (portEl) {
           const blockEl = portEl.parentElement;
           const all = Array.from(document.querySelectorAll(".block"));
           const idx = all.indexOf(blockEl);
@@ -2795,7 +2854,7 @@ function App() {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [view.scale, blocks, hiddenBlockIds, togglePortCollapse, drawing, screenToWorld, drawShape, clearSelection]);
+  }, [view.scale, blocks, hiddenBlockIds, togglePortCollapse, drawing, screenToWorld, drawShape, clearSelection, selection]);
 
   /* ----- keyboard ----- */
   useEffect(() => {
@@ -3815,10 +3874,15 @@ function App() {
               const d = strokeToPath(s);
               if (!d) return null;
               const isSel = selection.has(s.id);
+              // vínculo com bloco: some quando o ramo recolhe, acende junto na apresentação/holofote
+              const anchored = !!(s.anchorId && blocksById.has(s.anchorId));
+              const anchorHidden = anchored && hiddenBlockIds.has(s.anchorId);
+              const lit = anchored && ((present && s.anchorId === focusId) || (spotlight && !present && selection.has(s.anchorId)));
               return (
                 <g
                   key={s.id}
-                  className={isSel ? "selected" : ""}
+                  data-id={s.id}
+                  className={`${isSel ? "selected" : ""} ${anchored ? "anchored" : ""} ${anchorHidden ? "hidden" : ""} ${lit ? "lit" : ""}`}
                   transform={`translate(${s.x||0},${s.y||0})`}
                   style={{ color: s.color || DEFAULT_COLOR }}
                 >
@@ -3968,6 +4032,30 @@ function App() {
                 <path key={pl.key} d={p.curveD} pathLength="100"
                   className={`pulse ${pl.dir}`}
                   style={{ stroke: col, color: col }} />
+              );
+            })}
+            {/* fios de vínculo desenho↔bloco: tracejado fino, cor do bloco, da porta até a
+                borda do desenho. Clica pra selecionar, Del desvincula. */}
+            {strokes.map(s => {
+              if (!s.anchorId) return null;
+              const b = blocksById.get(s.anchorId);
+              if (!b || hiddenBlockIds.has(b.id)) return null;
+              const bb = strokeBBox(s);
+              if (!bb) return null;
+              const pp = portWorldPos(b, s.anchorPort || "right", sizes[b.id]);
+              // ponto da caixa do desenho mais próximo da porta
+              const tx = Math.max(bb.x, Math.min(pp.x, bb.x + bb.w));
+              const ty = Math.max(bb.y, Math.min(pp.y, bb.y + bb.h));
+              const d = `M ${pp.x} ${pp.y} L ${tx} ${ty}`;
+              const col = b.color || DEFAULT_COLOR;
+              const sel = selectedAnchor === s.id;
+              return (
+                <g key={"anchor-" + s.id}>
+                  <path d={d} className={`anchor ${sel ? "selected" : ""}`} style={{ stroke: col, color: col }} />
+                  <path d={d} className="anchor-hit"
+                    style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                    onMouseDown={(ev) => { ev.stopPropagation(); clearSelection(); setSelectedAnchor(s.id); }} />
+                </g>
               );
             })}
             {preview && <path d={bezierPath(preview.from, preview.to)} className="preview" />}
