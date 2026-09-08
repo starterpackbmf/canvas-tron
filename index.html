@@ -1762,17 +1762,25 @@ function App() {
   }, [edges]);
 
   const hiddenBlockIds = useMemo(() => {
-    const hidden = new Set();
-    // "Near" blocks = the ones whose port was clicked; they must always stay visible.
-    const nearIds = new Set();
-    edges.forEach(e => {
-      if (!e.collapsed) return;
-      const near = e.collapseDir === "backward" ? e.to.id : e.from.id;
-      const far  = e.collapseDir === "backward" ? e.from.id : e.to.id;
-      nearIds.add(near);
-      collectFarSide(near, far, hidden);
-    });
-    nearIds.forEach(id => hidden.delete(id));
+    // Recolhimento aninhado: se o nó "near" de uma ligação recolhida já está
+    // escondido por outra (o pai dele recolheu), a ligação dele não conta, e ele
+    // some junto com o resto do ramo. Iteramos até estabilizar. (O bug antigo
+    // devolvia todo "near" pra tela, então recolher um pai cujo filho também
+    // estava recolhido deixava o filho visível ao lado da pílula.)
+    let hidden = new Set();
+    for (let i = 0; i < 8; i++) {
+      const next = new Set();
+      edges.forEach(e => {
+        if (!e.collapsed) return;
+        const near = e.collapseDir === "backward" ? e.to.id : e.from.id;
+        const far  = e.collapseDir === "backward" ? e.from.id : e.to.id;
+        if (hidden.has(near)) return;
+        collectFarSide(near, far, next);
+      });
+      const same = next.size === hidden.size && [...next].every(id => hidden.has(id));
+      hidden = next;
+      if (same) break;
+    }
     return hidden;
   }, [blocks, edges, collectFarSide]);
 
