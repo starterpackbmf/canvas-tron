@@ -2277,18 +2277,57 @@ function App() {
     }));
   }, []);
 
-  // Recolhe UMA conexão só (um ramo). Esconde sempre o lado de baixo (mais
-  // longe da raiz numa árvore top-down), independente da direção da ligação.
+  // Profundidade de cada bloco a partir da raiz do seu mapa (componente).
+  // Raiz = bloco sem ligação chegando (from→to); se houver mais de um, o que
+  // tem mais descendentes; se nenhum (ciclo), o de mais ligações. A distância
+  // é medida ignorando a direção das ligações, então funciona mesmo se alguma
+  // foi desenhada do filho pro pai.
+  const blockDepth = useMemo(() => {
+    const adj = new Map(), indeg = new Map(), out = new Map();
+    blocks.forEach(b => { adj.set(b.id, []); indeg.set(b.id, 0); out.set(b.id, []); });
+    edges.forEach(e => {
+      if (!adj.has(e.from.id) || !adj.has(e.to.id)) return;
+      adj.get(e.from.id).push(e.to.id); adj.get(e.to.id).push(e.from.id);
+      out.get(e.from.id).push(e.to.id);
+      indeg.set(e.to.id, indeg.get(e.to.id) + 1);
+    });
+    const reach = (id) => { // quantos blocos alcanço seguindo from→to
+      const seen = new Set([id]); const q = [id];
+      while (q.length) { const c = q.shift(); out.get(c).forEach(n => { if (!seen.has(n)) { seen.add(n); q.push(n); } }); }
+      return seen.size;
+    };
+    const depth = new Map();
+    blocks.forEach(b => {
+      if (depth.has(b.id)) return;
+      // componente conexo do bloco
+      const comp = []; const seen = new Set([b.id]); const q = [b.id];
+      while (q.length) { const c = q.shift(); comp.push(c); adj.get(c).forEach(n => { if (!seen.has(n)) { seen.add(n); q.push(n); } }); }
+      let roots = comp.filter(id => indeg.get(id) === 0);
+      let root;
+      if (roots.length === 1) root = roots[0];
+      else if (roots.length > 1) root = roots.reduce((best, id) => reach(id) > reach(best) ? id : best);
+      else root = comp.reduce((best, id) => adj.get(id).length > adj.get(best).length ? id : best);
+      depth.set(root, 0); const bq = [root];
+      while (bq.length) { const c = bq.shift(); adj.get(c).forEach(n => { if (!depth.has(n)) { depth.set(n, depth.get(c) + 1); bq.push(n); } }); }
+    });
+    return depth;
+  }, [blocks, edges]);
+
+  // Recolhe UMA conexão só (um ramo). Esconde o lado do FILHO: o endpoint mais
+  // fundo a partir da raiz. Antes usava posição na tela ("esconde o de baixo"),
+  // o que quebrava em mapa horizontal ou radial: filho desenhado acima do pai
+  // fazia o pai (e o mapa inteiro atrás dele) sumir.
   const collapseEdgeById = useCallback((id) => {
     setEdges(p => p.map(e => {
       if (e.id !== id) return e;
       if (e.collapsed) return { ...e, collapsed: false };
-      const a = blocksById.get(e.from.id), b = blocksById.get(e.to.id);
-      if (!a || !b) return e;
-      const dir = a.y <= b.y ? "forward" : "backward"; // esconde o bloco mais embaixo
+      const da = blockDepth.get(e.from.id), db = blockDepth.get(e.to.id);
+      let dir;
+      if (da == null || db == null || da === db) dir = "forward"; // empate: from é o pai
+      else dir = da < db ? "forward" : "backward";
       return { ...e, collapsed: true, collapseDir: dir };
     }));
-  }, [blocksById]);
+  }, [blockDepth]);
 
   /* ----- connection path editing ----- */
   // Cycle the routing style of one connection: curva → ortogonal → reta
@@ -4040,7 +4079,7 @@ function App() {
                 <div
                   className="edge-style-btn"
                   style={{ left: p.mid.x, top: p.mid.y + 48, color: p.toColor || p.color, transform: `translate(-50%,-50%) ${inv}` }}
-                  title="Recolher só este ramo (esconde o lado de baixo)"
+                  title="Recolher só este ramo (esconde o lado do filho, o mais longe da raiz)"
                   onMouseDown={(e) => { e.stopPropagation(); collapseEdgeById(p.id); setSelectedEdge(null); }}
                 >⊟ RECOLHER</div>
                 {[["from", p.p1, p.fromColor], ["to", p.p2, p.toColor]].map(([end, pos, col]) => (
