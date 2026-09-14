@@ -22,7 +22,63 @@
     --bg:#030612; --bg-2:#050a1a;
     --cyan:#00f0ff; --orange:#ff9d00;
     --white:#e9fbff; --muted:#6b8aa0; --danger:#ff3b5c;
+    --blk-bg:rgba(5,14,28,.9);   /* fundo do bloco (skin SVG lê esta var) */
+    --body-text:#dcefff;
   }
+  /* ===== tema claro (off-white quente, não branco puro) ===== */
+  body.light{
+    --bg:#f4f1ea; --bg-2:#ece8df;
+    --cyan:#0a8fa6; --white:#1c2a36; --muted:#5f7283;
+    --blk-bg:rgba(255,255,255,.93);
+    --body-text:#22323f;
+  }
+  body.light .bg{
+    background:
+      radial-gradient(ellipse 120% 80% at 50% -15%,rgba(0,140,255,.07),transparent 60%),
+      #f4f1ea;
+  }
+  body.light .bg::before{
+    background-image:
+      linear-gradient(rgba(20,60,90,.07) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(20,60,90,.07) 1px,transparent 1px);
+  }
+  body.light .bg::after{background:radial-gradient(ellipse at center,transparent 60%,rgba(60,50,30,.10) 100%)}
+  body.light .bg-particles{display:none}
+  body.light .toolbar,body.light .hint,body.light .drawbar,body.light .palette,body.light .presentbar,
+  body.light .breadcrumb,body.light .cloud-panel,body.light .attr-dock,body.light .zoom,body.light .minimap{
+    background:rgba(255,255,255,.86);
+    border-color:rgba(10,110,140,.22);
+    box-shadow:0 10px 30px rgba(30,40,60,.14),inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  body.light .ic,body.light .shape-btn,body.light .tool{color:#3f5668}
+  body.light .toolbar .tb-lbl{color:rgba(40,70,90,.6)}
+  body.light .toolbar .tb-danger .ic{color:rgba(200,30,60,.8)}
+  body.light .block{
+    background:var(--blk-bg);
+    /* cor do bloco levemente escurecida pra ler bem no claro (borda, título) */
+    --bc-ui:color-mix(in srgb,var(--bc) 72%,#0b1a26);
+    border-color:var(--bc-ui);
+    box-shadow:0 3px 12px rgba(20,30,50,.12),inset 0 0 0 1px rgba(255,255,255,.6);
+  }
+  body.light .block .title{color:var(--bc-ui)}
+  body.light .block .body{color:var(--body-text)}
+  body.light .block.fill-soft{background:rgba(var(--bc-rgb),.26)}
+  body.light .block.fill-solid{background:var(--bc);border-color:var(--bc-ui)}
+  body.light .block.fill-solid .title{color:#08131c}
+  body.light .block.fill-solid .body{color:#12222e}
+  body.light .block.selected{box-shadow:0 0 0 2px var(--bc-ui),0 6px 18px rgba(20,30,50,.18)}
+  body.light .note{
+    background:rgba(255,255,255,.72);
+    color:color-mix(in srgb,var(--nc) 70%,#0b1a26);
+    border-color:color-mix(in srgb,var(--nc) 50%,#fff);
+  }
+  body.light .edges path{filter:none}
+  body.light .collapse-badge,body.light .edge-style-btn{background:rgba(255,255,255,.96);box-shadow:0 2px 8px rgba(20,30,50,.18)}
+  body.light .cloud-panel input,body.light .attr-cell,body.light .attr-addval{background:rgba(255,255,255,.8);color:var(--white)}
+  body.light .cloud-overlay{background:rgba(120,110,90,.35)}
+  body.light .minimap .mm-view{fill:rgba(10,143,166,.12)}
+  body.light .swatch{border-color:rgba(0,0,0,.12)}
+  body.light .breadcrumb .crumb.current{filter:brightness(.7)}
   *{box-sizing:border-box}
   html,body,#root{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:"Segoe UI",Inter,system-ui,sans-serif;user-select:none}
 
@@ -291,7 +347,7 @@
   .collapse-badge .icon{font-size:11px;line-height:1}
   /* badge com nome do próximo bloco: cresce com o texto, mas com teto + reticências */
   .collapse-badge.named{
-    max-width:180px;text-transform:uppercase;letter-spacing:.4px;
+    max-width:112px;text-transform:uppercase;letter-spacing:.4px;
     color:currentColor;
   }
   .collapse-badge.named .badge-txt{
@@ -337,7 +393,7 @@
     --bc-rgb:0,240,255;
     position:absolute;
     padding:14px 16px;
-    background:rgba(5,14,28,.9);
+    background:var(--blk-bg);
     border:1px solid var(--bc);border-width:var(--bw,1px);border-radius:6px;
     color:var(--white);font-size:13px;line-height:1.45;
     box-shadow:0 0 14px rgba(var(--bc-rgb),.35),inset 0 0 20px rgba(var(--bc-rgb),.06);
@@ -362,13 +418,19 @@
       0 0 24px rgba(var(--bc-rgb),.7),
       inset 0 0 22px rgba(var(--bc-rgb),.12);
   }
+  /* preenchimento do bloco: none (padrão) | soft (cor translúcida) | solid (cor cheia, texto escuro) */
+  .block.fill-soft{background:rgba(var(--bc-rgb),.22)}
+  .block.fill-solid{background:var(--bc);border-color:var(--bc);color:#08131c}
+  .block.fill-solid .title{color:#08131c}
+  .block.fill-solid .body{color:#12222e}
+  .block.fill-solid .body b,.block.fill-solid .body i{color:inherit}
   .block .title{
     font-weight:var(--title-weight,700);letter-spacing:.5px;color:var(--bc);
     text-transform:uppercase;font-size:var(--title-size,13px);margin-bottom:6px;
     text-shadow:none;outline:none;
     text-align:center;
   }
-  .block .body{color:#dcefff;outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;text-align:center;font-size:var(--body-size,15px)}
+  .block .body{color:var(--body-text);outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;text-align:center;font-size:var(--body-size,15px)}
   /* imagem dentro do bloco (entre título e corpo) */
   .block .block-img{display:block;width:100%;max-height:300px;object-fit:contain;border-radius:5px;margin:2px 0 8px;background:rgba(0,0,0,.25);pointer-events:none;user-select:none}
 
@@ -888,6 +950,12 @@ const layoutMindMap = (blocks, edges, sizes, hidden, struct) => {
     children.get(p).push(c);
   });
   const kids = (id) => (children.get(id) || []).filter(k => !hidden.has(k));
+  // nó com ramo recolhido mostra pílulas na porta: afasta os filhos visíveis
+  // pra pílula não cair em cima deles
+  const hasPill = new Set();
+  edges.forEach(e => { if (e.collapsed) hasPill.add(e.collapseDir === "backward" ? e.to.id : e.from.id); });
+  const PILL_ROOM = 48;
+  const extra = (id) => hasPill.has(id) ? PILL_ROOM : 0;
   const pos = new Map(), ports = new Map();
   // ---- horizontal (dir +1 = direita, -1 = esquerda)
   const spanH = new Map();
@@ -905,7 +973,7 @@ const layoutMindMap = (blocks, edges, sizes, hidden, struct) => {
     const ks = kids(id); if (!ks.length) return;
     let sum = 0; ks.forEach(k => { sum += measureH(k); }); sum += MAP_GAP_Y * (ks.length - 1);
     let cy = yTop + (H - sum) / 2;
-    const nx = dir > 0 ? x + w + MAP_GAP_X : x - MAP_GAP_X;
+    const nx = dir > 0 ? x + w + MAP_GAP_X + extra(id) : x - MAP_GAP_X - extra(id);
     ks.forEach(k => {
       placeH(k, dir, nx, cy);
       ports.set(edgeOf.get(k).id, dir > 0 ? { from: "right", to: "left" } : { from: "left", to: "right" });
@@ -927,7 +995,7 @@ const layoutMindMap = (blocks, edges, sizes, hidden, struct) => {
     const ks = kids(id); if (!ks.length) return;
     let sum = 0; ks.forEach(k => { sum += measureV(k); }); sum += MAP_DOWN_GAP_X * (ks.length - 1);
     let cx = xLeft + (W - sum) / 2;
-    const ny = y + h + MAP_DOWN_GAP_Y;
+    const ny = y + h + MAP_DOWN_GAP_Y + extra(id);
     ks.forEach(k => {
       placeV(k, cx, ny);
       ports.set(edgeOf.get(k).id, { from: "bottom", to: "top" });
@@ -959,8 +1027,8 @@ const layoutMindMap = (blocks, edges, sizes, hidden, struct) => {
         y += measureH(k) + MAP_GAP_Y;
       });
     };
-    stack(R, 1, r.x + w + MAP_GAP_X);
-    stack(L, -1, r.x - MAP_GAP_X);
+    stack(R, 1, r.x + w + MAP_GAP_X + extra(r.id));
+    stack(L, -1, r.x - MAP_GAP_X - extra(r.id));
   });
   return { pos, ports };
 };
@@ -1272,7 +1340,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
@@ -1304,7 +1372,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
           <polygon
             points={shapeDef.points}
             style={{
-              fill: "rgba(5,14,28,.9)",
+              fill: block.fill === "solid" ? color : block.fill === "soft" ? `rgba(${hexToRgb(color)},.22)` : "var(--blk-bg)",
               stroke: color,
               strokeWidth: selected ? 2.4 : 1.6,
               vectorEffect: "non-scaling-stroke",
@@ -1816,6 +1884,12 @@ function App() {
   // Holofote (spotlight no modo edição) + minimapa
   const [spotlight, setSpotlight] = useState(false);
   const [showMinimap, setShowMinimap] = useState(false);
+  // Tema claro/escuro: preferência da pessoa, não do mapa (fica no localStorage)
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("canvas-tron:theme") || "dark"; } catch { return "dark"; } });
+  useEffect(() => {
+    document.body.classList.toggle("light", theme === "light");
+    try { localStorage.setItem("canvas-tron:theme", theme); } catch {}
+  }, [theme]);
   // ----- nuvem (Supabase, login email+senha) -----
   const [cloudOpen, setCloudOpen] = useState(false);
   const [cloudDoc, setCloudDoc] = useState({ id: null, name: "" });
@@ -2148,6 +2222,13 @@ function App() {
   }, [selection]);
 
   // Aplica a forma nos blocos selecionados (retângulo = volta ao padrão).
+  const setBlockFill = useCallback((fill) => {
+    setBlocks(p => p.map(b => {
+      if (!selection.has(b.id)) return b;
+      if (!fill || fill === "none") { const { fill: _drop, ...rest } = b; return rest; }
+      return { ...b, fill };
+    }));
+  }, [selection]);
   const setBlockShape = useCallback((shape) => {
     setBlocks(p => p.map(b => {
       if (!selection.has(b.id)) return b;
@@ -3317,7 +3398,7 @@ function App() {
       const out = document.createElement("canvas");
       out.width = Math.round(W * S); out.height = Math.round(H * S);
       const ctx = out.getContext("2d");
-      ctx.fillStyle = "#030612"; ctx.fillRect(0, 0, out.width, out.height);
+      ctx.fillStyle = theme === "light" ? "#f4f1ea" : "#030612"; ctx.fillRect(0, 0, out.width, out.height);
       // aplica a mesma transformação da tela (escala 2 p/ qualidade)
       const worldTransform = () => { ctx.setTransform(S, 0, 0, S, 0, 0); ctx.translate(v.x, v.y); ctx.scale(v.scale, v.scale); };
       // 1) ligações + setas (atrás dos blocos)
@@ -3579,6 +3660,16 @@ function App() {
     left:   { x:-1, y: 0 },
     right:  { x: 1, y: 0 },
   };
+  // Ligações recolhidas que saem da MESMA porta do mesmo bloco: as pílulas
+  // abrem em leque (lado a lado numa porta vertical, empilhadas numa
+  // horizontal) em vez de cair todas no mesmo ponto.
+  const collapsedGroups = new Map();
+  edges.forEach(e => {
+    if (!e.collapsed) return;
+    const key = e.collapseDir === "backward" ? e.to.id + ":" + e.to.port : e.from.id + ":" + e.from.port;
+    if (!collapsedGroups.has(key)) collapsedGroups.set(key, []);
+    collapsedGroups.get(key).push(e.id);
+  });
   const edgePaths = edges.map(e => {
     const a = blocksById.get(e.from.id);
     const b = blocksById.get(e.to.id);
@@ -3608,8 +3699,15 @@ function App() {
       const fcx = farBlock.x + fw / 2, fcy = farBlock.y + fh / 2;
       let dx = fcx - nearPos.x, dy = fcy - nearPos.y;
       const dl = Math.hypot(dx, dy);
-      const dir = dl > 6 ? { x: dx / dl, y: dy / dl } : (PORT_DIR[nearPort] || { x: 0, y: 1 });
-      const stubEnd = { x: nearPos.x + dir.x * STUB_LEN, y: nearPos.y + dir.y * STUB_LEN };
+      const grp = collapsedGroups.get(nearBlock.id + ":" + nearPort) || [e.id];
+      const gi = grp.indexOf(e.id), gn = grp.length;
+      const pd = PORT_DIR[nearPort] || { x: 0, y: 1 };
+      // sozinha aponta pro filho escondido; em grupo, todas saem reto da porta e abrem em leque
+      const dir = (gn > 1 || dl <= 6) ? pd : { x: dx / dl, y: dy / dl };
+      const spacing = pd.x === 0 ? 118 : 30; // porta vertical: pílulas lado a lado; horizontal: empilhadas
+      const off = (gi - (gn - 1) / 2) * spacing;
+      const perp = { x: -pd.y, y: pd.x };
+      const stubEnd = { x: nearPos.x + dir.x * STUB_LEN + perp.x * off, y: nearPos.y + dir.y * STUB_LEN + perp.y * off };
       const label = (farBlock.title || "").replace(/<[^>]*>/g, "").trim();
       return {
         id: e.id,
@@ -3799,6 +3897,11 @@ function App() {
             <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>
             <button className={`ic ${attrsOpen?"active":""}`} onClick={() => setAttrsOpen(o => !o)} title="Tabela de atributos (produtos)">
               <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9 h18 M3 14.5 h18 M9 4 v16"/></svg>
+            </button>
+            <button className="ic" onClick={() => setTheme(t => t === "light" ? "dark" : "light")} title={theme === "light" ? "Tema escuro" : "Tema claro (off-white)"}>
+              {theme === "light"
+                ? <svg viewBox="0 0 24 24" className="ic-svg"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+                : <svg viewBox="0 0 24 24" className="ic-svg"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>}
             </button>
             <button className="ic" onClick={enterPresent} title="Apresentar (P)">▶</button>
             <button className={`ic ${isFullscreen?"active":""}`} onClick={toggleFullscreen} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>{isFullscreen ? "⤧" : "⛶"}</button>
@@ -4057,8 +4160,22 @@ function App() {
             </div>
             {hasBlockSel && (() => {
               const selShape = blocks.find(b => selection.has(b.id))?.shape || "rounded";
+              const selFill = blocks.find(b => selection.has(b.id))?.fill || "none";
               return (
                 <>
+                  <div className="vsep"/>
+                  <div className="group">
+                    <span className="lbl">Fundo</span>
+                    <button className={`shape-btn ${selFill === "none" ? "active" : ""}`} onClick={() => setBlockFill("none")} title="Sem preenchimento (só a borda)">
+                      <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/></svg>
+                    </button>
+                    <button className={`shape-btn ${selFill === "soft" ? "active" : ""}`} onClick={() => setBlockFill("soft")} title="Preenchimento suave (cor translúcida)">
+                      <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3" style={{fill:"currentColor",fillOpacity:.3}}/></svg>
+                    </button>
+                    <button className={`shape-btn ${selFill === "solid" ? "active" : ""}`} onClick={() => setBlockFill("solid")} title="Preenchimento sólido (cor cheia, destaque máximo)">
+                      <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3" style={{fill:"currentColor"}}/></svg>
+                    </button>
+                  </div>
                   <div className="vsep"/>
                   <div className="group">
                     <span className="lbl">Forma</span>
