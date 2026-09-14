@@ -867,6 +867,104 @@ const portWorldPos = (b, port, size) => {
     case "right":  return { x: b.x + w,   y: b.y + h/2 };
   }
 };
+/* ================== Modo Mapa (layout automático, estilo XMind) ==================
+   Árvore = ligações pai→filho (from→to). Cada filho tem UM pai (a primeira
+   ligação manda); ordem dos irmãos = ordem das ligações no array `edges`.
+   Raízes ficam onde estão (âncora); a subárvore se organiza em volta.
+   Nós escondidos (ramo recolhido) ficam fora do cálculo. */
+const MAP_GAP_X = 70;       // pai → filho (estruturas horizontais)
+const MAP_GAP_Y = 26;       // entre irmãos (vertical)
+const MAP_DOWN_GAP_X = 30;  // entre irmãos (estrutura "baixo")
+const MAP_DOWN_GAP_Y = 70;  // pai → filho (estrutura "baixo")
+const layoutMindMap = (blocks, edges, sizes, hidden, struct) => {
+  const byId = new Map(blocks.map(b => [b.id, b]));
+  const size = (id) => { const b = byId.get(id); const s = sizes[id]; return { w: s?.w ?? b.w ?? 240, h: s?.h ?? b.h ?? 80 }; };
+  const children = new Map(), parentOf = new Map(), edgeOf = new Map();
+  edges.forEach(e => {
+    const p = e.from.id, c = e.to.id;
+    if (!byId.has(p) || !byId.has(c) || p === c || parentOf.has(c)) return;
+    parentOf.set(c, p); edgeOf.set(c, e);
+    if (!children.has(p)) children.set(p, []);
+    children.get(p).push(c);
+  });
+  const kids = (id) => (children.get(id) || []).filter(k => !hidden.has(k));
+  const pos = new Map(), ports = new Map();
+  // ---- horizontal (dir +1 = direita, -1 = esquerda)
+  const spanH = new Map();
+  const measureH = (id) => {
+    if (spanH.has(id)) return spanH.get(id);
+    const ks = kids(id); let sum = 0;
+    ks.forEach(k => { sum += measureH(k); });
+    if (ks.length) sum += MAP_GAP_Y * (ks.length - 1);
+    const v = Math.max(size(id).h, sum); spanH.set(id, v); return v;
+  };
+  const placeH = (id, dir, xEdge, yTop) => {
+    const { w, h } = size(id); const H = measureH(id);
+    const x = dir > 0 ? xEdge : xEdge - w;
+    pos.set(id, { x, y: yTop + (H - h) / 2 });
+    const ks = kids(id); if (!ks.length) return;
+    let sum = 0; ks.forEach(k => { sum += measureH(k); }); sum += MAP_GAP_Y * (ks.length - 1);
+    let cy = yTop + (H - sum) / 2;
+    const nx = dir > 0 ? x + w + MAP_GAP_X : x - MAP_GAP_X;
+    ks.forEach(k => {
+      placeH(k, dir, nx, cy);
+      ports.set(edgeOf.get(k).id, dir > 0 ? { from: "right", to: "left" } : { from: "left", to: "right" });
+      cy += measureH(k) + MAP_GAP_Y;
+    });
+  };
+  // ---- vertical (organograma: filhos abaixo)
+  const spanV = new Map();
+  const measureV = (id) => {
+    if (spanV.has(id)) return spanV.get(id);
+    const ks = kids(id); let sum = 0;
+    ks.forEach(k => { sum += measureV(k); });
+    if (ks.length) sum += MAP_DOWN_GAP_X * (ks.length - 1);
+    const v = Math.max(size(id).w, sum); spanV.set(id, v); return v;
+  };
+  const placeV = (id, xLeft, y) => {
+    const { w, h } = size(id); const W = measureV(id);
+    pos.set(id, { x: xLeft + (W - w) / 2, y });
+    const ks = kids(id); if (!ks.length) return;
+    let sum = 0; ks.forEach(k => { sum += measureV(k); }); sum += MAP_DOWN_GAP_X * (ks.length - 1);
+    let cx = xLeft + (W - sum) / 2;
+    const ny = y + h + MAP_DOWN_GAP_Y;
+    ks.forEach(k => {
+      placeV(k, cx, ny);
+      ports.set(edgeOf.get(k).id, { from: "bottom", to: "top" });
+      cx += measureV(k) + MAP_DOWN_GAP_X;
+    });
+  };
+  const roots = blocks.filter(b => !hidden.has(b.id) && !parentOf.has(b.id));
+  roots.forEach(r => {
+    const { w, h } = size(r.id);
+    if (struct === "down") { placeV(r.id, r.x + w / 2 - measureV(r.id) / 2, r.y); return; }
+    if (struct === "right") { placeH(r.id, 1, r.x, r.y + h / 2 - measureH(r.id) / 2); return; }
+    // radial: raiz no centro, primeiros filhos à direita, o resto à esquerda
+    // (ou o lado gravado em `side` quando o usuário arrastou pro outro lado)
+    pos.set(r.id, { x: r.x, y: r.y });
+    const ks = kids(r.id); const half = Math.ceil(ks.length / 2);
+    const R = [], L = [];
+    ks.forEach((k, i) => {
+      const s = byId.get(k).side;
+      ((s === "L" || (!s && i >= half)) ? L : R).push(k);
+    });
+    const cy = r.y + h / 2;
+    const stack = (list, dir, xEdge) => {
+      if (!list.length) return;
+      let sum = 0; list.forEach(k => { sum += measureH(k); }); sum += MAP_GAP_Y * (list.length - 1);
+      let y = cy - sum / 2;
+      list.forEach(k => {
+        placeH(k, dir, xEdge, y);
+        ports.set(edgeOf.get(k).id, dir > 0 ? { from: "right", to: "left" } : { from: "left", to: "right" });
+        y += measureH(k) + MAP_GAP_Y;
+      });
+    };
+    stack(R, 1, r.x + w + MAP_GAP_X);
+    stack(L, -1, r.x - MAP_GAP_X);
+  });
+  return { pos, ports };
+};
+
 const bezierPath = (a, b) => {
   const dx = Math.abs(b.x - a.x) * 0.5 + 40;
   return `M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`;
@@ -1048,7 +1146,7 @@ const bezierMidpoint = (a, b) => {
 };
 
 /* ================== Block ================== */
-function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange, onMeasure }) {
+function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange, onMeasure, mapMode, onEnterSibling, editReq }) {
   const elRef = useRef(null);
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
@@ -1090,6 +1188,14 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // F2 (ou pedido externo): abre a edição do título
+  useEffect(() => {
+    if (editReq && editReq.id === block.id) setEditingTitle(true);
+  }, [editReq]);
+  // bloco descartado/apagado enquanto editava: avisa o pai pra barra de
+  // formatação não ficar presa na tela
+  useEffect(() => () => { onEditingTitleChange?.(block.id, false); onEditingBodyChange?.(block.id, false); }, []);
 
   // Notify parent when body/title editing starts/stops, so it can show the format bar
   useEffect(() => {
@@ -1218,6 +1324,12 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
               const html = e.currentTarget.innerHTML;
               const plain = e.currentTarget.textContent.trim();
               if (plain) freshRef.current = false;
+              // Modo Mapa: Enter salva e já cria o irmão (Ctrl+Enter vai pro corpo)
+              if (mapMode && !e.ctrlKey && !e.metaKey) {
+                e.currentTarget.blur(); // onBlur salva (ou descarta se vazio)
+                if (plain) onEnterSibling?.(block.id);
+                return;
+              }
               enterToBodyRef.current = true;
               onChange(block.id, { title: plain ? html : "" });
               setEditingTitle(false);
@@ -1679,6 +1791,13 @@ function App() {
 
   // Energy-flow animation toggle (animated pulse running along the connections)
   const [flow, setFlow] = useState(() => saved?.flow ?? true);
+  // Modo Mapa (XMind): o mapa se organiza sozinho. Estrutura: radial | right | down
+  const [mapOn, setMapOn] = useState(() => !!saved?.map?.on);
+  const [mapStruct, setMapStruct] = useState(() => saved?.map?.struct || "right");
+  const mapOnRef = useRef(mapOn); useEffect(() => { mapOnRef.current = mapOn; });
+  const mapStructRef = useRef(mapStruct); useEffect(() => { mapStructRef.current = mapStruct; });
+  // pedido de edição por teclado (F2): {id, k}
+  const [editReq, setEditReq] = useState(null);
   // Presentation / focus mode
   const [present, setPresent] = useState(false);
   const [focusId, setFocusId] = useState(null);
@@ -1699,7 +1818,7 @@ function App() {
     const { data: sub } = supa.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
-  const getDoc = useCallback(() => ({ blocks, notes, strokes, images, edges, view, flow, attrCols }), [blocks, notes, strokes, images, edges, view, flow, attrCols]);
+  const getDoc = useCallback(() => ({ blocks, notes, strokes, images, edges, view, flow, attrCols, map: { on: mapOn, struct: mapStruct } }), [blocks, notes, strokes, images, edges, view, flow, attrCols, mapOn, mapStruct]);
   const loadDoc = useCallback((d) => {
     if (!d) return;
     bumpNidFromData(d);
@@ -1708,6 +1827,7 @@ function App() {
     setAttrCols(d.attrCols || []);
     if (d.view) setView(d.view);
     if (typeof d.flow === "boolean") setFlow(d.flow);
+    setMapOn(!!(d.map && d.map.on)); setMapStruct((d.map && d.map.struct) || "right");
     setSelection(new Set()); setSelectedEdge(null);
   }, []);
 
@@ -1957,6 +2077,21 @@ function App() {
       id, x: parent.x + w / 2 - CW / 2, y: parent.y + h + 90, w: CW, h: CH,
       title: "", body: "", color: parent.color || DEFAULT_COLOR,
     };
+    if (mapOnRef.current) {
+      const eds = edgesRef.current;
+      const isRoot = !eds.some(e => e.to.id === parentId && blocksRef.current.some(b => b.id === e.from.id));
+      if (isRoot) {
+        // cada ramo principal ganha uma cor da paleta (como o XMind)
+        const n = eds.filter(e => e.from.id === parentId).length;
+        child.color = PRESET_COLORS[n % PRESET_COLORS.length];
+        if (mapStructRef.current === "radial") {
+          // vai pro lado com menos ramos; congela o lado dos irmãos pra ninguém pular
+          const sides = freezeSides(parentId);
+          const nR = sides.filter(s => s === "R").length, nL = sides.length - nR;
+          child.side = nR <= nL ? "R" : "L";
+        }
+      } else if (parent.side) child.side = parent.side;
+    }
     pendingEditRef.current = id;
     setBlocks(p => [...p, child]);
     setEdges(p => [...p, { id: uid(), from: { id: parentId, port: "bottom" }, to: { id, port: "top" } }]);
@@ -2249,14 +2384,20 @@ function App() {
       return;
     }
     if (selection.size === 0) return;
-    setBlocks(p => p.filter(b => !selection.has(b.id)));
-    setNotes(p => p.filter(n => !selection.has(n.id)));
-    setStrokes(p => p.filter(s => !selection.has(s.id))
-      .map(s => (s.anchorId && selection.has(s.anchorId)) ? { ...s, anchorId: undefined, anchorPort: undefined } : s));
-    setImages(p => p.filter(im => !selection.has(im.id)));
-    setEdges(p => p.filter(e => !selection.has(e.from.id) && !selection.has(e.to.id)));
+    // Modo Mapa: apagar um nó leva o ramo inteiro junto (como o XMind); Ctrl+Z traz de volta
+    let sel = selection;
+    if (mapOn) {
+      sel = new Set(selection); const q = [...selection];
+      while (q.length) { const c = q.shift(); edges.forEach(e => { if (e.from.id === c && !sel.has(e.to.id)) { sel.add(e.to.id); q.push(e.to.id); } }); }
+    }
+    setBlocks(p => p.filter(b => !sel.has(b.id)));
+    setNotes(p => p.filter(n => !sel.has(n.id)));
+    setStrokes(p => p.filter(s => !sel.has(s.id))
+      .map(s => (s.anchorId && sel.has(s.anchorId)) ? { ...s, anchorId: undefined, anchorPort: undefined } : s));
+    setImages(p => p.filter(im => !sel.has(im.id)));
+    setEdges(p => p.filter(e => !sel.has(e.from.id) && !sel.has(e.to.id)));
     setSelection(new Set());
-  }, [selection, selectedEdge, selectedAnchor]);
+  }, [selection, selectedEdge, selectedAnchor, mapOn, edges]);
 
   // Ctrl+C / Ctrl+X — copia a seleção pro clipboard (texto, funciona entre mapas/abas)
   useEffect(() => {
@@ -2502,10 +2643,156 @@ function App() {
   useEffect(() => {
     const t = setTimeout(() => {
       const draw = { shape: lastDrawShapeRef.current, width: drawWidth, color: drawColor };
-      try { localStorage.setItem(LS_KEY, JSON.stringify({ blocks, notes, strokes, images, edges, view, flow, attrCols, draw })); } catch {}
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ blocks, notes, strokes, images, edges, view, flow, attrCols, draw, map: { on: mapOn, struct: mapStruct } })); } catch {}
     }, 500);
     return () => clearTimeout(t);
-  }, [blocks, notes, strokes, images, edges, view, flow, attrCols, drawShape, drawWidth, drawColor]);
+  }, [blocks, notes, strokes, images, edges, view, flow, attrCols, drawShape, drawWidth, drawColor, mapOn, mapStruct]);
+
+  /* ================== Modo Mapa ================== */
+  const sizesRef = useRef(sizes); useEffect(() => { sizesRef.current = sizes; });
+  const hiddenRef = useRef(hiddenBlockIds); useEffect(() => { hiddenRef.current = hiddenBlockIds; });
+  const layoutAnimRef = useRef(0);
+  const [layoutNonce, setLayoutNonce] = useState(0);
+  const blockCenter = useCallback((b) => {
+    const s = sizesRef.current[b.id];
+    return { x: b.x + (s?.w ?? b.w ?? 240) / 2, y: b.y + (s?.h ?? b.h ?? 80) / 2 };
+  }, []);
+  // Radial: grava em `side` (L/R) o lado atual de cada filho da raiz, pra que
+  // criar/reordenar não faça os outros pularem de lado. Devolve a lista de lados.
+  const freezeSides = useCallback((rootId) => {
+    const bl = blocksRef.current, byId = new Map(bl.map(b => [b.id, b]));
+    const root = byId.get(rootId); if (!root) return [];
+    const rc = blockCenter(root);
+    const kids = edgesRef.current.filter(e => e.from.id === rootId && byId.has(e.to.id)).map(e => byId.get(e.to.id));
+    const half = Math.ceil(kids.length / 2);
+    const sideOf = (b, i) => b.side || (mapOnRef.current && Math.abs(blockCenter(b).x - rc.x) > 1 ? (blockCenter(b).x < rc.x ? "L" : "R") : (i < half ? "R" : "L"));
+    const sides = kids.map(sideOf);
+    if (kids.some((b, i) => b.side !== sides[i])) {
+      const m = new Map(kids.map((b, i) => [b.id, sides[i]]));
+      setBlocks(p => p.map(b => m.has(b.id) && b.side !== m.get(b.id) ? { ...b, side: m.get(b.id) } : b));
+    }
+    return sides;
+  }, [blockCenter]);
+  // Recalcula posições/portas e anima os blocos até lá (tween em JS pra
+  // as linhas acompanharem; transition CSS deixaria a linha na frente do bloco)
+  const relayoutNow = useCallback((animate = true) => {
+    const bl = blocksRef.current, ed = edgesRef.current;
+    const { pos, ports } = layoutMindMap(bl, ed, sizesRef.current, hiddenRef.current, mapStructRef.current);
+    let portsChanged = false;
+    const newEdges = ed.map(e => {
+      const p = ports.get(e.id); if (!p) return e;
+      if (e.from.port === p.from && e.to.port === p.to && !e.waypoints) return e;
+      portsChanged = true;
+      const { waypoints: _w, ...rest } = e;
+      return { ...rest, from: { ...e.from, port: p.from }, to: { ...e.to, port: p.to } };
+    });
+    if (portsChanged) setEdges(newEdges);
+    const moves = [];
+    bl.forEach(b => { const p = pos.get(b.id); if (p && (Math.abs(p.x - b.x) > 0.5 || Math.abs(p.y - b.y) > 0.5)) moves.push({ id: b.id, x0: b.x, y0: b.y, x1: p.x, y1: p.y }); });
+    if (!moves.length) return;
+    cancelAnimationFrame(layoutAnimRef.current); layoutAnimRef.current = 0;
+    const apply = (k) => {
+      const e = 1 - Math.pow(1 - k, 3);
+      const m = new Map(moves.map(mv => [mv.id, mv]));
+      setBlocks(p => p.map(b => { const mv = m.get(b.id); return mv ? { ...b, x: mv.x0 + (mv.x1 - mv.x0) * e, y: mv.y0 + (mv.y1 - mv.y0) * e } : b; }));
+    };
+    if (!animate) { apply(1); return; }
+    const t0 = performance.now(), dur = 260;
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / dur);
+      apply(k);
+      layoutAnimRef.current = k < 1 ? requestAnimationFrame(step) : 0;
+    };
+    layoutAnimRef.current = requestAnimationFrame(step);
+  }, []);
+  useEffect(() => {
+    if (!mapOn) return;
+    if (dragRef.current || layoutAnimRef.current) return; // arrastando ou já animando
+    relayoutNow(true);
+  }, [mapOn, mapStruct, blocks, edges, sizes, hiddenBlockIds, layoutNonce, relayoutNow]);
+
+  // Enter: cria um irmão logo depois do bloco (mesmo pai). Sem pai → vira filho.
+  const createSiblingBlock = useCallback((id) => {
+    const bl = blocksRef.current, ed = edgesRef.current;
+    const cur = bl.find(b => b.id === id); if (!cur) return;
+    const pe = ed.find(e => e.to.id === id && bl.some(b => b.id === e.from.id));
+    if (!pe) { createChildBlock(id); return; }
+    const CW = 200, CH = 70, newId = uid();
+    const child = { id: newId, x: cur.x, y: cur.y + (sizesRef.current[id]?.h ?? cur.h ?? 80) + 30, w: CW, h: CH, title: "", body: "", color: cur.color || DEFAULT_COLOR };
+    if (mapStructRef.current === "radial") {
+      const parentIsRoot = !ed.some(e => e.to.id === pe.from.id && bl.some(b => b.id === e.from.id));
+      if (parentIsRoot) { freezeSides(pe.from.id); const rc = blockCenter(bl.find(b => b.id === pe.from.id)); child.side = cur.side || (blockCenter(cur).x < rc.x ? "L" : "R"); }
+      else if (cur.side) child.side = cur.side;
+    }
+    pendingEditRef.current = newId;
+    setBlocks(p => [...p, child]);
+    setEdges(p => {
+      const i = p.findIndex(e => e.id === pe.id);
+      const ne = { id: uid(), from: { id: pe.from.id, port: pe.from.port }, to: { id: newId, port: pe.to.port } };
+      const n = p.slice(); n.splice(i < 0 ? p.length : i + 1, 0, ne); return n;
+    });
+    setSelection(new Set([newId])); setSelectedEdge(null);
+  }, [createChildBlock, freezeSides, blockCenter]);
+
+  // Soltou um nó (não-raiz) no modo mapa: a posição onde caiu vira a nova
+  // ordem entre os irmãos (e, no radial, o lado). Raiz solta fica onde soltou.
+  const reorderSiblingByDrop = useCallback((id) => {
+    const bl = blocksRef.current, ed = edgesRef.current, byId = new Map(bl.map(b => [b.id, b]));
+    const pe = ed.find(e => e.to.id === id && byId.has(e.from.id)); if (!pe) return;
+    const parent = byId.get(pe.from.id);
+    const sibEdges = ed.filter(e => e.from.id === parent.id && byId.has(e.to.id));
+    const struct = mapStructRef.current;
+    const parentIsRoot = !ed.some(e => e.to.id === parent.id && byId.has(e.from.id));
+    let key;
+    if (struct === "down") key = (e) => blockCenter(byId.get(e.to.id)).x;
+    else if (struct === "radial" && parentIsRoot) {
+      const rc = blockCenter(parent);
+      const sideOf = (b) => b.id === id ? (blockCenter(b).x < rc.x ? "L" : "R") : (b.side || (blockCenter(b).x < rc.x ? "L" : "R"));
+      const m = new Map(sibEdges.map(e => [e.to.id, sideOf(byId.get(e.to.id))]));
+      setBlocks(p => p.map(b => m.has(b.id) && b.side !== m.get(b.id) ? { ...b, side: m.get(b.id) } : b));
+      key = (e) => (m.get(e.to.id) === "L" ? 1e6 : 0) + blockCenter(byId.get(e.to.id)).y;
+    } else key = (e) => blockCenter(byId.get(e.to.id)).y;
+    const sorted = sibEdges.slice().sort((a, b) => key(a) - key(b));
+    if (sorted.every((e, i) => e === sibEdges[i])) return;
+    const idxs = []; ed.forEach((e, i) => { if (sibEdges.includes(e)) idxs.push(i); });
+    const next = ed.slice(); idxs.forEach((ix, j) => { next[ix] = sorted[j]; });
+    setEdges(next);
+  }, [blockCenter]);
+
+  // Setas: anda pela árvore (pai, filhos, irmãos primeiro; senão o bloco mais
+  // próximo naquela direção)
+  const navigateTree = useCallback((key) => {
+    const hid = hiddenRef.current;
+    const bl = blocksRef.current.filter(b => !hid.has(b.id)); if (!bl.length) return;
+    const ed = edgesRef.current, byId = new Map(bl.map(b => [b.id, b]));
+    const selId = selectionRef.current.size === 1 ? [...selectionRef.current][0] : null;
+    const cur = selId && byId.get(selId);
+    if (!cur) {
+      const root = bl.find(b => !ed.some(e => e.to.id === b.id && byId.has(e.from.id))) || bl[0];
+      setSelection(new Set([root.id])); setSelectedEdge(null); return;
+    }
+    const v = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[key];
+    const c = blockCenter(cur);
+    const pick = (cands) => {
+      let best = null, bestScore = Infinity;
+      cands.forEach(b => {
+        if (b.id === cur.id) return;
+        const bc = blockCenter(b); const dx = bc.x - c.x, dy = bc.y - c.y;
+        const along = dx * v[0] + dy * v[1], perp = Math.abs(dx * v[1]) + Math.abs(dy * v[0]);
+        if (along <= 1 || perp > along * 1.6) return; // fora do cone de 90° naquela direção
+        const score = along + perp * 2;
+        if (score < bestScore) { bestScore = score; best = b; }
+      });
+      return best;
+    };
+    const near = [];
+    ed.forEach(e => {
+      if (e.to.id === cur.id && byId.has(e.from.id)) { near.push(byId.get(e.from.id)); ed.forEach(s => { if (s.from.id === e.from.id && byId.has(s.to.id)) near.push(byId.get(s.to.id)); }); }
+      if (e.from.id === cur.id && byId.has(e.to.id)) near.push(byId.get(e.to.id));
+    });
+    const target = pick(near) || pick(bl);
+    if (target) { setSelection(new Set([target.id])); setSelectedEdge(null); }
+  }, [blockCenter]);
 
   /* ----- smooth camera tween + center-on-block (used by presentation) ----- */
   const tweenView = useCallback((target, dur = 440) => {
@@ -2830,6 +3117,12 @@ function App() {
         connectRef.current = null;
         document.querySelectorAll(".port.hot").forEach(p => p.classList.remove("hot"));
       }
+      if (dragRef.current && mapOnRef.current) {
+        const moved = dragRef.current.items.filter(i => i.kind === "block");
+        dragRef.current = null;
+        if (moved.length === 1) reorderSiblingByDrop(moved[0].id);
+        setLayoutNonce(n => n + 1); // volta pro lugar (animado)
+      }
       dragRef.current = null;
       resizeRef.current = null;
       panRef.current = false;
@@ -2854,7 +3147,7 @@ function App() {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [view.scale, blocks, hiddenBlockIds, togglePortCollapse, drawing, screenToWorld, drawShape, clearSelection, selection]);
+  }, [view.scale, blocks, hiddenBlockIds, togglePortCollapse, drawing, screenToWorld, drawShape, clearSelection, selection, reorderSiblingByDrop]);
 
   /* ----- keyboard ----- */
   useEffect(() => {
@@ -2876,6 +3169,17 @@ function App() {
         return;
       }
       if (editingEl) return;
+      // Modo Mapa: Enter = irmão, setas = navegar, F2 = editar título
+      if (!present && !e.defaultPrevented && selectionRef.current.size === 1) {
+        const sid = [...selectionRef.current][0];
+        if (blocksRef.current.some(b => b.id === sid)) {
+          if (e.key === "F2") { e.preventDefault(); setEditReq({ id: sid, k: Date.now() }); return; }
+          if (mapOnRef.current && e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); createSiblingBlock(sid); return; }
+        }
+      }
+      if (!present && mapOnRef.current && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault(); navigateTree(e.key); return;
+      }
       // finaliza a linha de pontos com Enter ou Esc
       if (drawingRef.current && drawingRef.current.type === "polyline") {
         if (e.key === "Enter" || e.key === "Escape") { e.preventDefault(); finishPolyline(); return; }
@@ -2910,7 +3214,7 @@ function App() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [deleteSelection, clearSelection, undo, redo, duplicateSelection, present, goToPresent, enterPresent, exitPresent, finishPolyline, createChildBlock]);
+  }, [deleteSelection, clearSelection, undo, redo, duplicateSelection, present, goToPresent, enterPresent, exitPresent, finishPolyline, createChildBlock, createSiblingBlock, navigateTree]);
 
   /* ----- wheel zoom ----- */
   const onWheel = useCallback((e) => {
@@ -3049,7 +3353,7 @@ function App() {
 
   /* ----- export / import ----- */
   const exportJSON = () => {
-    const data = { blocks, notes, strokes, images, edges, view };
+    const data = { blocks, notes, strokes, images, edges, view, map: { on: mapOn, struct: mapStruct } };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -3068,6 +3372,7 @@ function App() {
         setImages(data.images || []);
         setEdges(data.edges || []);
         if (data.view) setView(data.view);
+        setMapOn(!!(data.map && data.map.on)); setMapStruct((data.map && data.map.struct) || "right");
         // bump id counter
         const ids = [...(data.blocks||[]),...(data.notes||[]),...(data.strokes||[]),...(data.images||[])].map(o=>parseInt(String(o.id).replace(/\D/g,""),10));
         _nid = Math.max(_nid, ...ids.filter(Number.isFinite)) + 1;
@@ -3402,6 +3707,27 @@ function App() {
             <button className="ic" onClick={() => mdRef.current.click()} title="Importar Markdown (.md): cada título #/##/### vira um bloco">📥</button>
           </div>
           <span className="tb-lbl">Criar</span>
+        </div>
+        <div className="dvr"/>
+        {/* MAPA: layout automático (estilo XMind) + estrutura */}
+        <div className="tb-group">
+          <div className="tb-row">
+            <button className={`ic ${mapOn?"active":""}`} onClick={() => setMapOn(v => !v)} title={mapOn ? "Modo Mapa ligado: o mapa se organiza sozinho (clique pra soltar os blocos)" : "Modo Mapa: o mapa se organiza sozinho, estilo XMind"}>
+              <svg viewBox="0 0 24 24" className="ic-svg"><rect x="2.5" y="9" width="7" height="6" rx="1.5"/><rect x="14.5" y="3" width="7" height="5" rx="1.5"/><rect x="14.5" y="16" width="7" height="5" rx="1.5"/><path d="M9.5 12 h2.5 M12 12 V5.5 H14.5 M12 12 V18.5 H14.5"/></svg>
+            </button>
+            {mapOn && (<>
+              <button className={`ic ${mapStruct==="radial"?"active":""}`} onClick={() => setMapStruct("radial")} title="Radial: ramos dos dois lados da raiz">
+                <svg viewBox="0 0 24 24" className="ic-svg"><rect x="8.5" y="9.5" width="7" height="5" rx="1.5"/><path d="M8.5 12 H4 M4 12 V7 M4 12 V17 M15.5 12 H20 M20 12 V7 M20 12 V17"/></svg>
+              </button>
+              <button className={`ic ${mapStruct==="right"?"active":""}`} onClick={() => setMapStruct("right")} title="Lógica: ramos pra direita">
+                <svg viewBox="0 0 24 24" className="ic-svg"><rect x="2.5" y="9.5" width="7" height="5" rx="1.5"/><path d="M9.5 12 H13 M13 12 V5 H20 M13 12 H20 M13 12 V19 H20"/></svg>
+              </button>
+              <button className={`ic ${mapStruct==="down"?"active":""}`} onClick={() => setMapStruct("down")} title="Organograma: ramos pra baixo">
+                <svg viewBox="0 0 24 24" className="ic-svg"><rect x="8.5" y="2.5" width="7" height="5" rx="1.5"/><path d="M12 7.5 V11 M12 11 H5 V15 M12 11 V15 M12 11 H19 V15"/></svg>
+              </button>
+            </>)}
+          </div>
+          <span className="tb-lbl">Mapa</span>
         </div>
         <div className="dvr"/>
         {/* EDITAR */}
@@ -4116,6 +4442,9 @@ function App() {
                 else setEditingTitleId(curr => curr === id ? null : curr);
               }}
               onMeasure={reportSize}
+              mapMode={mapOn}
+              onEnterSibling={createSiblingBlock}
+              editReq={editReq}
             />
           ))}
           {notes.map(n => (
@@ -4200,7 +4529,9 @@ function App() {
 
       <div className="zoom">{Math.round(view.scale*100)}%</div>
       <div className="hint">
-        <b>B</b> bloco • <b>Tab</b> filho • <b>N</b> texto • <b>D</b> desenho • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>clica na linha</b> editar/estilo • <b>duplo-clique</b> editar • <b>Del</b> apagar
+        {mapOn
+          ? (<><b>Tab</b> filho • <b>Enter</b> irmão • <b>Ctrl+Enter</b> corpo • <b>setas</b> navegar • <b>F2</b> editar • <b>arrasta</b> reordena • <b>Del</b> apaga o ramo • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer</>)
+          : (<><b>B</b> bloco • <b>Tab</b> filho • <b>N</b> texto • <b>D</b> desenho • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>clica na linha</b> editar/estilo • <b>duplo-clique</b> editar • <b>Del</b> apagar</>)}
       </div>
 
       {mmData && (
