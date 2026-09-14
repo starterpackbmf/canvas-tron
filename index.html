@@ -3361,12 +3361,16 @@ function App() {
     a.download = "canvas-tron.json";
     a.click();
   };
+  // Carregar: aceita .json (mapa salvo) E .md/.txt (Markdown vira árvore).
+  // Decide pelo nome do arquivo; se não for JSON válido, tenta como Markdown.
   const importJSON = (e) => {
     const f = e.target.files[0]; if (!f) return;
     const r = new FileReader();
     r.onload = () => {
+      const text = String(r.result || "");
+      if (/\.(md|markdown|txt)$/i.test(f.name) || !/^\s*[\[{]/.test(text)) { importMarkdownText(text); return; }
       try {
-        const data = JSON.parse(r.result);
+        const data = JSON.parse(text);
         setBlocks(data.blocks || []);
         setNotes(data.notes || []);
         setStrokes(data.strokes || []);
@@ -3377,7 +3381,7 @@ function App() {
         // bump id counter
         const ids = [...(data.blocks||[]),...(data.notes||[]),...(data.strokes||[]),...(data.images||[])].map(o=>parseInt(String(o.id).replace(/\D/g,""),10));
         _nid = Math.max(_nid, ...ids.filter(Number.isFinite)) + 1;
-      } catch { alert("Arquivo inválido"); }
+      } catch { alert("Arquivo inválido: esperava um .json salvo pelo Canvas ou um .md com títulos/listas."); }
     };
     r.readAsText(f);
     e.target.value = "";
@@ -3521,12 +3525,10 @@ function App() {
     return { newBlocks, newEdges };
   };
 
-  const importMarkdown = (e) => {
-    const f = e.target.files[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
+  const importMarkdownText = (text) => {
       try {
-        const tree = parseMarkdownTree(r.result);
+        const tree = parseMarkdownTree(text);
+        if (tree.level === 0 && !tree.children.length) { alert("Nenhum título (#) nem item de lista (-) encontrado no arquivo."); return; }
         // Modo Mapa com conteúdo: a árvore nova nasce ABAIXO do que já existe
         // (a raiz é a âncora do layout; no centro ela cairia em cima do mapa).
         // Senão, no centro da tela pra aparecer na hora.
@@ -3549,7 +3551,11 @@ function App() {
         console.error(err);
         alert("Erro ao importar: " + err.message);
       }
-    };
+  };
+  const importMarkdown = (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => importMarkdownText(r.result);
     r.readAsText(f);
     e.target.value = "";
   };
@@ -3739,7 +3745,6 @@ function App() {
             <button className="ic" onClick={() => imgRef.current.click()} title="Inserir imagem (ou cole com Ctrl+V)">
               <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.4"/><path d="M21 15 l-5-5 -8 8"/></svg>
             </button>
-            <button className="ic" onClick={() => mdRef.current.click()} title="Importar Markdown (.md): cada título #/##/### vira um bloco">📥</button>
           </div>
           <span className="tb-lbl">Criar</span>
         </div>
@@ -3795,7 +3800,8 @@ function App() {
           <div className="tb-row">
             <button className={`ic ${cloudDoc.id ? "active" : ""}`} onClick={() => setCloudOpen(true)} title={cloudDoc.id ? `Nuvem: ${cloudDoc.name}` : "Nuvem (salvar/abrir no Supabase)"}>☁</button>
             <button className="ic" onClick={exportJSON} title="Salvar (.json)">⤓</button>
-            <button className="ic" onClick={() => fileRef.current.click()} title="Carregar (.json)">⤒</button>
+            <button className="ic" onClick={() => fileRef.current.click()} title="Carregar (.json salvo ou .md)">⤒</button>
+            <button className="ic" onClick={() => mdRef.current.click()} title="Importar Markdown (.md): títulos e listas viram blocos"><span className="mini">MD</span></button>
             <button className="ic" onClick={exportPNG} title="Exportar PNG">🖼</button>
           </div>
           <span className="tb-lbl">Arquivo</span>
@@ -4629,7 +4635,7 @@ function App() {
         />
       )}
 
-      <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON} />
+      <input ref={fileRef} type="file" accept=".json,.md,.markdown,.txt" style={{display:"none"}} onChange={importJSON} />
       <input ref={mdRef} type="file" accept=".md,.markdown,.txt" style={{display:"none"}} onChange={importMarkdown} />
       <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={(e) => { const f = e.target.files[0]; if (f) addImageFromBlob(f, null); e.target.value = ""; }} />
       <input ref={blockImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={(e) => { const f = e.target.files[0]; if (f) setBlockImageFromFile(f); e.target.value = ""; }} />
