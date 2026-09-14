@@ -872,10 +872,10 @@ const portWorldPos = (b, port, size) => {
    ligação manda); ordem dos irmãos = ordem das ligações no array `edges`.
    Raízes ficam onde estão (âncora); a subárvore se organiza em volta.
    Nós escondidos (ramo recolhido) ficam fora do cálculo. */
-const MAP_GAP_X = 70;       // pai → filho (estruturas horizontais)
+const MAP_GAP_X = 84;       // pai → filho (estruturas horizontais)
 const MAP_GAP_Y = 26;       // entre irmãos (vertical)
 const MAP_DOWN_GAP_X = 30;  // entre irmãos (estrutura "baixo")
-const MAP_DOWN_GAP_Y = 70;  // pai → filho (estrutura "baixo")
+const MAP_DOWN_GAP_Y = 76;  // pai → filho (estrutura "baixo")
 const layoutMindMap = (blocks, edges, sizes, hidden, struct) => {
   const byId = new Map(blocks.map(b => [b.id, b]));
   const size = (id) => { const b = byId.get(id); const s = sizes[id]; return { w: s?.w ?? b.w ?? 240, h: s?.h ?? b.h ?? 80 }; };
@@ -1023,6 +1023,17 @@ const orthogonalPath = (p1, dir1, p2, dir2) => {
 };
 
 // Cubic bezier that leaves p1 along dir1 and arrives at p2 along dir2 (smooth "curva" style)
+// Curva do Modo Mapa: o ponto de controle só anda na direção da porta, e no
+// máximo metade da folga entre pai e filho. Assim um leque de muitos filhos
+// vira um S limpo por linha, sem cruzar as vizinhas (a dirBezier usa 40% da
+// distância TOTAL, e com filho a 70px de lado e 600px de altura ela dava laço).
+const mapBezier = (p1, dir1, p2, dir2) => {
+  const along = Math.abs((p2.x - p1.x) * dir1.x + (p2.y - p1.y) * dir1.y);
+  const k = Math.max(18, along * 0.5);
+  const c1 = { x: p1.x + dir1.x * k, y: p1.y + dir1.y * k };
+  const c2 = { x: p2.x + dir2.x * k, y: p2.y + dir2.y * k };
+  return `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
+};
 const dirBezier = (p1, dir1, p2, dir2) => {
   const k = Math.max(60, Math.hypot(p2.x - p1.x, p2.y - p1.y) * 0.4);
   const c1 = { x: p1.x + dir1.x * k, y: p1.y + dir1.y * k };
@@ -3625,7 +3636,7 @@ function App() {
     if (wps.length === 0) {
       if (style === "straight")      curveD = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
       else if (style === "ortho")    curveD = orthogonalPath(p1, dir1, p2, dir2);
-      else                           curveD = dirBezier(p1, dir1, p2, dir2);
+      else                           curveD = mapOn ? mapBezier(p1, dir1, p2, dir2) : dirBezier(p1, dir1, p2, dir2);
     } else {
       if (style === "ortho")         curveD = roundedPolyPath(pts, 14);
       else if (style === "straight") curveD = roundedPolyPath(pts, 0);
