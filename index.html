@@ -3264,6 +3264,7 @@ function App() {
   };
 
   /* ----- fit/reset/clear ----- */
+  const fitAllRef = useRef(null);
   const fitAll = () => {
     const items = [...blocks.filter(b => !hiddenBlockIds.has(b.id)), ...notes, ...images];
     // Include strokes' extents
@@ -3406,36 +3407,58 @@ function App() {
       .replace(/\n/g, "<br>");
   };
 
+  // Markdown → árvore. Títulos (#, ##, ###) viram níveis; listas (-, *, +, 1.)
+  // aninhadas por indentação viram filhos do título/item acima (é assim que
+  // XMind, Notion e ChatGPT exportam). Linhas soltas viram corpo do nó atual.
   const parseMarkdownTree = (text) => {
     const lines = text.split(/\r?\n/);
     const rootNode = { level: 0, title: "Mapa Mental", body: "", children: [] };
-    const stack = [rootNode];
+    const stack = [rootNode];      // títulos
+    let listStack = [];            // [{indent, node}] itens de lista sob o título atual
     let pending = [];
+    let inFence = false;
+    const curNode = () => listStack.length ? listStack[listStack.length - 1].node : stack[stack.length - 1];
     const flush = () => {
       if (!pending.length) return;
-      const cur = stack[stack.length - 1];
+      const cur = curNode();
       const extra = pending.join("\n").trim();
       if (extra) cur.body = (cur.body ? cur.body + "\n" : "") + extra;
       pending = [];
     };
-    for (const line of lines) {
-      const m = line.match(/^(#{1,6})\s+(.+?)\s*$/);
-      if (m) {
+    for (const raw of lines) {
+      const line = raw.replace(/\t/g, "    ");
+      if (/^\s*```/.test(line)) { inFence = !inFence; pending.push(line); continue; }
+      if (inFence) { pending.push(line); continue; }
+      const h = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+      if (h) {
         flush();
-        const level = m[1].length;
-        const title = m[2];
+        listStack = [];
+        const level = h[1].length;
         while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop();
         const parent = stack[stack.length - 1];
-        const node = { level, title, body: "", children: [] };
+        const node = { level, title: h[2], body: "", children: [] };
         parent.children.push(node);
         stack.push(node);
-      } else {
-        pending.push(line);
+        continue;
       }
+      const li = line.match(/^(\s*)(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?(.+?)\s*$/);
+      if (li) {
+        flush();
+        const indent = li[1].length;
+        while (listStack.length && listStack[listStack.length - 1].indent >= indent) listStack.pop();
+        const parent = listStack.length ? listStack[listStack.length - 1].node : stack[stack.length - 1];
+        const node = { level: 99, title: li[2], body: "", children: [] };
+        parent.children.push(node);
+        listStack.push({ indent, node });
+        continue;
+      }
+      // linha em branco fecha a lista só se a próxima coisa não for item (tratado
+      // naturalmente: item novo com indent menor/igual faz pop)
+      pending.push(line);
     }
     flush();
-    // If there's a single top-level heading, promote it to be the actual root
-    if (rootNode.children.length === 1) return rootNode.children[0];
+    // Se só existe um título de topo, ele vira a raiz de verdade
+    if (rootNode.children.length === 1 && !rootNode.body) return rootNode.children[0];
     return rootNode;
   };
 
@@ -3460,9 +3483,8 @@ function App() {
         node.children.forEach((child, i) => {
           // Top-level children of synthetic root pick a distinct preset;
           // everyone else inherits parent color
-          const childColor = (depth === 0 && root.level === 0)
-            ? PRESET_COLORS[i % PRESET_COLORS.length]
-            : (depth === 0 ? color : color);
+          // ramos principais ganham cores distintas (como o Tab no Modo Mapa)
+          const childColor = depth === 0 ? PRESET_COLORS[i % PRESET_COLORS.length] : color;
           assignLayout(child, depth + 1, childColor);
         });
         const lastRow = rowCursor - 1;
@@ -3481,7 +3503,7 @@ function App() {
         y: originY + node._row   * ROW_H,
         w: B_W, h: B_H,
         color: node._color,
-        title: node.title,
+        title: mdInlineToHtml(node.title),
         body: node.body ? mdInlineToHtml(node.body) : "",
       });
       if (node.children) {
@@ -3505,13 +3527,24 @@ function App() {
     r.onload = () => {
       try {
         const tree = parseMarkdownTree(r.result);
-        // Place at current view center so the user sees it immediately
-        const cx = (-view.x + window.innerWidth  / 2) / view.scale;
-        const cy = (-view.y + window.innerHeight / 2) / view.scale;
-        const { newBlocks, newEdges } = buildMindMapFromTree(tree, cx - 200, cy - 200);
-        if (!newBlocks.length) { alert("Nenhum título encontrado no arquivo Markdown."); return; }
+        // Modo Mapa com conteúdo: a árvore nova nasce ABAIXO do que já existe
+        // (a raiz é a âncora do layout; no centro ela cairia em cima do mapa).
+        // Senão, no centro da tela pra aparecer na hora.
+        let ox, oy;
+        const cur = blocksRef.current;
+        if (mapOnRef.current && cur.length) {
+          ox = Math.min(...cur.map(b => b.x));
+          oy = Math.max(...cur.map(b => b.y + (sizesRef.current[b.id]?.h ?? b.h ?? 80))) + 140;
+        } else {
+          ox = (-view.x + window.innerWidth  / 2) / view.scale - 200;
+          oy = (-view.y + window.innerHeight / 2) / view.scale - 200;
+        }
+        const { newBlocks, newEdges } = buildMindMapFromTree(tree, ox, oy);
+        if (!newBlocks.length) { alert("Nenhum título ou item de lista encontrado no arquivo Markdown."); return; }
         setBlocks(prev => [...prev, ...newBlocks]);
         setEdges(prev => [...prev, ...newEdges]);
+        // no Modo Mapa o layout assenta em ~300ms; depois enquadra tudo
+        if (mapOnRef.current) setTimeout(() => fitAllRef.current && fitAllRef.current(), 500);
       } catch (err) {
         console.error(err);
         alert("Erro ao importar: " + err.message);
@@ -3683,6 +3716,8 @@ function App() {
     const worldY = mmData.minY + (e.clientY - r.top) / mmData.sc;
     setView(v => ({ ...v, x: window.innerWidth / 2 - worldX * v.scale, y: window.innerHeight / 2 - worldY * v.scale }));
   };
+
+  fitAllRef.current = fitAll;
 
   /* ----- render ----- */
   return (
