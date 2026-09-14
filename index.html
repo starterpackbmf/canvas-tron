@@ -460,10 +460,13 @@
 
   /* ports pequenos — só um detalhe, pra não tampar a setinha. Crescem no hover. */
   .port{
-    position:absolute;width:7px;height:7px;
+    position:absolute;width:8px;height:8px;
     background:var(--bg);border:1.5px solid var(--bc,var(--cyan));border-radius:50%;
     cursor:crosshair;transition:all .12s ease;z-index:2;opacity:.7;
   }
+  /* área de clique invisível bem maior que a bolinha (28px): recolher/ligar
+     sem precisar acertar 7px */
+  .port::before{content:"";position:absolute;inset:-10px;border-radius:50%}
   .port:hover,.port.hot{background:var(--bc,var(--cyan));box-shadow:0 0 12px var(--bc,var(--cyan)),0 0 20px rgba(var(--bc-rgb,0,240,255),.6);transform:scale(2);opacity:1}
   .port.top{top:-4px;left:50%;transform:translateX(-50%)}
   .port.bottom{bottom:-4px;left:50%;transform:translateX(-50%)}
@@ -959,10 +962,18 @@ const layoutMindMap = (blocks, edges, sizes, hidden, struct) => {
   const kids = (id) => (children.get(id) || []).filter(k => !hidden.has(k));
   // nó com ramo recolhido mostra pílulas na porta: afasta os filhos visíveis
   // pra pílula não cair em cima deles
-  const hasPill = new Set();
-  edges.forEach(e => { if (e.collapsed) hasPill.add(e.collapseDir === "backward" ? e.to.id : e.from.id); });
+  const hasPill = new Set(), pillCount = new Map();
+  edges.forEach(e => {
+    if (!e.collapsed) return;
+    const near = e.collapseDir === "backward" ? e.to.id : e.from.id;
+    hasPill.add(near); pillCount.set(near, (pillCount.get(near) || 0) + 1);
+  });
   const PILL_ROOM = 48;
   const extra = (id) => hasPill.has(id) ? PILL_ROOM : 0;
+  // largura/altura que o leque de pílulas ocupa (mesmo espaçamento do render:
+  // 118px lado a lado em porta vertical, 30px empilhadas em porta horizontal)
+  const pillSpanX = (id) => (pillCount.get(id) || 0) * 118;
+  const pillSpanY = (id) => (pillCount.get(id) || 0) * 30;
   const pos = new Map(), ports = new Map();
   // ---- horizontal (dir +1 = direita, -1 = esquerda)
   const spanH = new Map();
@@ -971,7 +982,7 @@ const layoutMindMap = (blocks, edges, sizes, hidden, struct) => {
     const ks = kids(id); let sum = 0;
     ks.forEach(k => { sum += measureH(k); });
     if (ks.length) sum += MAP_GAP_Y * (ks.length - 1);
-    const v = Math.max(size(id).h, sum); spanH.set(id, v); return v;
+    const v = Math.max(size(id).h, sum, pillSpanY(id)); spanH.set(id, v); return v;
   };
   const placeH = (id, dir, xEdge, yTop) => {
     const { w, h } = size(id); const H = measureH(id);
@@ -994,7 +1005,7 @@ const layoutMindMap = (blocks, edges, sizes, hidden, struct) => {
     const ks = kids(id); let sum = 0;
     ks.forEach(k => { sum += measureV(k); });
     if (ks.length) sum += MAP_DOWN_GAP_X * (ks.length - 1);
-    const v = Math.max(size(id).w, sum); spanV.set(id, v); return v;
+    const v = Math.max(size(id).w, sum, pillSpanX(id)); spanV.set(id, v); return v;
   };
   const placeV = (id, xLeft, y) => {
     const { w, h } = size(id); const W = measureV(id);
