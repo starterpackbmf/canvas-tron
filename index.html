@@ -289,6 +289,13 @@
   .workspace.tool-eraser{cursor:not-allowed}
   .workspace.tool-eraser .stroke-hit{cursor:not-allowed !important}
   .workspace.panning{cursor:grabbing}
+  .workspace.hand{cursor:grab}
+  .workspace.marquee{cursor:crosshair}
+  .marquee-rect{
+    position:absolute;z-index:7;pointer-events:none;
+    border:1px dashed var(--cyan);background:rgba(0,240,255,.08);
+    box-shadow:0 0 10px rgba(0,240,255,.25);
+  }
 
   /* ===== strokes (freehand drawings) ===== */
   /* z-index:5 puts the drawings IN FRONT of the blocks (blocks are z-index auto).
@@ -1884,6 +1891,15 @@ function App() {
   // Holofote (spotlight no modo edição) + minimapa
   const [spotlight, setSpotlight] = useState(false);
   const [showMinimap, setShowMinimap] = useState(false);
+  // Fundo: "hand" (arrastar move o mapa) ou "arrow" (arrastar desenha um
+  // retângulo e seleciona o que estiver dentro). Ctrl segurado inverte na hora.
+  const [panMode, setPanMode] = useState(() => { try { return localStorage.getItem("canvas-tron:panmode") || "hand"; } catch { return "hand"; } });
+  useEffect(() => { try { localStorage.setItem("canvas-tron:panmode", panMode); } catch {} }, [panMode]);
+  const [ctrlHeld, setCtrlHeld] = useState(false);
+  const arrowMode = (panMode === "arrow") !== ctrlHeld;
+  const arrowModeRef = useRef(arrowMode); useEffect(() => { arrowModeRef.current = arrowMode; });
+  const marqueeRef = useRef(null);            // {sx, sy, additive, rect}
+  const [marquee, setMarquee] = useState(null); // {x,y,w,h} em coordenadas do mundo
   // Tema claro/escuro: preferência da pessoa, não do mapa (fica no localStorage)
   const [theme, setTheme] = useState(() => { try { return localStorage.getItem("canvas-tron:theme") || "dark"; } catch { return "dark"; } });
   useEffect(() => {
@@ -3074,6 +3090,14 @@ function App() {
         }));
         return;
       }
+      if (marqueeRef.current) {
+        const wp = screenToWorld(e.clientX, e.clientY);
+        const m = marqueeRef.current;
+        const rect = { x: Math.min(m.sx, wp.x), y: Math.min(m.sy, wp.y), w: Math.abs(wp.x - m.sx), h: Math.abs(wp.y - m.sy) };
+        m.rect = rect;
+        setMarquee(rect);
+        return;
+      }
       if (panRef.current) {
         setView(v => ({ ...v, x: v.x + e.movementX, y: v.y + e.movementY }));
         return;
@@ -3215,6 +3239,25 @@ function App() {
         if (moved.length === 1) reorderSiblingByDrop(moved[0].id);
         setLayoutNonce(n => n + 1); // volta pro lugar (animado)
       }
+      if (marqueeRef.current) {
+        const { rect, additive } = marqueeRef.current;
+        marqueeRef.current = null;
+        setMarquee(null);
+        if (wsRef.current) wsRef.current.classList.remove("marquee");
+        if (rect.w > 3 || rect.h > 3) {
+          const hit = (x, y, w, h) => x < rect.x + rect.w && x + w > rect.x && y < rect.y + rect.h && y + h > rect.y;
+          const ids = [];
+          blocks.forEach(b => {
+            if (hiddenBlockIds.has(b.id)) return;
+            const sz = sizesRef.current[b.id];
+            if (hit(b.x, b.y, sz?.w ?? b.w ?? 240, sz?.h ?? b.h ?? 80)) ids.push(b.id);
+          });
+          notesRef.current.forEach(n => { if (hit(n.x, n.y, 1, 1)) ids.push(n.id); });
+          imagesRef.current.forEach(im => { if (hit(im.x, im.y, im.w || 0, im.h || 0)) ids.push(im.id); });
+          setSelection(prev => new Set([...(additive ? prev : []), ...ids]));
+          setSelectedEdge(null);
+        }
+      }
       dragRef.current = null;
       resizeRef.current = null;
       panRef.current = false;
@@ -3244,6 +3287,7 @@ function App() {
   /* ----- keyboard ----- */
   useEffect(() => {
     const onKey = (e) => {
+      if (e.key === "Control") setCtrlHeld(true);
       const ae = document.activeElement;
       // digitando num campo de formulário (painéis: atributos, nuvem, etc.) →
       // não dispara atalho nenhum (era o bug do "P" abrir apresentação)
@@ -3299,12 +3343,18 @@ function App() {
       if (e.key === "p" || e.key === "P") enterPresent();
       if (e.key === "Escape") { clearSelection(); setTool("select"); }
     };
-    const onKeyUp = (e) => { if (e.key === " ") spaceRef.current = false; };
+    const onKeyUp = (e) => {
+      if (e.key === " ") spaceRef.current = false;
+      if (e.key === "Control") setCtrlHeld(false);
+    };
+    const onBlur = () => setCtrlHeld(false); // soltou o Ctrl fora da janela
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
     };
   }, [deleteSelection, clearSelection, undo, redo, duplicateSelection, present, goToPresent, enterPresent, exitPresent, finishPolyline, createChildBlock, createSiblingBlock, navigateTree]);
 
@@ -3348,7 +3398,16 @@ function App() {
       e.preventDefault();
       return;
     }
-    // Default: clicking empty workspace always pans the canvas
+    if (arrowModeRef.current) {
+      // modo seta: retângulo de seleção (Shift soma à seleção atual)
+      if (!e.shiftKey) clearSelection();
+      marqueeRef.current = { sx: wp.x, sy: wp.y, additive: e.shiftKey, rect: { x: wp.x, y: wp.y, w: 0, h: 0 } };
+      setMarquee({ x: wp.x, y: wp.y, w: 0, h: 0 });
+      wsRef.current.classList.add("marquee");
+      e.preventDefault();
+      return;
+    }
+    // modo mão: arrastar o fundo move o mapa
     clearSelection();
     panRef.current = true;
     wsRef.current.classList.add("panning");
@@ -3702,8 +3761,10 @@ function App() {
       const grp = collapsedGroups.get(nearBlock.id + ":" + nearPort) || [e.id];
       const gi = grp.indexOf(e.id), gn = grp.length;
       const pd = PORT_DIR[nearPort] || { x: 0, y: 1 };
-      // sozinha aponta pro filho escondido; em grupo, todas saem reto da porta e abrem em leque
-      const dir = (gn > 1 || dl <= 6) ? pd : { x: dx / dl, y: dy / dl };
+      // No Modo Mapa a pílula sai SEMPRE reto pela porta (o filho escondido
+      // fica parado onde estava e pode estar em cima do pai). No livre, sozinha
+      // aponta pro filho escondido; em grupo, todas saem reto e abrem em leque.
+      const dir = (mapOn || gn > 1 || dl <= 6) ? pd : { x: dx / dl, y: dy / dl };
       const spacing = pd.x === 0 ? 118 : 30; // porta vertical: pílulas lado a lado; horizontal: empilhadas
       const off = (gi - (gn - 1) / 2) * spacing;
       const perp = { x: -pd.y, y: pd.x };
@@ -3846,6 +3907,12 @@ function App() {
         <div className="tb-group">
           <div className="tb-row">
             <button className={`ic ${tool==="select"?"active":""}`} onClick={() => setTool("select")} title="Selecionar / mover (V)">◉</button>
+            <button className={`ic ${!arrowMode?"active":""}`} onClick={() => setPanMode("hand")} title="Mão: arrastar o fundo move o mapa (Ctrl segurado vira seta)">
+              <svg viewBox="0 0 24 24" className="ic-svg"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V4.5a1.5 1.5 0 0 1 3 0V12M14 11.5V6a1.5 1.5 0 0 1 3 0v7.5M17 12a1.5 1.5 0 0 1 3 0v3.5A6.5 6.5 0 0 1 13.5 22h-1.2a6.5 6.5 0 0 1-5.2-2.6L4 15.4a1.6 1.6 0 0 1 2.5-2L8 15.2"/></svg>
+            </button>
+            <button className={`ic ${arrowMode?"active":""}`} onClick={() => setPanMode("arrow")} title="Seta: arrastar no fundo seleciona em área (Ctrl segurado vira mão)">
+              <svg viewBox="0 0 24 24" className="ic-svg"><path d="M5 3l14 8.5-6.2 1.6L9.5 20z"/></svg>
+            </button>
             <button className={`ic ${tool==="block"?"active":""}`} onClick={() => setTool("block")} title="Bloco (B)">▭</button>
             <button className={`ic ${tool==="draw" && drawShape==="text" ? "active":""}`} onClick={() => { clearSelection(); setTool("draw"); setDrawShape("text"); }} title="Texto / anotação (N)">
               <svg viewBox="0 0 24 24" className="ic-svg"><path d="M6 6 H18 M12 6 V18 M9 18 H15"/></svg>
@@ -4344,7 +4411,7 @@ function App() {
 
       <div
         ref={wsRef}
-        className={`workspace ${tool === "block" ? "tool-block" : ""} ${tool === "note" ? "tool-note" : ""} ${tool === "draw" && drawShape !== "eraser" ? "tool-draw" : ""} ${tool === "draw" && drawShape === "eraser" ? "tool-eraser" : ""}`}
+        className={`workspace ${tool === "select" && !arrowMode ? "hand" : ""} ${tool === "block" ? "tool-block" : ""} ${tool === "note" ? "tool-note" : ""} ${tool === "draw" && drawShape !== "eraser" ? "tool-draw" : ""} ${tool === "draw" && drawShape === "eraser" ? "tool-eraser" : ""}`}
         onMouseDown={onWorkspaceDown}
         onDoubleClick={(e) => {
           // duplo-clique finaliza a linha de pontos em andamento
@@ -4616,6 +4683,7 @@ function App() {
               editReq={editReq}
             />
           ))}
+          {marquee && <div className="marquee-rect" style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }} />}
           {notes.map(n => (
             <Note
               key={n.id}
@@ -4700,7 +4768,7 @@ function App() {
       <div className="hint">
         {mapOn
           ? (<><b>Tab</b> filho • <b>Enter</b> irmão • <b>Ctrl+Enter</b> corpo • <b>setas</b> navegar • <b>F2</b> editar • <b>arrasta</b> reordena • <b>Del</b> apaga o ramo • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer</>)
-          : (<><b>B</b> bloco • <b>Tab</b> filho • <b>N</b> texto • <b>D</b> desenho • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>clica na linha</b> editar/estilo • <b>duplo-clique</b> editar • <b>Del</b> apagar</>)}
+          : (<><b>B</b> bloco • <b>Tab</b> filho • <b>N</b> texto • <b>D</b> desenho • <b>Ctrl</b> mão/seta • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>clica na linha</b> editar/estilo • <b>duplo-clique</b> editar • <b>Del</b> apagar</>)}
       </div>
 
       {mmData && (
