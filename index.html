@@ -2,6 +2,11 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#02040a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>Canvas Tron — React</title>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -80,7 +85,7 @@
   body.light .swatch{border-color:rgba(0,0,0,.12)}
   body.light .breadcrumb .crumb.current{filter:brightness(.7)}
   *{box-sizing:border-box}
-  html,body,#root{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:"Segoe UI",Inter,system-ui,sans-serif;user-select:none}
+  html,body,#root{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:"Segoe UI",Inter,system-ui,sans-serif;user-select:none;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
 
   /* ===== background grid ===== */
   /* Apple-ish: preto, leve gradiente azul frio, grid quase imperceptível e
@@ -281,7 +286,7 @@
   }
 
   /* ===== workspace ===== */
-  .workspace{position:fixed;inset:0;z-index:1;cursor:default}
+  .workspace{position:fixed;inset:0;z-index:1;cursor:default;touch-action:none}
   .workspace.tool-block{cursor:crosshair}
   .workspace.tool-note{cursor:text}
   /* cursor de lápis no modo desenho: hotspot (3,21) = ponta do lápis */
@@ -846,6 +851,34 @@
     border:1px solid rgba(var(--bc-rgb),.4);color:var(--bc);opacity:.9;
   }
   .block .attr-tag.tier{background:rgba(var(--bc-rgb),.16);font-weight:700}
+
+  /* ===== Mobile / toque ===== */
+  /* Respeita o recorte (notch/ilha) dos celulares nas barras fixas */
+  .toolbar{padding-top:calc(6px + env(safe-area-inset-top))}
+  .palette,.color-pop{margin-top:env(safe-area-inset-top)}
+
+  /* Telas estreitas OU dispositivo de toque grosso (dedo): compacta as barras
+     e aumenta a área de toque pra não errar o alvo. */
+  @media (max-width:640px), (pointer:coarse){
+    .toolbar{gap:2px;padding:5px 6px;border-radius:11px;top:calc(8px + env(safe-area-inset-top))}
+    .toolbar .dvr{margin:2px 3px}
+    .toolbar .tb-lbl{display:none}            /* esconde os rótulos "Criar/Editar/Ver/Arquivo" pra caber */
+    .ic{width:34px;height:34px;font-size:15px}
+    .tool{padding:6px 9px;font-size:11px}
+    /* paleta de cores ao alcance do polegar (o dot cresce, sem quebrar layout) */
+    .swatch{width:26px;height:26px}
+    /* zoom mais longe do dedo; minimapa atrapalha mais que ajuda no toque */
+    .zoom{bottom:calc(10px + env(safe-area-inset-bottom))}
+    .minimap{display:none}
+    /* painéis ocupam quase a largura toda, roláveis */
+    .cloud-panel,.attr-dock{max-width:94vw;max-height:70vh;overflow:auto;-webkit-overflow-scrolling:touch}
+  }
+  /* Em toque (dedo), amplia a área de toque das alças de redimensionar
+     sem mexer no tamanho/posição do quadradinho visível (as portas já têm
+     um alvo invisível de ~28px via .port::before). */
+  @media (pointer:coarse){
+    .resize::before{content:"";position:absolute;inset:-9px}
+  }
 </style>
 </head>
 <body>
@@ -3381,6 +3414,120 @@ function App() {
       y: e.clientY - wp.y * newScale,
     });
   }, [view, screenToWorld]);
+
+  /* ----- toque (mobile): 1 dedo = mouse, 2 dedos = pinça (zoom + pan) -----
+     Em vez de reescrever os ~30 handlers de mouse, a gente traduz o toque em
+     eventos de mouse sintéticos e deixa a lógica existente (arrastar bloco,
+     ligar portas, redimensionar, marquee, pan) funcionar igual. Toques na UI
+     (barras, painéis, campos de texto) passam batido — o toque nativo cuida
+     de clique em botão, rolagem de painel e teclado. */
+  useEffect(() => {
+    const stage = wsRef.current;
+    if (!stage) return;
+
+    const CHROME = ".toolbar,.palette,.color-pop,.cloud-panel,.attr-dock,.breadcrumb,.zoom,.minimap,.present-hud,input,textarea,select,button";
+    const onChrome = (el) => {
+      if (!el) return false;
+      if (el.closest && el.closest(CHROME)) return true;
+      // campo de texto ativo (bloco em edição): toque nativo posiciona o cursor
+      // e abre o teclado — não interceptar.
+      let n = el;
+      while (n && n !== stage) { if (n.isContentEditable) return true; n = n.parentElement; }
+      return false;
+    };
+
+    const fire = (type, x, y, extra) => {
+      const el = document.elementFromPoint(x, y) || stage;
+      el.dispatchEvent(new MouseEvent(type, {
+        bubbles: true, cancelable: true, view: window,
+        clientX: x, clientY: y, button: 0, buttons: 1, ...(extra || {}),
+      }));
+    };
+
+    let mode = null;          // "drag" | "pinch"
+    let touchId = null;       // dedo seguido no modo 1-dedo
+    let last = null;          // última posição (p/ movementX/Y do pan)
+    let pinch = null;         // âncora da pinça {dist, cx, cy, view}
+    let lastTap = 0, lastTapXY = null;   // detecção de duplo-toque
+
+    const onStart = (e) => {
+      if (onChrome(e.target)) return;
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        mode = "drag"; touchId = t.identifier;
+        last = { x: t.clientX, y: t.clientY };
+        fire("mousedown", t.clientX, t.clientY);
+        e.preventDefault();
+      } else if (e.touches.length === 2) {
+        // virou pinça: encerra limpo qualquer arraste de 1 dedo
+        if (mode === "drag" && last) fire("mouseup", last.x, last.y, { buttons: 0 });
+        mode = "pinch"; touchId = null;
+        const [a, b] = e.touches;
+        pinch = {
+          dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1,
+          cx: (a.clientX + b.clientX) / 2,
+          cy: (a.clientY + b.clientY) / 2,
+          view: { ...viewRef.current },
+        };
+        e.preventDefault();
+      }
+    };
+
+    const onMove = (e) => {
+      if (mode === "drag" && touchId !== null) {
+        let t = null;
+        for (const tt of e.touches) if (tt.identifier === touchId) t = tt;
+        if (!t) return;
+        const mv = { movementX: t.clientX - last.x, movementY: t.clientY - last.y };
+        last = { x: t.clientX, y: t.clientY };
+        fire("mousemove", t.clientX, t.clientY, mv);
+        e.preventDefault();
+      } else if (mode === "pinch" && e.touches.length >= 2 && pinch) {
+        const [a, b] = e.touches;
+        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
+        const cx = (a.clientX + b.clientX) / 2, cy = (a.clientY + b.clientY) / 2;
+        const v0 = pinch.view;
+        const newScale = Math.max(0.2, Math.min(3, v0.scale * (dist / pinch.dist)));
+        // ponto do mundo sob o centro inicial da pinça = âncora do zoom;
+        // mover o centro dos dedos arrasta o mapa junto (2 dedos = pan)
+        const wx = (pinch.cx - v0.x) / v0.scale;
+        const wy = (pinch.cy - v0.y) / v0.scale;
+        setView({ scale: newScale, x: cx - wx * newScale, y: cy - wy * newScale });
+        e.preventDefault();
+      }
+    };
+
+    const onEnd = (e) => {
+      if (mode === "drag") {
+        const t = e.changedTouches[0];
+        if (t) {
+          const now = Date.now();
+          fire("mouseup", t.clientX, t.clientY, { buttons: 0 });
+          // duplo-toque → dblclick (editar bloco / criar bloco no vazio)
+          if (lastTapXY && now - lastTap < 320 &&
+              Math.hypot(t.clientX - lastTapXY.x, t.clientY - lastTapXY.y) < 28) {
+            fire("dblclick", t.clientX, t.clientY, { buttons: 0, detail: 2 });
+            lastTap = 0; lastTapXY = null;
+          } else {
+            lastTap = now; lastTapXY = { x: t.clientX, y: t.clientY };
+          }
+        }
+      }
+      if (e.touches.length === 0) { mode = null; touchId = null; last = null; pinch = null; }
+      else { mode = null; touchId = null; pinch = null; } // aguarda soltar tudo p/ novo gesto
+    };
+
+    stage.addEventListener("touchstart", onStart, { passive: false });
+    stage.addEventListener("touchmove", onMove, { passive: false });
+    stage.addEventListener("touchend", onEnd, { passive: false });
+    stage.addEventListener("touchcancel", onEnd, { passive: false });
+    return () => {
+      stage.removeEventListener("touchstart", onStart);
+      stage.removeEventListener("touchmove", onMove);
+      stage.removeEventListener("touchend", onEnd);
+      stage.removeEventListener("touchcancel", onEnd);
+    };
+  }, [setView]);
 
   /* ----- workspace click ----- */
   const onWorkspaceDown = (e) => {
