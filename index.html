@@ -2,6 +2,11 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#02040a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>Canvas Tron — React</title>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -80,7 +85,7 @@
   body.light .swatch{border-color:rgba(0,0,0,.12)}
   body.light .breadcrumb .crumb.current{filter:brightness(.7)}
   *{box-sizing:border-box}
-  html,body,#root{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:"Segoe UI",Inter,system-ui,sans-serif;user-select:none}
+  html,body,#root{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:"Segoe UI",Inter,system-ui,sans-serif;user-select:none;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
 
   /* ===== background grid ===== */
   /* Apple-ish: preto, leve gradiente azul frio, grid quase imperceptível e
@@ -281,7 +286,7 @@
   }
 
   /* ===== workspace ===== */
-  .workspace{position:fixed;inset:0;z-index:1;cursor:default}
+  .workspace{position:fixed;inset:0;z-index:1;cursor:default;touch-action:none}
   .workspace.tool-block{cursor:crosshair}
   .workspace.tool-note{cursor:text}
   /* cursor de lápis no modo desenho: hotspot (3,21) = ponta do lápis */
@@ -846,6 +851,80 @@
     border:1px solid rgba(var(--bc-rgb),.4);color:var(--bc);opacity:.9;
   }
   .block .attr-tag.tier{background:rgba(var(--bc-rgb),.16);font-weight:700}
+
+  /* ===== Mobile / toque ===== */
+  .toolbar{padding-top:calc(6px + env(safe-area-inset-top))}
+  .palette,.color-pop{margin-top:env(safe-area-inset-top)}
+
+  /* Controle de zoom na tela (−/%/+/enquadrar) — útil no dedo e no mouse */
+  .zoomctl{position:fixed;bottom:14px;right:14px;z-index:10;display:flex;align-items:center;gap:6px}
+  .zoomctl .zoom{position:static;bottom:auto;right:auto}
+  .zoom{cursor:pointer;user-select:none}
+  .zbtn{
+    width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+    font-size:19px;font-weight:700;line-height:1;color:var(--cyan);cursor:pointer;
+    background:linear-gradient(180deg,rgba(9,19,34,.78),rgba(5,12,24,.78));
+    border:1px solid rgba(0,240,255,.2);border-radius:9px;
+    backdrop-filter:blur(10px);box-shadow:0 6px 18px rgba(0,0,0,.4);
+    transition:border-color .12s ease,box-shadow .12s ease,transform .1s ease;
+  }
+  .zbtn:hover{border-color:var(--cyan);box-shadow:0 0 12px rgba(0,240,255,.3)}
+  .zbtn:active{transform:translateY(1px)}
+  body.light .zbtn{color:#0a6b7a}
+
+  /* Botão-menu (☰) e fundo escuro do drawer — só aparecem no mobile */
+  .menu-fab{display:none}
+  .mm-scrim{display:none}
+
+  /* Telas estreitas OU toque grosso (dedo): a toolbar vira uma gaveta
+     (bottom sheet) que abre pelo ☰; painéis viram folhas de tela cheia. */
+  @media (max-width:640px), (pointer:coarse){
+    .menu-fab{
+      display:inline-flex;align-items:center;justify-content:center;
+      position:fixed;top:calc(10px + env(safe-area-inset-top));left:12px;z-index:23;
+      width:46px;height:46px;font-size:20px;color:var(--cyan);cursor:pointer;
+      background:linear-gradient(180deg,rgba(9,19,34,.92),rgba(5,12,24,.92));
+      border:1px solid rgba(0,240,255,.3);border-radius:12px;
+      backdrop-filter:blur(12px);box-shadow:0 8px 24px rgba(0,0,0,.5);
+    }
+    .mm-scrim{display:block;position:fixed;inset:0;z-index:21;background:rgba(0,0,0,.45)}
+
+    /* toolbar = bottom sheet, escondida até abrir (.mm-open) */
+    .toolbar{
+      top:auto;left:0;right:0;bottom:0;transform:translateY(105%);
+      width:100%;max-width:100%;border-radius:16px 16px 0 0;
+      flex-wrap:wrap;justify-content:flex-start;gap:8px;
+      padding:16px 14px calc(18px + env(safe-area-inset-bottom));
+      max-height:72vh;overflow:auto;-webkit-overflow-scrolling:touch;z-index:22;
+      transition:transform .22s cubic-bezier(.4,0,.2,1);
+    }
+    .toolbar.mm-open{transform:translateY(0)}
+    .toolbar .dvr{display:none}
+    .toolbar .tb-group{flex-direction:row;align-items:center;gap:10px;width:100%;padding:2px 0}
+    .toolbar .tb-row{flex-wrap:wrap;gap:6px}
+    .toolbar .tb-lbl{display:block;font-size:11px;min-width:52px;text-align:left;order:-1}
+    .toolbar .tb-danger{margin-left:0}
+    .ic{width:44px;height:44px;font-size:18px}   /* alvo de toque cheio na gaveta */
+    .tool{padding:9px 13px;font-size:12px}
+    .swatch{width:28px;height:28px}
+    .minimap{display:none}
+    .hint{display:none}                          /* atalhos de teclado não servem no dedo */
+    .zoomctl{bottom:calc(12px + env(safe-area-inset-bottom))}
+    .zbtn{width:40px;height:40px;font-size:21px}
+
+    /* painéis (Nuvem / Atributos) viram folhas de tela quase cheia */
+    .cloud-panel,.attr-dock{
+      position:fixed;left:0;right:0;bottom:0;top:auto;
+      width:100%;max-width:100%;max-height:82vh;
+      border-radius:16px 16px 0 0;overflow:auto;-webkit-overflow-scrolling:touch;
+      padding-bottom:calc(16px + env(safe-area-inset-bottom));z-index:24;
+    }
+  }
+  /* Em toque, amplia a área de toque das alças de redimensionar sem mexer no
+     quadradinho visível (portas já têm alvo invisível de ~28px via ::before). */
+  @media (pointer:coarse){
+    .resize::before{content:"";position:absolute;inset:-9px}
+  }
 </style>
 </head>
 <body>
@@ -2971,6 +3050,7 @@ function App() {
 
   /* ----- fullscreen (tela cheia do navegador) ----- */
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // gaveta de ferramentas no mobile
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) {
       document.exitFullscreen?.();
@@ -3381,6 +3461,129 @@ function App() {
       y: e.clientY - wp.y * newScale,
     });
   }, [view, screenToWorld]);
+
+  /* ----- zoom por botão (+/−) ancorado no centro da tela ----- */
+  const zoomBy = useCallback((factor) => {
+    const v = viewRef.current;
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const newScale = Math.max(0.2, Math.min(3, v.scale * factor));
+    const wx = (cx - v.x) / v.scale, wy = (cy - v.y) / v.scale;
+    setView({ scale: newScale, x: cx - wx * newScale, y: cy - wy * newScale });
+  }, [setView]);
+
+  /* ----- toque (mobile): 1 dedo = mouse, 2 dedos = pinça (zoom + pan) -----
+     Em vez de reescrever os ~30 handlers de mouse, a gente traduz o toque em
+     eventos de mouse sintéticos e deixa a lógica existente (arrastar bloco,
+     ligar portas, redimensionar, marquee, pan) funcionar igual. Toques na UI
+     (barras, painéis, campos de texto) passam batido — o toque nativo cuida
+     de clique em botão, rolagem de painel e teclado. */
+  useEffect(() => {
+    const stage = wsRef.current;
+    if (!stage) return;
+
+    const CHROME = ".toolbar,.palette,.color-pop,.cloud-panel,.attr-dock,.breadcrumb,.zoom,.minimap,.present-hud,input,textarea,select,button";
+    const onChrome = (el) => {
+      if (!el) return false;
+      if (el.closest && el.closest(CHROME)) return true;
+      // campo de texto ativo (bloco em edição): toque nativo posiciona o cursor
+      // e abre o teclado — não interceptar.
+      let n = el;
+      while (n && n !== stage) { if (n.isContentEditable) return true; n = n.parentElement; }
+      return false;
+    };
+
+    const fire = (type, x, y, extra) => {
+      const el = document.elementFromPoint(x, y) || stage;
+      el.dispatchEvent(new MouseEvent(type, {
+        bubbles: true, cancelable: true, view: window,
+        clientX: x, clientY: y, button: 0, buttons: 1, ...(extra || {}),
+      }));
+    };
+
+    let mode = null;          // "drag" | "pinch"
+    let touchId = null;       // dedo seguido no modo 1-dedo
+    let last = null;          // última posição (p/ movementX/Y do pan)
+    let pinch = null;         // âncora da pinça {dist, cx, cy, view}
+    let lastTap = 0, lastTapXY = null;   // detecção de duplo-toque
+
+    const onStart = (e) => {
+      if (onChrome(e.target)) return;
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        mode = "drag"; touchId = t.identifier;
+        last = { x: t.clientX, y: t.clientY };
+        fire("mousedown", t.clientX, t.clientY);
+        e.preventDefault();
+      } else if (e.touches.length === 2) {
+        // virou pinça: encerra limpo qualquer arraste de 1 dedo
+        if (mode === "drag" && last) fire("mouseup", last.x, last.y, { buttons: 0 });
+        mode = "pinch"; touchId = null;
+        const [a, b] = e.touches;
+        pinch = {
+          dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1,
+          cx: (a.clientX + b.clientX) / 2,
+          cy: (a.clientY + b.clientY) / 2,
+          view: { ...viewRef.current },
+        };
+        e.preventDefault();
+      }
+    };
+
+    const onMove = (e) => {
+      if (mode === "drag" && touchId !== null) {
+        let t = null;
+        for (const tt of e.touches) if (tt.identifier === touchId) t = tt;
+        if (!t) return;
+        const mv = { movementX: t.clientX - last.x, movementY: t.clientY - last.y };
+        last = { x: t.clientX, y: t.clientY };
+        fire("mousemove", t.clientX, t.clientY, mv);
+        e.preventDefault();
+      } else if (mode === "pinch" && e.touches.length >= 2 && pinch) {
+        const [a, b] = e.touches;
+        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
+        const cx = (a.clientX + b.clientX) / 2, cy = (a.clientY + b.clientY) / 2;
+        const v0 = pinch.view;
+        const newScale = Math.max(0.2, Math.min(3, v0.scale * (dist / pinch.dist)));
+        // ponto do mundo sob o centro inicial da pinça = âncora do zoom;
+        // mover o centro dos dedos arrasta o mapa junto (2 dedos = pan)
+        const wx = (pinch.cx - v0.x) / v0.scale;
+        const wy = (pinch.cy - v0.y) / v0.scale;
+        setView({ scale: newScale, x: cx - wx * newScale, y: cy - wy * newScale });
+        e.preventDefault();
+      }
+    };
+
+    const onEnd = (e) => {
+      if (mode === "drag") {
+        const t = e.changedTouches[0];
+        if (t) {
+          const now = Date.now();
+          fire("mouseup", t.clientX, t.clientY, { buttons: 0 });
+          // duplo-toque → dblclick (editar bloco / criar bloco no vazio)
+          if (lastTapXY && now - lastTap < 320 &&
+              Math.hypot(t.clientX - lastTapXY.x, t.clientY - lastTapXY.y) < 28) {
+            fire("dblclick", t.clientX, t.clientY, { buttons: 0, detail: 2 });
+            lastTap = 0; lastTapXY = null;
+          } else {
+            lastTap = now; lastTapXY = { x: t.clientX, y: t.clientY };
+          }
+        }
+      }
+      if (e.touches.length === 0) { mode = null; touchId = null; last = null; pinch = null; }
+      else { mode = null; touchId = null; pinch = null; } // aguarda soltar tudo p/ novo gesto
+    };
+
+    stage.addEventListener("touchstart", onStart, { passive: false });
+    stage.addEventListener("touchmove", onMove, { passive: false });
+    stage.addEventListener("touchend", onEnd, { passive: false });
+    stage.addEventListener("touchcancel", onEnd, { passive: false });
+    return () => {
+      stage.removeEventListener("touchstart", onStart);
+      stage.removeEventListener("touchmove", onMove);
+      stage.removeEventListener("touchend", onEnd);
+      stage.removeEventListener("touchcancel", onEnd);
+    };
+  }, [setView]);
 
   /* ----- workspace click ----- */
   const onWorkspaceDown = (e) => {
@@ -3913,7 +4116,14 @@ function App() {
       <div className="bg-particles" />
 
       {!present && (
-      <div className="toolbar">
+      <>
+      {/* Botão-menu (☰) + fundo escuro: só aparecem no mobile (CSS). Abrem/fecham a gaveta. */}
+      <button className="menu-fab" onClick={() => setMobileMenuOpen(o => !o)} aria-label={mobileMenuOpen ? "Fechar menu" : "Abrir menu"} title="Menu">{mobileMenuOpen ? "✕" : "☰"}</button>
+      {mobileMenuOpen && <div className="mm-scrim" onClick={() => setMobileMenuOpen(false)} />}
+      <div
+        className={`toolbar ${mobileMenuOpen ? "mm-open" : ""}`}
+        onClick={(e) => { if (e.target.closest && e.target.closest("button")) setMobileMenuOpen(false); }}
+      >
         {/* CRIAR: ferramentas que colocam coisa no mapa */}
         <div className="tb-group">
           <div className="tb-row">
@@ -4006,6 +4216,7 @@ function App() {
           <span className="tb-lbl">Limpar</span>
         </div>
       </div>
+      </>
       )}
 
       {present && (
@@ -4775,7 +4986,12 @@ function App() {
         </div>
       </div>
 
-      <div className="zoom">{Math.round(view.scale*100)}%</div>
+      <div className="zoomctl">
+        <button className="zbtn" onClick={() => zoomBy(1/1.2)} aria-label="Diminuir zoom" title="Diminuir zoom">−</button>
+        <div className="zoom" onClick={() => zoomBy(1/view.scale)} title="Voltar pra 100%">{Math.round(view.scale*100)}%</div>
+        <button className="zbtn" onClick={() => zoomBy(1.2)} aria-label="Aumentar zoom" title="Aumentar zoom">+</button>
+        <button className="zbtn" onClick={fitAll} aria-label="Enquadrar tudo" title="Enquadrar tudo">⊡</button>
+      </div>
       <div className="hint">
         {mapOn
           ? (<><b>Tab</b> filho • <b>Enter</b> irmão • <b>Ctrl+Enter</b> corpo • <b>setas</b> navegar • <b>F2</b> editar • <b>arrasta</b> reordena • <b>Del</b> apaga o ramo • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer</>)
