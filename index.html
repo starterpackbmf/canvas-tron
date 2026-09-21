@@ -2170,6 +2170,10 @@ function App() {
   /* ----- selection ----- */
   const selectOne = useCallback((id, additive = false) => {
     setSelection(prev => {
+      // clicou num item que JÁ faz parte de uma seleção múltipla: mantém o grupo,
+      // pra arrastar todos juntos sem Shift. Se for só um clique (sem arrastar),
+      // o mouseup reduz a seleção a ele.
+      if (!additive && prev.size > 1 && prev.has(id)) return prev;
       const next = additive ? new Set(prev) : new Set();
       next.add(id);
       return next;
@@ -2627,7 +2631,7 @@ function App() {
       // traço selecionado OU vinculado a um bloco que está sendo arrastado anda junto
       strokes.forEach(s => { if (sel.has(s.id) || (s.anchorId && sel.has(s.anchorId))) items.push({ kind:"stroke", id:s.id, startX:s.x||0, startY:s.y||0 }); });
       images.forEach(im => { if (sel.has(im.id)) items.push({ kind:"image", id:im.id, startX:im.x, startY:im.y }); });
-      dragRef.current = { startMouse:{ x:e.clientX, y:e.clientY }, items };
+      dragRef.current = { startMouse:{ x:e.clientX, y:e.clientY }, items, clickedId: id, moved: false };
       return sel;
     });
   }, [blocks, notes, strokes, images]);
@@ -3160,6 +3164,7 @@ function App() {
       }
       if (dragRef.current) {
         const d = dragRef.current;
+        if (!d.moved && Math.hypot(e.clientX - d.startMouse.x, e.clientY - d.startMouse.y) > 3) d.moved = true;
         const dx = (e.clientX - d.startMouse.x) / view.scale;
         const dy = (e.clientY - d.startMouse.y) / view.scale;
         // Apply movement
@@ -3323,6 +3328,12 @@ function App() {
         setPreview(null);
         connectRef.current = null;
         document.querySelectorAll(".port.hot").forEach(p => p.classList.remove("hot"));
+      }
+      // clique simples (sem arrastar, sem Shift) num item de uma seleção múltipla:
+      // agora sim a seleção vira só ele
+      if (dragRef.current && !dragRef.current.moved && !e.shiftKey && dragRef.current.items.length > 1) {
+        const cid = dragRef.current.clickedId;
+        setSelection(new Set([cid]));
       }
       if (dragRef.current && mapOnRef.current) {
         const moved = dragRef.current.items.filter(i => i.kind === "block");
