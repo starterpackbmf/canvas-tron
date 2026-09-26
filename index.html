@@ -999,6 +999,18 @@
     --color-background-icon-active:var(--d-sel);--color-text-icon-active:var(--d-text);
     --color-line-gray:var(--d-line);--color-background-item-confirm:#d9534f;
   }
+  /* tabela (Dores, Camadas...): linhas finas, cabeçalho em negrito, sem cor de fundo */
+  .doc-editor .tc-wrap{--color-background:var(--d-bg);--color-text-secondary:var(--d-faint);--color-border:var(--d-line)}
+  .doc-editor .tc-table{font-size:15px;line-height:1.45;border-top:1px solid var(--d-line)}
+  .doc-editor .tc-cell{padding:8px 10px}
+  .doc-editor .tc-table--heading .tc-row:first-child{font-weight:600;background:var(--d-bg);position:relative;top:auto}
+  .doc-editor .tc-add-row,.doc-editor .tc-add-column{color:var(--d-faint)}
+  .doc-editor .tc-add-row:hover,.doc-editor .tc-add-column:hover{color:var(--d-text);background:var(--d-hover)}
+  .doc-editor .tc-add-row:before{background:transparent}
+  .doc-editor .tc-cell--selected,.doc-editor .tc-row--selected{background:var(--d-sel)}
+  .doc-editor .tc-toolbox__toggler{color:var(--d-faint)}
+  .doc-editor .tc-popover{--color-background:var(--d-pop);--color-border:var(--d-line);--color-background-hover:var(--d-hover);--color-text-secondary:var(--d-muted);background:var(--d-pop);border-color:var(--d-line);color:var(--d-text)}
+  .doc-editor .tc-popover__item-icon{background:var(--d-hover);border-color:var(--d-line);color:var(--d-text)}
   .doc-editor .ce-popover__items{scrollbar-color:var(--d-faint) transparent}
   .doc-editor .ce-popover-item__icon{background:var(--d-hover);box-shadow:none;color:var(--d-text)}
   .doc-editor .cdx-search-field{background:var(--d-hover);border-color:var(--d-line)}
@@ -1942,6 +1954,7 @@ const docTexts = (doc) => {
   ((doc && doc.blocks) || []).forEach(b => {
     const d = b.data || {};
     if (b.type === "list") walkItems(d.items);
+    else if (b.type === "table") (d.content || []).forEach(row => (row || []).forEach(c => out.push(docPlain(c))));
     else if (d.text) out.push(docPlain(d.text));
   });
   return out.filter(Boolean);
@@ -1972,6 +1985,7 @@ const loadDocLibs = () => {
     add(J + "@editorjs/quote@2.7.6/dist/quote.umd.js"),
     add(J + "@editorjs/delimiter@1.4.2/dist/delimiter.umd.js"),
     add(J + "editorjs-drag-drop@1.1.16/dist/bundle.js"),
+    add(J + "@editorjs/table@2.4.6/dist/table.umd.js"),
   ])).catch(err => { _docLibs = null; throw err; });
   return _docLibs;
 };
@@ -1987,13 +2001,18 @@ const DOC_I18N = {
     toolNames: {
       Text: "Texto", Heading: "Título", "Unordered List": "Lista", "Ordered List": "Lista numerada",
       Checklist: "Checklist", Quote: "Citação / fala", Delimiter: "Divisória",
-      Bold: "Negrito", Italic: "Itálico", Link: "Link",
+      Bold: "Negrito", Italic: "Itálico", Link: "Link", Table: "Tabela",
     },
     tools: {
       header: { "Heading 1": "Título 1", "Heading 2": "Título 2", "Heading 3": "Título 3" },
       list: { Unordered: "Lista", Ordered: "Numerada", Checklist: "Checklist" },
       link: { "Add a link": "Cole o link" },
       quote: { "Align Left": "Alinhar à esquerda", "Align Center": "Centralizar" },
+      table: {
+        "With headings": "Com cabeçalho", "Without headings": "Sem cabeçalho", Heading: "Cabeçalho",
+        "Add column to left": "Coluna à esquerda", "Add column to right": "Coluna à direita", "Delete column": "Apagar coluna",
+        "Add row above": "Linha acima", "Add row below": "Linha abaixo", "Delete row": "Apagar linha",
+      },
     },
     blockTunes: {
       delete: { Delete: "Apagar", "Click to delete": "Confirmar" },
@@ -2042,7 +2061,8 @@ function DocEditor({ block, onSave, onClose }) {
       const ed = new window.EditorJS({
         holder: holderRef.current,
         data: block.doc && block.doc.blocks ? { blocks: block.doc.blocks } : { blocks: [] },
-        placeholder: "Escreva aqui. Digite / pra títulos, listas e checklist",
+        placeholder: "Escreva aqui. Digite / pra títulos, listas, checklist e tabela",
+        minHeight: 120,
         autofocus: !block.doc,
         i18n: DOC_I18N,
         tools: {
@@ -2050,6 +2070,9 @@ function DocEditor({ block, onSave, onClose }) {
           list: { class: window.EditorjsList, inlineToolbar: true, config: { defaultStyle: "unordered" } },
           quote: { class: window.Quote, inlineToolbar: true, config: { quotePlaceholder: "Fala / citação", captionPlaceholder: "" } },
           delimiter: window.Delimiter,
+          // o plugin ignora withHeadings da config quando o bloco nasce: vai pelo data do menu
+          table: { class: window.Table, inlineToolbar: true, config: { rows: 2, cols: 3, withHeadings: true },
+                   toolbox: { title: "Table", icon: window.Table.toolbox.icon, data: { withHeadings: true } } },
         },
         onReady: () => {
           if (dead) return;
