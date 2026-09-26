@@ -925,6 +925,91 @@
   @media (pointer:coarse){
     .resize::before{content:"";position:absolute;inset:-9px}
   }
+
+  /* ===== bloco-documento: selo no bloco + popup de escrita (Editor.js) ===== */
+  .block .doc-chip{
+    position:relative;z-index:1;margin-top:8px;padding:7px 9px;border-radius:6px;
+    border:1px dashed rgba(var(--bc-rgb),.45);background:rgba(var(--bc-rgb),.06);
+    text-align:left;cursor:pointer;
+  }
+  .block .doc-chip:hover{border-style:solid;background:rgba(var(--bc-rgb),.12)}
+  .doc-chip-head{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--bc);font-weight:700}
+  .doc-chip-head svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .doc-chip-line{font-size:12px;color:var(--body-text);opacity:.85;margin-top:4px;line-height:1.35;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .doc-chip-meta{font-size:10px;color:var(--muted);margin-top:4px}
+
+  /* popup de anotação: visual neutro (grafite), sem o azul Tron. Leitura calma. */
+  .doc-overlay{
+    position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.55);backdrop-filter:blur(4px);animation:fadein .15s ease;
+  }
+  .doc-panel{
+    --d-bg:#262624;--d-text:#ecebe6;--d-muted:#9c9a92;--d-faint:#6f6d66;
+    --d-line:rgba(255,255,255,.1);--d-hover:rgba(255,255,255,.06);--d-pop:#30302e;
+    --d-check:#5fb85f;--d-sel:rgba(255,255,255,.12);
+    width:min(820px,94vw);height:88vh;display:flex;flex-direction:column;
+    background:var(--d-bg);border:1px solid var(--d-line);border-radius:14px;
+    box-shadow:0 24px 70px rgba(0,0,0,.5);color:var(--d-text);overflow:hidden;
+    font-family:-apple-system,"Segoe UI",Inter,system-ui,sans-serif;
+  }
+  body.light .doc-panel{
+    --d-bg:#faf9f5;--d-text:#1f1e1d;--d-muted:#6f6d66;--d-faint:#a3a19a;
+    --d-line:rgba(0,0,0,.1);--d-hover:rgba(0,0,0,.05);--d-pop:#ffffff;
+    --d-check:#3f8f3f;--d-sel:rgba(0,0,0,.08);
+    box-shadow:0 24px 70px rgba(0,0,0,.18);
+  }
+  .doc-head{display:flex;align-items:center;gap:12px;padding:14px 20px 4px}
+  .doc-status{font-size:12px;color:var(--d-muted);flex:1}
+  .doc-status b{color:var(--d-text);font-weight:500}
+  .doc-x{cursor:pointer;color:var(--d-muted);font-size:24px;line-height:1;padding:2px 8px;border-radius:6px;background:none;border:none}
+  .doc-x:hover{color:var(--d-text);background:var(--d-hover)}
+  .doc-scroll{flex:1;overflow:auto;padding:14px 56px 48px 72px;-webkit-overflow-scrolling:touch;scrollbar-color:var(--d-faint) transparent}
+  .doc-title{
+    width:100%;background:none;border:none;outline:none;color:var(--d-text);
+    font-size:34px;font-weight:700;letter-spacing:-.3px;margin:0 0 10px;padding:0;font-family:inherit;
+    resize:none;overflow:hidden;line-height:1.2;display:block;
+  }
+  .doc-title::placeholder{color:var(--d-faint)}
+  .doc-loading{color:var(--d-muted);font-size:13px;padding:20px 0}
+
+  /* conteúdo do editor */
+  .doc-editor{color:var(--d-text);font-size:16px;line-height:1.65}
+  .doc-editor .ce-block__content,.doc-editor .ce-toolbar__content{max-width:none}
+  .doc-editor .ce-paragraph[data-placeholder]:empty::before,
+  .doc-editor [data-placeholder-active]:empty::before{color:var(--d-faint)}
+  .doc-editor h1.ce-header{font-size:28px;margin:.7em 0 .15em;font-weight:700;letter-spacing:-.2px}
+  .doc-editor h2.ce-header{font-size:22px;margin:.8em 0 .1em;font-weight:700;letter-spacing:-.1px}
+  .doc-editor h3.ce-header{font-size:18px;margin:.7em 0 .05em;font-weight:600}
+  .doc-editor .cdx-quote__text{min-height:0;border:none;border-left:3px solid var(--d-faint);border-radius:0;padding:0 0 0 14px;margin:0;background:none;box-shadow:none;color:var(--d-text)}
+  .doc-editor .cdx-quote__caption{display:none}
+  .doc-editor .ce-delimiter::before{color:var(--d-faint)}
+  .doc-editor .cdx-list{--checkbox-background:transparent;--color-border:var(--d-faint);--color-bg-checked:var(--d-check);--color-bg-checked-hover:var(--d-check);--color-tick:#fff}
+  .doc-editor .cdx-list__checkbox-check{background:transparent;border-color:var(--d-faint)}
+  .doc-editor .cdx-list__item:has(.cdx-list__checkbox--checked) .cdx-list__item-content{color:var(--d-muted);text-decoration:line-through}
+  .doc-editor .ce-block--selected .ce-block__content{background:var(--d-sel)}
+  .doc-editor ::selection{background:var(--d-sel)}
+  .doc-editor a{color:var(--d-text);text-decoration:underline}
+  .doc-editor .ce-toolbar__plus,.doc-editor .ce-toolbar__settings-btn{color:var(--d-faint);background:transparent}
+  .doc-editor .ce-toolbar__plus:hover,.doc-editor .ce-toolbar__settings-btn:hover{color:var(--d-text);background:var(--d-hover)}
+  .doc-editor .ce-popover,.doc-editor .ce-inline-toolbar,.doc-editor .ce-popover--inline{
+    --color-background:var(--d-pop);--color-text-primary:var(--d-text);--color-text-secondary:var(--d-muted);
+    --color-border:var(--d-line);--color-shadow:rgba(0,0,0,.35);
+    --color-background-item-hover:var(--d-hover);--color-background-item-focus:var(--d-sel);
+    --color-background-icon-active:var(--d-sel);--color-text-icon-active:var(--d-text);
+    --color-line-gray:var(--d-line);--color-background-item-confirm:#d9534f;
+  }
+  .doc-editor .ce-popover__items{scrollbar-color:var(--d-faint) transparent}
+  .doc-editor .ce-popover-item__icon{background:var(--d-hover);box-shadow:none;color:var(--d-text)}
+  .doc-editor .cdx-search-field{background:var(--d-hover);border-color:var(--d-line)}
+  .doc-editor .cdx-search-field__input{color:var(--d-text)}
+
+  @media (max-width:640px){
+    .doc-panel{width:100vw;height:100%;border-radius:0;border:none}
+    .doc-head{padding:calc(10px + env(safe-area-inset-top)) 14px 10px}
+    .doc-scroll{padding:18px 16px calc(40px + env(safe-area-inset-bottom))}
+    .doc-title{font-size:24px}
+  }
 </style>
 </head>
 <body>
@@ -1322,7 +1407,7 @@ const bezierMidpoint = (a, b) => {
 };
 
 /* ================== Block ================== */
-function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange, onMeasure, mapMode, onEnterSibling, editReq }) {
+function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange, onMeasure, mapMode, onEnterSibling, editReq, onOpenDoc }) {
   const elRef = useRef(null);
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
@@ -1460,7 +1545,9 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
         e.stopPropagation();
         // Use closest() so clicking on inner spans (from bold/italic/color formatting)
         // still correctly resolves to the parent title or body element
+        // bloco com documento: título e corpo seguem editáveis; o resto abre o documento
         if (e.target.closest(".title")) setEditingTitle(true);
+        else if (block.doc && !e.target.closest(".body")) onOpenDoc?.(block.id);
         else setEditingBody(true);
       }}
     >
@@ -1548,6 +1635,19 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
           />
         )
       )}
+      {block.doc && (() => {
+        const st = docStats(block.doc);
+        return (
+          <div className="doc-chip" title="Duplo clique abre o documento">
+            <div className="doc-chip-head">
+              <svg viewBox="0 0 24 24"><path d="M14 3 H7 a2 2 0 0 0 -2 2 v14 a2 2 0 0 0 2 2 h10 a2 2 0 0 0 2 -2 V8 Z"/><path d="M14 3 v5 h5 M9 13 h6 M9 17 h4"/></svg>
+              Documento
+            </div>
+            {st.first && <div className="doc-chip-line">{st.first}</div>}
+            <div className="doc-chip-meta">{st.words.toLocaleString("pt-BR")} palavras{st.spoken ? " · " + st.spoken : ""}</div>
+          </div>
+        );
+      })()}
       {(() => {
         const rs = normAttrs(block.attrs).filter(r => r.k || r.v);
         if (!rs.length) return null;
@@ -1822,6 +1922,228 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
 }
 
 /* ================== AttrTable (paleta lateral: colunas → valores → aplica) ========= */
+/* ================== Bloco-documento ==================
+   Cada bloco pode carregar um documento (block.doc = saída do Editor.js).
+   Vai junto com o mapa no autosave e na nuvem; nada de tabela nova. */
+const DOC_WPM = 150; // ritmo de fala pra estimar a duração do roteiro
+
+const docPlain = (html) => {
+  const d = document.createElement("div");
+  d.innerHTML = String(html || "").replace(/<br\s*\/?>/gi, " ");
+  return (d.textContent || "").replace(/\s+/g, " ").trim();
+};
+// textos de todos os blocos do documento, na ordem (inclui itens de lista aninhados)
+const docTexts = (doc) => {
+  const out = [];
+  const walkItems = (items) => (items || []).forEach(it => {
+    if (typeof it === "string") out.push(docPlain(it));
+    else if (it) { out.push(docPlain(it.content)); walkItems(it.items); }
+  });
+  ((doc && doc.blocks) || []).forEach(b => {
+    const d = b.data || {};
+    if (b.type === "list") walkItems(d.items);
+    else if (d.text) out.push(docPlain(d.text));
+  });
+  return out.filter(Boolean);
+};
+const docStats = (doc) => {
+  const texts = docTexts(doc);
+  const words = texts.join(" ").split(/\s+/).filter(Boolean).length;
+  const secs = Math.round(words / DOC_WPM * 60);
+  const m = Math.floor(secs / 60), s = secs % 60;
+  const spoken = words === 0 ? "" : m === 0 ? `~${Math.max(s, 1)}s falado` : `~${m}min${s ? String(s).padStart(2, "0") : ""} falado`;
+  return { words, spoken, first: texts[0] || "" };
+};
+const docIsEmpty = (doc) => docTexts(doc).length === 0 && !((doc && doc.blocks) || []).some(b => b.type === "delimiter");
+
+// Editor.js e plugins só carregam na primeira vez que um documento abre
+let _docLibs = null;
+const loadDocLibs = () => {
+  if (_docLibs) return _docLibs;
+  const add = (src) => new Promise((ok, fail) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = ok; s.onerror = () => fail(new Error("falha ao carregar " + src));
+    document.head.appendChild(s);
+  });
+  const J = "https://cdn.jsdelivr.net/npm/";
+  _docLibs = add(J + "@editorjs/editorjs@2.31.7/dist/editorjs.umd.js").then(() => Promise.all([
+    add(J + "@editorjs/header@2.8.9/dist/header.umd.js"),
+    add(J + "@editorjs/list@2.0.9/dist/editorjs-list.umd.js"),
+    add(J + "@editorjs/quote@2.7.6/dist/quote.umd.js"),
+    add(J + "@editorjs/delimiter@1.4.2/dist/delimiter.umd.js"),
+    add(J + "editorjs-drag-drop@1.1.16/dist/bundle.js"),
+  ])).catch(err => { _docLibs = null; throw err; });
+  return _docLibs;
+};
+
+const DOC_I18N = {
+  messages: {
+    ui: {
+      blockTunes: { toggler: { "Click to tune": "Opções", "or drag to move": "ou arraste pra mover", "Drag to move": "Arraste pra mover" } },
+      inlineToolbar: { converter: { "Convert to": "Converter em" } },
+      toolbar: { toolbox: { Add: "Adicionar" } },
+      popover: { Filter: "Buscar", "Nothing found": "Nada encontrado", "Convert to": "Converter em" },
+    },
+    toolNames: {
+      Text: "Texto", Heading: "Título", "Unordered List": "Lista", "Ordered List": "Lista numerada",
+      Checklist: "Checklist", Quote: "Citação / fala", Delimiter: "Divisória",
+      Bold: "Negrito", Italic: "Itálico", Link: "Link",
+    },
+    tools: {
+      header: { "Heading 1": "Título 1", "Heading 2": "Título 2", "Heading 3": "Título 3" },
+      list: { Unordered: "Lista", Ordered: "Numerada", Checklist: "Checklist" },
+      link: { "Add a link": "Cole o link" },
+      quote: { "Align Left": "Alinhar à esquerda", "Align Center": "Centralizar" },
+    },
+    blockTunes: {
+      delete: { Delete: "Apagar", "Click to delete": "Confirmar" },
+      moveUp: { "Move up": "Subir" },
+      moveDown: { "Move down": "Descer" },
+    },
+  },
+};
+
+function DocEditor({ block, onSave, onClose }) {
+  const holderRef = useRef(null);
+  const editorRef = useRef(null);
+  const saveTimer = useRef(null);
+  const lastDoc = useRef(block.doc || null);
+  const closingRef = useRef(false);
+  const [status, setStatus] = useState("loading"); // loading | ready | saving | saved | error
+  const [stats, setStats] = useState(() => docStats(block.doc));
+  const [title, setTitle] = useState(() => docPlain(block.title));
+  const titleDirty = useRef(false);
+  const titleRef = useRef(null);
+  // título quebra linha e cresce junto (título longo não some no celular)
+  useEffect(() => {
+    const t = titleRef.current; if (!t) return;
+    t.style.height = "auto"; t.style.height = t.scrollHeight + "px";
+  }, [title]);
+
+  // grava no bloco; documento vazio some do bloco
+  const commit = useCallback(async () => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    try {
+      const data = await ed.save();
+      // parágrafos vazios no fim não entram no bloco
+      while (data.blocks.length && data.blocks[data.blocks.length - 1].type === "paragraph" && !docPlain(data.blocks[data.blocks.length - 1].data.text).replace(/^\/$/, "")) data.blocks.pop();
+      lastDoc.current = data;
+      setStats(docStats(data));
+      onSave(block.id, { doc: docIsEmpty(data) ? null : { blocks: data.blocks, time: data.time } });
+      setStatus("saved");
+    } catch { setStatus("error"); }
+  }, [block.id, onSave]);
+
+  useEffect(() => {
+    let dead = false;
+    loadDocLibs().then(() => {
+      if (dead || !holderRef.current) return;
+      const ed = new window.EditorJS({
+        holder: holderRef.current,
+        data: block.doc && block.doc.blocks ? { blocks: block.doc.blocks } : { blocks: [] },
+        placeholder: "Escreva aqui. Digite / pra títulos, listas e checklist",
+        autofocus: !block.doc,
+        i18n: DOC_I18N,
+        tools: {
+          header: { class: window.Header, inlineToolbar: true, shortcut: "CMD+SHIFT+H", config: { levels: [1, 2, 3], defaultLevel: 2, placeholder: "Título" } },
+          list: { class: window.EditorjsList, inlineToolbar: true, config: { defaultStyle: "unordered" } },
+          quote: { class: window.Quote, inlineToolbar: true, config: { quotePlaceholder: "Fala / citação", captionPlaceholder: "" } },
+          delimiter: window.Delimiter,
+        },
+        onReady: () => {
+          if (dead) return;
+          try { new window.DragDrop(ed); } catch {}
+          setStatus("ready");
+        },
+        onChange: () => {
+          setStatus("saving");
+          clearTimeout(saveTimer.current);
+          saveTimer.current = setTimeout(commit, 500);
+        },
+      });
+      editorRef.current = ed;
+    }).catch(() => { if (!dead) setStatus("error"); });
+    return () => {
+      dead = true;
+      clearTimeout(saveTimer.current);
+      const ed = editorRef.current;
+      editorRef.current = null;
+      if (ed && ed.destroy) { try { ed.destroy(); } catch {} }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const saveTitle = () => {
+    if (!titleDirty.current) return;
+    titleDirty.current = false;
+    const t = title.trim();
+    const safe = t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    onSave(block.id, { title: safe });
+  };
+
+  const close = useCallback(async () => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    clearTimeout(saveTimer.current);
+    saveTitle();
+    await commit();
+    onClose();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commit, onClose, title]);
+
+  // Esc fecha (menos quando um menu do editor está aberto: aí o Esc é dele)
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      if (holderRef.current && holderRef.current.querySelector(".ce-popover--opened, .ce-inline-toolbar--showed, .ce-conversion-toolbar--showed")) return;
+      e.preventDefault(); e.stopPropagation();
+      close();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [close]);
+
+  const statusTxt = status === "loading" ? "Carregando editor..."
+    : status === "saving" ? "Salvando..."
+    : status === "error" ? "Não consegui carregar o editor. Confira a internet e abra de novo."
+    : status === "saved" ? "Salvo" : "Salvo automaticamente";
+
+  return (
+    <div className="doc-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
+      <div className="doc-panel" role="dialog" aria-label="Documento do bloco">
+        <div className="doc-head">
+          <div className="doc-status">
+            {statusTxt}
+            {stats.words > 0 && <> · <b>{stats.words.toLocaleString("pt-BR")} palavras</b> · {stats.spoken}</>}
+          </div>
+          <button className="doc-x" onClick={close} title="Fechar (Esc)">×</button>
+        </div>
+        <div className="doc-scroll">
+          <textarea
+            ref={titleRef}
+            className="doc-title"
+            rows={1}
+            value={title}
+            placeholder="Sem título"
+            onChange={(e) => { titleDirty.current = true; setTitle(e.target.value.replace(/[\r\n]+/g, " ")); }}
+            onBlur={saveTitle}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault(); saveTitle();
+                const ed = editorRef.current;
+                if (ed && ed.caret) { try { ed.caret.setToFirstBlock("start"); } catch {} }
+              }
+            }}
+          />
+          {status === "loading" && <div className="doc-loading">Carregando editor...</div>}
+          <div ref={holderRef} className="doc-editor" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AttrTable({ cols, setCols, selBlocks, blocks, onApply, onClearCol, onClose }) {
   const strip = (t) => (t || "").replace(/<[^>]*>/g, "").trim();
   const [status, setStatus] = useState("");
@@ -2000,6 +2322,10 @@ function App() {
   const [cloudOpen, setCloudOpen] = useState(false);
   const [cloudDoc, setCloudDoc] = useState({ id: null, name: "" });
   const [attrsOpen, setAttrsOpen] = useState(false);
+  // bloco-documento aberto na popup (id do bloco) + ref pros atalhos globais
+  const [docId, setDocId] = useState(null);
+  const docOpenRef = useRef(false);
+  useEffect(() => { docOpenRef.current = !!docId; }, [docId]);
   // paleta de colunas/valores (por mapa) — só um helper pra aplicar valores nos blocos
   const [attrCols, setAttrCols] = useState(() => saved?.attrCols ?? []);
   const [session, setSession] = useState(null);
@@ -2567,6 +2893,19 @@ function App() {
   /* ----- update ----- */
   const updateBlock = useCallback((id, patch) => {
     setBlocks(p => p.map(b => b.id === id ? { ...b, ...patch } : b));
+  }, []);
+  // salva vindo da popup do documento; doc vazio (null) sai do bloco
+  const saveDocPatch = useCallback((id, patch) => {
+    setBlocks(p => p.map(b => {
+      if (b.id !== id) return b;
+      const nb = { ...b, ...patch };
+      if (nb.doc === null) delete nb.doc;
+      return nb;
+    }));
+  }, []);
+  const openDoc = useCallback((id) => {
+    if (!blocksRef.current.some(b => b.id === id)) return;
+    setDocId(id);
   }, []);
   const updateNote = useCallback((id, patch) => {
     setNotes(p => p.map(n => n.id === id ? { ...n, ...patch } : n));
@@ -3389,6 +3728,7 @@ function App() {
   /* ----- keyboard ----- */
   useEffect(() => {
     const onKey = (e) => {
+      if (docOpenRef.current) return; // escrevendo no documento: nenhum atalho do canvas
       if (e.key === "Control") setCtrlHeld(true);
       const ae = document.activeElement;
       // digitando num campo de formulário (painéis: atributos, nuvem, etc.) →
@@ -4527,6 +4867,13 @@ function App() {
                   </div>
                   <div className="vsep"/>
                   <div className="group">
+                    <span className="lbl">Documento</span>
+                    <button className={`shape-btn ${selBlock && selBlock.doc ? "active" : ""}`} onClick={() => selBlock && openDoc(selBlock.id)} title={selBlock && selBlock.doc ? "Abrir o documento do bloco" : "Criar um documento dentro do bloco (roteiro, notas)"}>
+                      <svg viewBox="0 0 24 24"><path d="M14 3 H7 a2 2 0 0 0 -2 2 v14 a2 2 0 0 0 2 2 h10 a2 2 0 0 0 2 -2 V8 Z"/><path d="M14 3 v5 h5 M9 13 h6 M9 17 h4"/></svg>
+                    </button>
+                  </div>
+                  <div className="vsep"/>
+                  <div className="group">
                     <span className="lbl">Ramo</span>
                     <button className="shape-btn" onClick={addYesNoBranch} title="Cria dois filhos ligados abaixo: NÃO (vermelho) e SIM (verde)">
                       <svg viewBox="0 0 24 24"><path d="M12 3 V9 M12 9 L5 15 M12 9 L19 15"/><circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="18" r="2.4"/></svg>
@@ -4914,6 +5261,7 @@ function App() {
               mapMode={mapOn}
               onEnterSibling={createSiblingBlock}
               editReq={editReq}
+              onOpenDoc={openDoc}
             />
           ))}
           {marquee && <div className="marquee-rect" style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }} />}
@@ -5054,6 +5402,15 @@ function App() {
           onApply={applyAttr}
           onClearCol={clearAttrCol}
           onClose={() => setAttrsOpen(false)}
+        />
+      )}
+
+      {docId && blocks.some(b => b.id === docId) && (
+        <DocEditor
+          key={docId}
+          block={blocks.find(b => b.id === docId)}
+          onSave={saveDocPatch}
+          onClose={() => setDocId(null)}
         />
       )}
 
