@@ -1009,6 +1009,14 @@
   .doc-editor .tc-add-row:before{background:transparent}
   .doc-editor .tc-cell--selected,.doc-editor .tc-row--selected{background:var(--d-sel)}
   .doc-editor .tc-toolbox__toggler{color:var(--d-faint)}
+  /* tabela em repouso (fora de edição e sem o mouse em cima): some os "+" e a
+     faixa reservada da direita, fica só a grade limpa. Hover mantém os "+"
+     vivos pra dar tempo de clicar neles. */
+  .doc-editor .ce-block:not(:focus-within):not(:hover) .tc-wrap{grid-template-columns:100% 0}
+  .doc-editor .ce-block:not(:focus-within):not(:hover) .tc-add-row,
+  .doc-editor .ce-block:not(:focus-within):not(:hover) .tc-add-column,
+  .doc-editor .ce-block:not(:focus-within):not(:hover) .tc-row:after{display:none}
+  .doc-editor .ce-block:not(:focus-within):not(:hover) .tc-cell:last-child{border-right:none}
   .doc-editor .tc-popover{--color-background:var(--d-pop);--color-border:var(--d-line);--color-background-hover:var(--d-hover);--color-text-secondary:var(--d-muted);background:var(--d-pop);border-color:var(--d-line);color:var(--d-text)}
   .doc-editor .tc-popover__item-icon{background:var(--d-hover);border-color:var(--d-line);color:var(--d-text)}
   .doc-editor .ce-popover__items{scrollbar-color:var(--d-faint) transparent}
