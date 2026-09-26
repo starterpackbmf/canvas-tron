@@ -926,6 +926,53 @@
     .resize::before{content:"";position:absolute;inset:-9px}
   }
 
+  /* ===== blocos prontos ===== */
+  .pm-overlay{position:fixed;inset:0;z-index:35;display:flex;align-items:flex-start;justify-content:center;padding-top:110px;background:rgba(2,5,12,.45);animation:fadein .12s ease}
+  .pm-panel{width:min(720px,94vw);background:linear-gradient(180deg,rgba(9,19,34,.98),rgba(5,12,24,.98));border:1px solid rgba(0,240,255,.28);border-radius:14px;
+    box-shadow:0 24px 70px rgba(0,0,0,.6),0 0 40px rgba(0,240,255,.1);color:var(--white);padding:14px 16px 16px}
+  .pm-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .pm-head > span:first-child{font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--cyan);flex:1}
+  .pm-key{font-size:11px;color:var(--muted)}
+  .pm-x{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 6px;border-radius:6px}
+  .pm-x:hover{color:var(--danger);background:rgba(255,59,92,.1)}
+  .pm-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .pm-col{display:flex;flex-direction:column;gap:6px}
+  .pm-group{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .pm-group svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .pm-item{display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;padding:8px 10px;border-radius:9px;
+    background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);color:var(--white);font:inherit;transition:border-color .12s,background .12s}
+  .pm-item:hover{border-color:var(--pc);background:rgba(255,255,255,.05)}
+  .pm-sw{flex:none;width:16px;height:16px;border:2px solid;display:inline-block}
+  .pm-txt{display:flex;flex-direction:column;min-width:0}
+  .pm-txt b{font-size:13px;font-weight:600}
+  .pm-txt small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pm-mine{border-top:1px solid rgba(0,240,255,.12);margin-top:14px;padding-top:12px}
+  .pm-mine-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .pm-chip{display:inline-flex;align-items:center;border:1px solid rgba(255,255,255,.1);border-radius:8px;overflow:hidden}
+  .pm-chip:hover{border-color:var(--pc)}
+  .pm-chip-go{display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:var(--white);font:inherit;font-size:12px;padding:6px 8px;cursor:pointer}
+  .pm-chip-go .pm-sw{width:12px;height:12px}
+  .pm-chip-x{background:none;border:none;border-left:1px solid rgba(255,255,255,.08);color:var(--muted);cursor:pointer;padding:6px 8px;font-size:14px}
+  .pm-chip-x:hover{color:var(--danger)}
+  .pm-empty{font-size:12px;color:var(--muted);line-height:1.5;margin-top:4px}
+  .pm-empty b{color:var(--white);font-weight:600}
+  body.light .pm-panel{background:#fbf9f4;border-color:rgba(10,143,166,.3);box-shadow:0 24px 70px rgba(0,0,0,.18)}
+  body.light .pm-item{background:rgba(0,0,0,.02);border-color:rgba(0,0,0,.08)}
+  body.light .pm-item:hover{background:rgba(0,0,0,.04)}
+  @media (max-width:640px){
+    .pm-overlay{padding-top:calc(60px + env(safe-area-inset-top))}
+    .pm-cols{grid-template-columns:1fr}
+    .pm-panel{max-height:80vh;overflow:auto}
+  }
+  /* check da Pendência */
+  .block .task-check{
+    position:absolute;top:8px;left:8px;z-index:2;width:18px;height:18px;border-radius:5px;padding:0;cursor:pointer;
+    border:2px solid var(--bc);background:transparent;color:var(--bg);font-size:12px;font-weight:900;line-height:14px;
+  }
+  .block.task-done .task-check{background:var(--bc)}
+  .block.has-task > .title{padding:0 18px}
+  .block.task-done > .title,.block.task-done > .body{text-decoration:line-through;opacity:.5}
+
   /* ===== link de leitura (?ver=) ===== */
   body.view-only .toolbar,body.view-only .menu-fab,body.view-only .mm-scrim,body.view-only .hint{display:none !important}
   body.view-only .block .port,body.view-only .block .resize,body.view-only .block .del{display:none !important}
@@ -1511,7 +1558,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
 
   // F2 (ou pedido externo): abre a edição do título
   useEffect(() => {
-    if (editReq && editReq.id === block.id) setEditingTitle(true);
+    if (editReq && editReq.id === block.id) { if (editReq.part === "body") setEditingBody(true); else setEditingTitle(true); }
   }, [editReq]);
   // bloco descartado/apagado enquanto editava: avisa o pai pra barra de
   // formatação não ficar presa na tela
@@ -1582,7 +1629,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
@@ -1634,6 +1681,15 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
             }}
           />
         </svg>
+      )}
+      {block.task && (
+        <button
+          className="task-check"
+          title={block.task.done ? "Marcar como pendente" : "Marcar como feito"}
+          onMouseDown={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); if (!readOnly) onChange(block.id, { task: { done: !block.task.done } }); }}
+        >{block.task.done ? "✓" : ""}</button>
       )}
       {editingTitle ? (
         <div
@@ -2051,6 +2107,106 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
   );
 }
 
+/* ================== Blocos prontos (modelos) ==================
+   Cada modelo é um pedaço de bloco (cor, forma, texto, documento...).
+   "Meus modelos" ficam no navegador (localStorage), salvos a partir de um bloco. */
+const PRESET_LS = "canvas-tron:presets";
+const docTpl = (...heads) => ({ blocks: heads.flatMap(h => [
+  { type: "header", data: { text: h, level: 3 } },
+  { type: "paragraph", data: { text: "" } },
+]) });
+const BUILTIN_PRESETS = [
+  { group: "Roteiro", items: [
+    { key: "gancho", name: "Gancho", hint: "frase de abertura, em destaque",
+      data: { title: "Gancho", color: "#ff9d00", fill: "soft", emphasis: true, w: 280 } },
+    { key: "cena", name: "Cena", hint: "já nasce com documento",
+      data: { title: "Cena", color: "#e9fbff", w: 240, doc: docTpl("Fala", "Na tela", "Notas") } },
+    { key: "cta", name: "CTA", hint: "chamada final",
+      data: { title: "CTA", color: "#00ff88", shape: "pill", fill: "soft", w: 240 } },
+  ]},
+  { group: "Aula", items: [
+    { key: "setup", name: "Setup TSS", hint: "região, médias, espaço, gatilho",
+      data: { title: "Setup", color: "#00f0ff", w: 260, body: "1. Região<br>2. Médias<br>3. Espaço gráfico<br>4. Gatilho" } },
+    { key: "grafico", name: "Gráfico", hint: "selecione e cole o print (Ctrl+V)",
+      data: { title: "Gráfico", color: "#e9fbff", shape: "rect", w: 380, h: 240 } },
+    { key: "pergunta", name: "Pergunta pro aluno", hint: "pausa na aula",
+      data: { title: "Pergunta", color: "#9d4bff", fill: "soft", w: 260 } },
+  ]},
+  { group: "Brainstorm", items: [
+    { key: "ideia", name: "Ideia", hint: "post-it rápido",
+      data: { title: "", color: "#ffdd00", shape: "rect", fill: "soft", w: 200, h: 110 }, focus: "body" },
+    { key: "decisao", name: "Decisão", hint: "losango com SIM e NÃO",
+      data: { title: "Decisão?", color: "#ff3b9a", shape: "diamond", w: 220, h: 120 }, after: "yesno" },
+    { key: "pendencia", name: "Pendência", hint: "tarefa com check",
+      data: { title: "Pendência", color: "#ff3b5c", w: 240, task: { done: false } } },
+  ]},
+];
+const PRESET_ICONS = { Roteiro: "M4 5h16v14H4z M4 9h16 M9 5v4 M15 5v4", Aula: "M3 9l9-5 9 5-9 5z M7 11v5c3 2 7 2 10 0v-5", Brainstorm: "M9 18h6 M10 21h4 M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" };
+const loadMyPresets = () => { try { const v = JSON.parse(localStorage.getItem(PRESET_LS) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
+const saveMyPresets = (list) => { try { localStorage.setItem(PRESET_LS, JSON.stringify(list)); } catch {} };
+// campos do bloco que viram modelo (posição, id e imagem ficam de fora)
+const PRESET_FIELDS = ["title", "body", "color", "shape", "fill", "w", "h", "fontSize", "emphasis", "doc", "attrs", "task"];
+const presetFromBlock = (b) => {
+  const d = {};
+  PRESET_FIELDS.forEach(k => { if (b[k] !== undefined && b[k] !== null && b[k] !== "") d[k] = JSON.parse(JSON.stringify(b[k])); });
+  if (d.task) d.task = { done: false };
+  return d;
+};
+
+function PresetMenu({ myPresets, onPick, onDeleteMine, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+  const Swatch = ({ d }) => {
+    const c = d.color || DEFAULT_COLOR;
+    const r = d.shape === "pill" ? 999 : d.shape === "rect" ? 2 : d.shape === "diamond" ? 1 : 5;
+    return <span className="pm-sw" style={{ borderColor: c, background: d.fill ? `rgba(${hexToRgb(c)},.25)` : "transparent", borderRadius: r, transform: d.shape === "diamond" ? "rotate(45deg) scale(.8)" : "none" }} />;
+  };
+  return (
+    <div className="pm-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="pm-panel" role="dialog" aria-label="Blocos prontos">
+        <div className="pm-head">
+          <span>Blocos prontos</span>
+          <span className="pm-key">tecla M</span>
+          <button className="pm-x" onClick={onClose} title="Fechar (Esc)">×</button>
+        </div>
+        <div className="pm-cols">
+          {BUILTIN_PRESETS.map(g => (
+            <div key={g.group} className="pm-col">
+              <div className="pm-group">
+                <svg viewBox="0 0 24 24"><path d={PRESET_ICONS[g.group]} /></svg>{g.group}
+              </div>
+              {g.items.map(it => (
+                <button key={it.key} className="pm-item" style={{ "--pc": it.data.color }} onClick={() => onPick(it)}>
+                  <Swatch d={it.data} />
+                  <span className="pm-txt"><b>{it.name}</b><small>{it.hint}</small></span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="pm-mine">
+          <div className="pm-group">Meus modelos</div>
+          {myPresets.length ? (
+            <div className="pm-mine-list">
+              {myPresets.map(m => (
+                <span key={m.id} className="pm-chip" style={{ "--pc": m.data.color || DEFAULT_COLOR }}>
+                  <button className="pm-chip-go" onClick={() => onPick(m)} title="Criar bloco com este modelo"><Swatch d={m.data} />{m.name}</button>
+                  <button className="pm-chip-x" onClick={() => onDeleteMine(m.id)} title="Apagar modelo">×</button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="pm-empty">Montou um bloco que funciona? Selecione ele e clique em <b>Salvar como modelo</b> na barra do bloco. Ele aparece aqui.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ================== AttrTable (paleta lateral: colunas → valores → aplica) ========= */
 /* ================== Bloco-documento ==================
    Cada bloco pode carregar um documento (block.doc = saída do Editor.js).
@@ -2063,7 +2219,7 @@ const docPlain = (html) => {
   return (d.textContent || "").replace(/\s+/g, " ").trim();
 };
 // textos de todos os blocos do documento, na ordem (inclui itens de lista aninhados)
-const docTexts = (doc) => {
+const docTexts = (doc, { headers = true } = {}) => {
   const out = [];
   const walkItems = (items) => (items || []).forEach(it => {
     if (typeof it === "string") out.push(docPlain(it));
@@ -2073,17 +2229,19 @@ const docTexts = (doc) => {
     const d = b.data || {};
     if (b.type === "list") walkItems(d.items);
     else if (b.type === "table") (d.content || []).forEach(row => (row || []).forEach(c => out.push(docPlain(c))));
+    else if (b.type === "header" && !headers) return;
     else if (d.text) out.push(docPlain(d.text));
   });
   return out.filter(Boolean);
 };
 const docStats = (doc) => {
-  const texts = docTexts(doc);
+  // títulos de seção (Abertura, Fala...) não são falados: ficam fora da contagem
+  const texts = docTexts(doc, { headers: false });
   const words = texts.join(" ").split(/\s+/).filter(Boolean).length;
   const secs = Math.round(words / DOC_WPM * 60);
   const m = Math.floor(secs / 60), s = secs % 60;
   const spoken = words === 0 ? "" : m === 0 ? `~${Math.max(s, 1)}s falado` : `~${m}min${s ? String(s).padStart(2, "0") : ""} falado`;
-  return { words, spoken, first: texts[0] || "" };
+  return { words, spoken, first: texts[0] || docTexts(doc)[0] || "" };
 };
 const docIsEmpty = (doc) => docTexts(doc).length === 0 && !((doc && doc.blocks) || []).some(b => b.type === "delimiter");
 
@@ -2472,6 +2630,11 @@ function App() {
   const [attrsOpen, setAttrsOpen] = useState(false);
   // bloco-documento aberto na popup (id do bloco) + ref pros atalhos globais
   const [docId, setDocId] = useState(null);
+  // blocos prontos: menu aberto + modelos do usuário
+  const [presetOpen, setPresetOpen] = useState(false);
+  const presetOpenRef = useRef(false);
+  useEffect(() => { presetOpenRef.current = presetOpen; }, [presetOpen]);
+  const [myPresets, setMyPresets] = useState(loadMyPresets);
   // link de leitura: estado do mapa compartilhado (loading | ok | missing)
   const [shared, setShared] = useState(VIEW_ONLY ? { status: "loading" } : null);
   const docOpenRef = useRef(false);
@@ -3053,6 +3216,54 @@ function App() {
       if (nb.doc === null) delete nb.doc;
       return nb;
     }));
+  }, []);
+  // cria um bloco a partir de um modelo, no centro da tela, já em edição
+  const createFromPreset = useCallback((preset) => {
+    const d = JSON.parse(JSON.stringify(preset.data || {}));
+    const w = d.w || 240, h = d.h || 80;
+    const ws = wsRef.current ? wsRef.current.getBoundingClientRect() : { left: 0, top: 0, width: innerWidth, height: innerHeight };
+    const c = screenToWorld(ws.left + ws.width / 2, ws.top + ws.height / 2);
+    // procura um lugar livre perto do centro (não empilha em cima de outro bloco)
+    const rects = blocksRef.current.map(o => ({ x: o.x, y: o.y, w: o.w || 240, h: (sizesRef.current[o.id] && sizesRef.current[o.id].h) || o.h || 80 }));
+    const hits = (x, y) => rects.some(r => x < r.x + r.w + 24 && x + w + 24 > r.x && y < r.y + r.h + 24 && y + h + 24 > r.y);
+    let x0 = Math.round(c.x - w / 2), y0 = Math.round(c.y - h / 2);
+    outer: for (let ring = 0; ring < 12; ring++) {
+      const step = 60 * ring;
+      const cands = ring === 0 ? [[0, 0]] : [[step, 0], [0, step], [-step, 0], [0, -step], [step, step], [-step, step], [step, -step], [-step, -step]];
+      for (const [dx, dy] of cands) if (!hits(x0 + dx, y0 + dy)) { x0 += dx; y0 += dy; break outer; }
+    }
+    const id = uid();
+    const b = { id, x: x0, y: y0, title: "", body: "", color: DEFAULT_COLOR, ...d, w, h };
+    const extraBlocks = [], extraEdges = [];
+    if (preset.after === "yesno") {
+      const CW = 150, CH = 64;
+      const cx = b.x + w / 2, cy = b.y + h + 90;
+      const nao = { id: uid(), x: cx - 170 - CW / 2, y: cy, w: CW, h: CH, title: "NÃO", body: "", color: "#ff3b5c" };
+      const sim = { id: uid(), x: cx + 170 - CW / 2, y: cy, w: CW, h: CH, title: "SIM", body: "", color: "#00ff88" };
+      extraBlocks.push(nao, sim);
+      extraEdges.push({ id: uid(), from: { id, port: "bottom" }, to: { id: nao.id, port: "top" } });
+      extraEdges.push({ id: uid(), from: { id, port: "bottom" }, to: { id: sim.id, port: "top" } });
+    }
+    if (preset.focus === "body") setEditReq({ id, k: Date.now(), part: "body" });
+    else pendingEditRef.current = id;
+    setBlocks(p => [...p, b, ...extraBlocks]);
+    if (extraEdges.length) setEdges(p => [...p, ...extraEdges]);
+    setTool("select");
+    selectOne(id);
+    setPresetOpen(false);
+  }, [screenToWorld, selectOne]);
+  const saveBlockAsPreset = useCallback(() => {
+    const b = blocksRef.current.find(x => selectionRef.current.has(x.id));
+    if (!b) return;
+    const sug = docPlain(b.title) || "Meu bloco";
+    const nm = prompt("Nome do modelo:", sug);
+    if (nm == null) return;
+    const item = { id: "m" + Date.now(), name: nm.trim() || sug, data: presetFromBlock(b) };
+    setMyPresets(prev => { const next = [...prev, item]; saveMyPresets(next); return next; });
+  }, []);
+  const deleteMyPreset = useCallback((id) => {
+    if (!confirm("Apagar este modelo? Os blocos já criados com ele continuam no mapa.")) return;
+    setMyPresets(prev => { const next = prev.filter(m => m.id !== id); saveMyPresets(next); return next; });
   }, []);
   const openDoc = useCallback((id) => {
     if (!blocksRef.current.some(b => b.id === id)) return;
@@ -3880,7 +4091,7 @@ function App() {
   /* ----- keyboard ----- */
   useEffect(() => {
     const onKey = (e) => {
-      if (docOpenRef.current || VIEW_ONLY) return; // escrevendo no documento / link de leitura: nenhum atalho
+      if (docOpenRef.current || VIEW_ONLY || presetOpenRef.current) return; // documento, link de leitura ou menu de modelos: nenhum atalho
       if (e.key === "Control") setCtrlHeld(true);
       const ae = document.activeElement;
       // digitando num campo de formulário (painéis: atributos, nuvem, etc.) →
@@ -3931,6 +4142,7 @@ function App() {
       if (e.key === " ") { spaceRef.current = true; e.preventDefault(); }
       if (e.key === "Delete" || e.key === "Backspace") deleteSelection();
       if (e.key === "b" || e.key === "B") setTool("block");
+      if (e.key === "m" || e.key === "M") { e.preventDefault(); setPresetOpen(true); }
       if (e.key === "n" || e.key === "N") { clearSelection(); setTool("draw"); setDrawShape("text"); }
       if (e.key === "d" || e.key === "D") { clearSelection(); setTool("draw"); setDrawShape(lastDrawShapeRef.current); }
       if (e.key === "v" || e.key === "V") setTool("select");
@@ -4660,6 +4872,9 @@ function App() {
               <svg viewBox="0 0 24 24" className="ic-svg"><path d="M5 3l14 8.5-6.2 1.6L9.5 20z"/></svg>
             </button>
             <button className={`ic ${tool==="block"?"active":""}`} onClick={() => setTool("block")} title="Bloco (B)">▭</button>
+            <button className={`ic ${presetOpen?"active":""}`} onClick={() => setPresetOpen(true)} title="Blocos prontos: roteiro, aula, brainstorm e os seus (M)">
+              <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><path d="M17.25 13.5v7.5 M13.5 17.25h7.5"/></svg>
+            </button>
             <button className={`ic ${tool==="draw" && drawShape==="text" ? "active":""}`} onClick={() => { clearSelection(); setTool("draw"); setDrawShape("text"); }} title="Texto / anotação (N)">
               <svg viewBox="0 0 24 24" className="ic-svg"><path d="M6 6 H18 M12 6 V18 M9 18 H15"/></svg>
             </button>
@@ -5038,6 +5253,13 @@ function App() {
                         <svg viewBox="0 0 24 24"><path d="M5 5 L19 19 M19 5 L5 19"/></svg>
                       </button>
                     )}
+                  </div>
+                  <div className="vsep"/>
+                  <div className="group">
+                    <span className="lbl">Modelo</span>
+                    <button className="shape-btn" onClick={saveBlockAsPreset} title="Salvar como modelo: cor, forma, texto e documento deste bloco viram um bloco pronto (tecla M)">
+                      <svg viewBox="0 0 24 24"><path d="M6 3h10l3 3v15H6z"/><path d="M9 3v5h6V3 M12 12v6 M9 15h6"/></svg>
+                    </button>
                   </div>
                   <div className="vsep"/>
                   <div className="group">
@@ -5577,6 +5799,15 @@ function App() {
           onApply={applyAttr}
           onClearCol={clearAttrCol}
           onClose={() => setAttrsOpen(false)}
+        />
+      )}
+
+      {presetOpen && !VIEW_ONLY && (
+        <PresetMenu
+          myPresets={myPresets}
+          onPick={createFromPreset}
+          onDeleteMine={deleteMyPreset}
+          onClose={() => setPresetOpen(false)}
         />
       )}
 
