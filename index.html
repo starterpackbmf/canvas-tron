@@ -926,6 +926,30 @@
     .resize::before{content:"";position:absolute;inset:-9px}
   }
 
+  /* ===== link de leitura (?ver=) ===== */
+  body.view-only .toolbar,body.view-only .menu-fab,body.view-only .mm-scrim,body.view-only .hint{display:none !important}
+  body.view-only .block .port,body.view-only .block .resize,body.view-only .block .del{display:none !important}
+  body.view-only .note,body.view-only .imgnode,body.view-only svg.strokes *,body.view-only svg.edges *{pointer-events:none !important}
+  body.view-only .block{cursor:grab}
+  body.view-only .block:has(.doc-chip){cursor:pointer}
+  .share-banner{
+    position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:25;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 32px);
+    padding:9px 16px;border-radius:12px;font-size:13px;color:var(--white);
+    background:rgba(5,12,24,.82);border:1px solid rgba(0,240,255,.25);backdrop-filter:blur(8px);
+    box-shadow:0 8px 30px rgba(0,0,0,.4);
+  }
+  .share-banner b{color:var(--cyan);letter-spacing:.3px}
+  .share-banner .share-meta{color:var(--muted);font-size:12px}
+  .share-banner .share-tip{font-size:12px;color:var(--white);opacity:.8}
+  .share-banner.missing{border-color:rgba(255,59,92,.4)}
+  body.light .share-banner{background:rgba(255,255,255,.9);border-color:rgba(10,143,166,.3)}
+  .share-box{margin:14px 0 4px;padding:12px;border:1px solid rgba(0,240,255,.18);border-radius:10px;background:rgba(0,240,255,.03)}
+  .share-box .cloud-lbl{margin-top:0}
+  .share-box input{margin:6px 0 !important;font-size:12px !important}
+  .share-hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4}
+  .share-hint.strong{color:var(--cyan)}
+
   /* ===== bloco-documento: selo no bloco + popup de escrita (Editor.js) ===== */
   .block .doc-chip{
     position:relative;z-index:1;margin-top:8px;padding:7px 9px;border-radius:6px;
@@ -1047,6 +1071,18 @@ const uid = () => "n" + (_nid++);
 
 /* ---- persistence (autosave) ---- */
 const LS_KEY = "canvas-tron:autosave";
+
+/* ---- link de leitura: ?ver=TOKEN abre o mapa compartilhado só pra ler ----
+   Nada é salvo nesse modo (nem autosave): quem abre o link não perde o mapa
+   que tem no próprio navegador, e o dono nunca é sobrescrito. */
+const SHARE_TOKEN = (() => { try { return new URLSearchParams(location.search).get("ver") || ""; } catch { return ""; } })();
+const VIEW_ONLY = !!SHARE_TOKEN;
+const shareUrl = (token) => location.origin + location.pathname + "?ver=" + token;
+const newShareToken = () => {
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const r = new Uint32Array(22); crypto.getRandomValues(r);
+  return Array.from(r, n => abc[n % abc.length]).join("");
+};
 
 /* ---- Supabase (login + mapas na nuvem) ---- */
 const SUPA_URL = "https://rgmugavizfdpddpwmubv.supabase.co";
@@ -1430,7 +1466,7 @@ const bezierMidpoint = (a, b) => {
 };
 
 /* ================== Block ================== */
-function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange, onMeasure, mapMode, onEnterSibling, editReq, onOpenDoc }) {
+function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange, onMeasure, mapMode, onEnterSibling, editReq, onOpenDoc, readOnly }) {
   const elRef = useRef(null);
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
@@ -1536,6 +1572,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
     }
   }, [editingBody]);
 
+  const downAtRef = useRef(null);
   const color = block.color || DEFAULT_COLOR;
   const shapeDef = SHAPE_BY_KEY[block.shape] || SHAPE_BY_KEY.rounded; // padrão: quadrado arredondado
   const useSkin = !!shapeDef.skin;
@@ -1557,6 +1594,8 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
         ...(shapeDef.radius ? { borderRadius: shapeDef.radius } : {}),
       }}
       onMouseDown={(e) => {
+        // link de leitura: deixa o evento subir pro fundo (arrastar = mover a tela)
+        if (readOnly) { downAtRef.current = { x: e.clientX, y: e.clientY }; return; }
         if (e.target.classList.contains("port")) return;
         if (e.target.classList.contains("del")) return;
         if (e.target.isContentEditable) return;
@@ -1564,8 +1603,16 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
         onSelect(block.id, e.shiftKey);
         onStartDrag(e);
       }}
+      onClick={(e) => {
+        // link de leitura: um clique (sem arrastar) abre o documento
+        if (!readOnly || !block.doc) return;
+        const d = downAtRef.current;
+        if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) return;
+        onOpenDoc?.(block.id);
+      }}
       onDoubleClick={(e) => {
         e.stopPropagation();
+        if (readOnly) return;
         // Use closest() so clicking on inner spans (from bold/italic/color formatting)
         // still correctly resolves to the parent title or body element
         // bloco com documento: título e corpo seguem editáveis; o resto abre o documento
@@ -1814,6 +1861,26 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
 
   useEffect(() => { setName(cloudDoc.name || ""); }, [cloudDoc.name]);
 
+  // link de leitura do mapa aberto: undefined = carregando, null = sem link
+  const [shareToken, setShareToken] = useState(undefined);
+  const [shareMsg, setShareMsg] = useState("");
+  const shareErr = (error) => /share_token/.test(error.message)
+    ? "O link ainda não está ligado no banco. Falta rodar o SQL que te passei."
+    : "Erro: " + error.message;
+  useEffect(() => {
+    setShareToken(undefined); setShareMsg("");
+    if (!client || !session || !cloudDoc.id) return;
+    client.from("canvas_maps").select("share_token").eq("id", cloudDoc.id).single().then(({ data, error }) => {
+      if (error) { setShareToken(null); setShareMsg(shareErr(error)); return; }
+      setShareToken(data ? data.share_token || null : null);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, session, cloudDoc.id]);
+  const copyShare = async (tk) => {
+    try { await navigator.clipboard.writeText(shareUrl(tk)); setShareMsg("Link copiado. É só mandar pro seu amigo."); }
+    catch { setShareMsg("Copie o link acima e mande pro seu amigo."); }
+  };
+
   const refresh = useCallback(async () => {
     if (!client || !session) return;
     setStatus("Carregando…");
@@ -1848,9 +1915,26 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
     } else {
       res = await client.from("canvas_maps").insert({ name: nm, data: doc }).select("id").single();
     }
-    if (res.error) { setStatus("Erro: " + res.error.message); return; }
+    if (res.error) { setStatus("Erro: " + res.error.message); return null; }
     setCloudDoc({ id: res.data.id, name: nm });
     setStatus("Salvo ✓"); refresh();
+    return res.data.id;
+  };
+  // cria o link já salvando a versão atual (o amigo vê o que está na nuvem)
+  const createShare = async () => {
+    const id = await save();
+    if (!id) return;
+    const tk = newShareToken();
+    const { error } = await client.from("canvas_maps").update({ share_token: tk }).eq("id", id);
+    if (error) { setShareMsg(shareErr(error)); return; }
+    setShareToken(tk);
+    copyShare(tk);
+  };
+  const stopShare = async () => {
+    if (!confirm("Desligar o link? Quem tiver ele não vai conseguir abrir mais.")) return;
+    const { error } = await client.from("canvas_maps").update({ share_token: null }).eq("id", cloudDoc.id);
+    if (error) { setShareMsg("Erro: " + error.message); return; }
+    setShareToken(null); setShareMsg("Link desligado.");
   };
   const saveAsNew = async () => {
     const nm = (name || "").trim() || "Sem título";
@@ -1924,6 +2008,29 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
               {cloudDoc.id && <button className="cloud-btn ghost" onClick={saveAsNew}>Salvar como novo</button>}
               <button className="cloud-btn ghost" onClick={novo}>＋ Novo mapa</button>
               <button className="cloud-btn ghost" onClick={refresh}>↻ Atualizar</button>
+            </div>
+            <div className="share-box">
+              <div className="cloud-lbl">Link de leitura</div>
+              {!cloudDoc.id ? (
+                <div className="share-hint">Salve o mapa na nuvem pra poder compartilhar.</div>
+              ) : shareToken === undefined ? (
+                <div className="share-hint">Carregando...</div>
+              ) : shareToken ? (
+                <>
+                  <input type="text" readOnly value={shareUrl(shareToken)} onFocus={(e) => e.target.select()} />
+                  <div className="cloud-row">
+                    <button className="cloud-btn" onClick={() => copyShare(shareToken)}>Copiar link</button>
+                    <button className="cloud-btn ghost" onClick={stopShare}>Desligar link</button>
+                  </div>
+                  <div className="share-hint">Quem abrir vê a última versão salva. Mudou o mapa? Clica em Salvar.</div>
+                </>
+              ) : (
+                <>
+                  <button className="cloud-btn" onClick={createShare}>Criar link de leitura</button>
+                  <div className="share-hint">Salva a versão atual e gera um link. Quem abrir só lê: não precisa de login e não edita nada.</div>
+                </>
+              )}
+              {shareMsg && <div className="share-hint strong">{shareMsg}</div>}
             </div>
             <div className="cloud-list">
               {maps.map((m) => (
@@ -2033,7 +2140,7 @@ const DOC_I18N = {
   },
 };
 
-function DocEditor({ block, onSave, onClose }) {
+function DocEditor({ block, onSave, onClose, readOnly }) {
   const holderRef = useRef(null);
   const editorRef = useRef(null);
   const saveTimer = useRef(null);
@@ -2072,9 +2179,10 @@ function DocEditor({ block, onSave, onClose }) {
       const ed = new window.EditorJS({
         holder: holderRef.current,
         data: block.doc && block.doc.blocks ? { blocks: block.doc.blocks } : { blocks: [] },
-        placeholder: "Escreva aqui. Digite / pra títulos, listas, checklist e tabela",
+        placeholder: readOnly ? "" : "Escreva aqui. Digite / pra títulos, listas, checklist e tabela",
         minHeight: 120,
-        autofocus: !block.doc,
+        readOnly: !!readOnly,
+        autofocus: !block.doc && !readOnly,
         i18n: DOC_I18N,
         tools: {
           header: { class: window.Header, inlineToolbar: true, shortcut: "CMD+SHIFT+H", config: { levels: [1, 2, 3], defaultLevel: 2, placeholder: "Título" } },
@@ -2087,7 +2195,7 @@ function DocEditor({ block, onSave, onClose }) {
         },
         onReady: () => {
           if (dead) return;
-          try { new window.DragDrop(ed); } catch {}
+          if (!readOnly) { try { new window.DragDrop(ed); } catch {} }
           setStatus("ready");
         },
         onChange: () => {
@@ -2119,6 +2227,7 @@ function DocEditor({ block, onSave, onClose }) {
   const close = useCallback(async () => {
     if (closingRef.current) return;
     closingRef.current = true;
+    if (readOnly) { onClose(); return; }
     clearTimeout(saveTimer.current);
     saveTitle();
     await commit();
@@ -2138,7 +2247,8 @@ function DocEditor({ block, onSave, onClose }) {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [close]);
 
-  const statusTxt = status === "loading" ? "Carregando editor..."
+  const statusTxt = status === "loading" ? "Carregando..."
+    : readOnly && status !== "error" ? "Só leitura"
     : status === "saving" ? "Salvando..."
     : status === "error" ? "Não consegui carregar o editor. Confira a internet e abra de novo."
     : status === "saved" ? "Salvo" : "Salvo automaticamente";
@@ -2160,6 +2270,7 @@ function DocEditor({ block, onSave, onClose }) {
             rows={1}
             value={title}
             placeholder="Sem título"
+            readOnly={!!readOnly}
             onChange={(e) => { titleDirty.current = true; setTitle(e.target.value.replace(/[\r\n]+/g, " ")); }}
             onBlur={saveTitle}
             onKeyDown={(e) => {
@@ -2266,7 +2377,10 @@ function AttrTable({ cols, setCols, selBlocks, blocks, onApply, onClearCol, onCl
 function App() {
   const [tool, setTool] = useState("select");
   // Restore last session from localStorage (falls back to the demo content below)
-  const saved = useMemo(() => { const d = loadSaved(); bumpNidFromData(d); return d; }, []);
+  const saved = useMemo(() => {
+    if (VIEW_ONLY) return { blocks: [], notes: [], strokes: [], images: [], edges: [] };
+    const d = loadSaved(); bumpNidFromData(d); return d;
+  }, []);
   const [blocks, setBlocks] = useState(() => saved?.blocks ?? ([
     { id:"b1", x:200, y:240, w:240, h:80, color:"#00f0ff", title:"O QUE NÃO É A TRADE DE ABERTURA", body:"Teste de validação, volume alto" },
     { id:"b2", x:520, y:160, w:260, h:120, color:"#ff9d00", title:"NÃO É O 1 MINUTO DE ENTRADA", body:"O saldo acumulado antes do mercado abrir. O 1 minuto de abertura é para se aferir o funcionamento." },
@@ -2358,6 +2472,8 @@ function App() {
   const [attrsOpen, setAttrsOpen] = useState(false);
   // bloco-documento aberto na popup (id do bloco) + ref pros atalhos globais
   const [docId, setDocId] = useState(null);
+  // link de leitura: estado do mapa compartilhado (loading | ok | missing)
+  const [shared, setShared] = useState(VIEW_ONLY ? { status: "loading" } : null);
   const docOpenRef = useRef(false);
   useEffect(() => { docOpenRef.current = !!docId; }, [docId]);
   // paleta de colunas/valores (por mapa) — só um helper pra aplicar valores nos blocos
@@ -2843,6 +2959,7 @@ function App() {
   useEffect(() => { blockSelectedRef.current = blocks.some(b => selection.has(b.id)); });
   useEffect(() => {
     const onPaste = (e) => {
+      if (VIEW_ONLY) return;
       const a = document.activeElement;
       if (a && (a.isContentEditable || a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT")) return;
       const dt = e.clipboardData; if (!dt) return;
@@ -3216,6 +3333,7 @@ function App() {
 
   /* ----- autosave to localStorage (debounced) ----- */
   useEffect(() => {
+    if (VIEW_ONLY) return; // link de leitura nunca grava nada
     const t = setTimeout(() => {
       const draw = { shape: lastDrawShapeRef.current, width: drawWidth, color: drawColor };
       try { localStorage.setItem(LS_KEY, JSON.stringify({ blocks, notes, strokes, images, edges, view, flow, attrCols, draw, map: { on: mapOn, struct: mapStruct } })); } catch {}
@@ -3762,7 +3880,7 @@ function App() {
   /* ----- keyboard ----- */
   useEffect(() => {
     const onKey = (e) => {
-      if (docOpenRef.current) return; // escrevendo no documento: nenhum atalho do canvas
+      if (docOpenRef.current || VIEW_ONLY) return; // escrevendo no documento / link de leitura: nenhum atalho
       if (e.key === "Control") setCtrlHeld(true);
       const ae = document.activeElement;
       // digitando num campo de formulário (painéis: atributos, nuvem, etc.) →
@@ -3972,6 +4090,13 @@ function App() {
 
   /* ----- workspace click ----- */
   const onWorkspaceDown = (e) => {
+    if (VIEW_ONLY) {
+      if (e.target.closest && e.target.closest(".collapse-badge-wrap")) return;
+      panRef.current = true;
+      wsRef.current.classList.add("panning");
+      e.preventDefault();
+      return;
+    }
     // Only react if clicking the workspace itself, not a child
     if (e.target !== wsRef.current && !e.target.classList.contains("world") && e.target.tagName !== "svg") return;
     // Blur any active editing so clicking outside always exits edit mode
@@ -4493,6 +4618,21 @@ function App() {
   };
 
   fitAllRef.current = fitAll;
+
+  // link de leitura: busca o mapa pelo código e enquadra tudo na tela
+  useEffect(() => {
+    if (!VIEW_ONLY) return;
+    document.body.classList.add("view-only");
+    if (!supa) { setShared({ status: "missing" }); return; }
+    supa.rpc("get_shared_map", { p_token: SHARE_TOKEN }).then(({ data, error }) => {
+      if (error || !data) { setShared({ status: "missing" }); return; }
+      loadDoc(data.data || {});
+      setShared({ status: "ok", name: data.name, updatedAt: data.updated_at });
+      try { document.title = (data.name || "Mapa") + " · Canvas Tron"; } catch {}
+      setTimeout(() => fitAllRef.current && fitAllRef.current(), 400);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ----- render ----- */
   return (
@@ -5296,6 +5436,7 @@ function App() {
               onEnterSibling={createSiblingBlock}
               editReq={editReq}
               onOpenDoc={openDoc}
+              readOnly={VIEW_ONLY}
             />
           ))}
           {marquee && <div className="marquee-rect" style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }} />}
@@ -5439,12 +5580,27 @@ function App() {
         />
       )}
 
+      {VIEW_ONLY && shared && (
+        <div className={`share-banner ${shared.status}`}>
+          {shared.status === "loading" && <span>Abrindo o mapa compartilhado...</span>}
+          {shared.status === "missing" && <span>Esse link não existe mais ou foi desligado por quem compartilhou.</span>}
+          {shared.status === "ok" && (
+            <>
+              <b>{shared.name || "Mapa"}</b>
+              <span className="share-meta">Só leitura{shared.updatedAt ? " · salvo em " + new Date(shared.updatedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(",", " às") : ""}</span>
+              {blocks.some(b => b.doc) && <span className="share-tip">Clique num bloco com documento pra ler</span>}
+            </>
+          )}
+        </div>
+      )}
+
       {docId && blocks.some(b => b.id === docId) && (
         <DocEditor
           key={docId}
           block={blocks.find(b => b.id === docId)}
           onSave={saveDocPatch}
           onClose={() => setDocId(null)}
+          readOnly={VIEW_ONLY}
         />
       )}
 
