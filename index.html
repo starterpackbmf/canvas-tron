@@ -2479,9 +2479,13 @@ const docStats = (doc) => {
   // títulos de seção (Abertura, Fala...) não são falados: ficam fora da contagem
   const texts = docTexts(doc, { headers: false });
   const words = texts.join(" ").split(/\s+/).filter(Boolean).length;
-  const secs = Math.round(words / DOC_WPM * 60);
+  // roteiro com fala em citação: o tempo falado conta só a fala (a direção não é dita),
+  // sem as marcações de cena tipo "(pausa)" e "(olho na lente)"
+  const falas = ((doc && doc.blocks) || []).filter(b => b.type === "quote").map(b => docPlain((b.data && b.data.text || "").replace(/<br\s*\/?>/gi, " ")).replace(/\([^)]*\)/g, " "));
+  const spokenWords = falas.length ? falas.join(" ").split(/\s+/).filter(Boolean).length : words;
+  const secs = Math.round(spokenWords / DOC_WPM * 60);
   const m = Math.floor(secs / 60), s = secs % 60;
-  const spoken = words === 0 ? "" : m === 0 ? `~${Math.max(s, 1)}s falado` : `~${m}min${s ? String(s).padStart(2, "0") : ""} falado`;
+  const spoken = spokenWords === 0 ? "" : m === 0 ? `~${Math.max(s, 1)}s falado` : `~${m}min${s ? String(s).padStart(2, "0") : ""} falado`;
   return { words, spoken, first: texts[0] || docTexts(doc)[0] || "" };
 };
 const docIsEmpty = (doc) => docTexts(doc).length === 0 && !((doc && doc.blocks) || []).some(b => b.type === "delimiter");
