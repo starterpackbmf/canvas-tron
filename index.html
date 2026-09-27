@@ -998,6 +998,62 @@
   .share-box .cloud-lbl{margin-top:0}
   .share-box input{margin:6px 0 !important;font-size:12px !important}
   .share-hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4}
+  .share-actions{display:inline-flex;align-items:center;gap:8px}
+  .share-banner .seg{display:inline-flex;border:1px solid rgba(0,240,255,.3);border-radius:999px;overflow:hidden}
+  .share-banner .seg button{background:none;border:none;color:var(--muted);font:inherit;font-size:12px;padding:5px 12px;cursor:pointer}
+  .share-banner .seg button.on{background:rgba(0,240,255,.16);color:var(--cyan)}
+  .exp-wrap{position:relative}
+  .exp-btn{background:none;border:1px solid rgba(0,240,255,.3);color:var(--white);font:inherit;font-size:12px;padding:5px 12px;border-radius:999px;cursor:pointer}
+  .exp-btn:hover{background:rgba(0,240,255,.1)}
+  .exp-menu{position:absolute;right:0;top:calc(100% + 8px);display:flex;flex-direction:column;min-width:250px;padding:6px;border-radius:12px;
+    background:#0b1628;border:1px solid rgba(0,240,255,.25);box-shadow:0 16px 40px rgba(0,0,0,.5);z-index:2}
+  .exp-menu button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:none;border:none;color:var(--white);font:inherit;padding:8px 10px;border-radius:8px;cursor:pointer}
+  .exp-menu button:hover{background:rgba(0,240,255,.1)}
+  .exp-menu b{font-size:13px;font-weight:600}
+  .exp-menu small{font-size:11px;color:var(--muted)}
+  .exp-msg{font-size:12px;color:var(--cyan)}
+  body.light .exp-menu{background:#fff;border-color:rgba(10,143,166,.3)}
+
+  /* leitura em documento (grafite, igual à popup de anotação) */
+  .rd-overlay{position:fixed;inset:0;z-index:24;overflow:auto;-webkit-overflow-scrolling:touch;background:#1f1f1d;
+    --d-text:#ecebe6;--d-muted:#9c9a92;--d-faint:#6f6d66;--d-line:rgba(255,255,255,.1);--d-head:rgba(255,255,255,.045);--d-check:#5fb85f}
+  body.light .rd-overlay{background:#faf9f5;--d-text:#1f1e1d;--d-muted:#6f6d66;--d-faint:#a3a19a;--d-line:rgba(0,0,0,.1);--d-head:rgba(0,0,0,.04);--d-check:#3f8f3f}
+  .rd-page{max-width:760px;margin:0 auto;padding:120px 24px 80px;color:var(--d-text);font-family:-apple-system,"Segoe UI",Inter,system-ui,sans-serif;font-size:16px;line-height:1.65}
+  .rd-title{font-size:34px;font-weight:700;letter-spacing:-.3px;margin:0 0 28px;line-height:1.2}
+  .rd-sec{padding:18px 0 6px;border-top:1px solid var(--d-line)}
+  .rd-sec.root{border-top:none;padding-top:8px}
+  .rd-h{margin:0 0 6px;font-weight:700;line-height:1.3;display:flex;align-items:center;gap:10px}
+  .rd-h::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--rc)}
+  h2.rd-h{font-size:26px}
+  h3.rd-h{font-size:20px}
+  .rd-body{margin:0 0 8px;color:var(--d-muted)}
+  .rd-meta{margin:0 0 10px;font-size:12px;color:var(--d-faint)}
+  .rd-doc h4{font-size:18px;margin:1.2em 0 .3em}
+  .rd-doc h5,.rd-doc h6{font-size:16px;margin:1em 0 .2em}
+  .rd-doc p{margin:0 0 .8em}
+  .rd-doc blockquote{margin:0 0 1em;padding:2px 0 2px 14px;border-left:3px solid var(--d-faint);font-style:italic}
+  .rd-doc hr{border:none;border-top:1px solid var(--d-line);margin:1.2em 0}
+  .rd-doc ul,.rd-doc ol{margin:0 0 1em;padding-left:1.4em}
+  .rd-doc ul.rd-check{list-style:none;padding-left:.2em}
+  .rd-doc .rd-box{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border:1.5px solid var(--d-faint);border-radius:4px;margin-right:8px;font-size:10px;vertical-align:-2px}
+  .rd-doc li.done > .rd-box{background:var(--d-check);border-color:var(--d-check);color:#fff}
+  .rd-doc li.done{color:var(--d-muted);text-decoration:line-through}
+  .rd-doc a{color:var(--d-text)}
+  .rd-table{overflow-x:auto;margin:0 0 1.2em;-webkit-overflow-scrolling:touch}
+  .rd-table table{border-collapse:collapse;width:100%;font-size:15px;line-height:1.45;min-width:520px}
+  .rd-table th{text-align:left;font-weight:600;background:var(--d-head);padding:9px 10px}
+  .rd-table th:first-child{border-radius:8px 0 0 0}
+  .rd-table th:last-child{border-radius:0 8px 0 0}
+  .rd-table td{padding:9px 10px;border-top:1px solid var(--d-line);vertical-align:top}
+  .rd-table td + td{border-left:1px solid var(--d-line)}
+  @media (max-width:760px){
+    .share-banner{left:8px;right:8px;transform:none;max-width:none;border-radius:12px;padding:8px 10px;gap:6px 10px}
+    .share-banner .share-tip{display:none}
+    .rd-page{padding:150px 16px 60px;font-size:16px}
+    .rd-title{font-size:26px}
+    h2.rd-h{font-size:22px}
+    h3.rd-h{font-size:18px}
+  }
   .share-hint.strong{color:var(--cyan)}
 
   /* ===== bloco-documento: selo no bloco + popup de escrita (Editor.js) ===== */
@@ -2110,6 +2166,179 @@ function CloudPanel({ client, session, getDoc, loadDoc, cloudDoc, setCloudDoc, o
   );
 }
 
+/* ================== Leitura em documento + exportar ==================
+   Usado no link de leitura: o mapa vira texto corrido na ordem das setas,
+   e dá pra baixar em Markdown/JSON ou copiar o texto (pra colar no Claude). */
+
+// ordem de leitura: raízes (sem seta chegando) de cima pra baixo, depois
+// segue as setas na ordem em que foram criadas. Bloco solto vai pro fim.
+const mapOutline = (blocks, edges) => {
+  const byId = new Map(blocks.map(b => [b.id, b]));
+  const kids = new Map(), hasParent = new Set();
+  (edges || []).forEach(e => {
+    if (!byId.has(e.from.id) || !byId.has(e.to.id) || e.from.id === e.to.id) return;
+    if (!kids.has(e.from.id)) kids.set(e.from.id, []);
+    kids.get(e.from.id).push(e.to.id);
+    hasParent.add(e.to.id);
+  });
+  const pos = (a, b) => (a.y - b.y) || (a.x - b.x);
+  const roots = blocks.filter(b => !hasParent.has(b.id)).sort(pos);
+  const seen = new Set(), out = [];
+  const walk = (id, depth) => {
+    if (seen.has(id)) return; seen.add(id);
+    out.push({ block: byId.get(id), depth });
+    (kids.get(id) || []).forEach(k => walk(k, depth + 1));
+  };
+  roots.forEach(r => walk(r.id, 0));
+  blocks.slice().sort(pos).forEach(b => walk(b.id, 0)); // ciclos / soltos
+  return out;
+};
+
+// HTML de dentro do bloco/documento só com o básico (vem de outra pessoa)
+const SAFE_TAGS = new Set(["B", "STRONG", "I", "EM", "U", "S", "MARK", "CODE", "BR", "A"]);
+const safeInline = (html) => {
+  const box = document.createElement("div");
+  box.innerHTML = String(html || "");
+  const walk = (node) => Array.from(node.childNodes).map(n => {
+    if (n.nodeType === 3) return n.textContent.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    if (n.nodeType !== 1) return "";
+    const inner = walk(n);
+    if (!SAFE_TAGS.has(n.tagName)) return inner;
+    if (n.tagName === "BR") return "<br>";
+    if (n.tagName === "A") {
+      const href = n.getAttribute("href") || "";
+      return /^https?:\/\//i.test(href) ? `<a href="${href.replace(/"/g, "&quot;")}" target="_blank" rel="noopener noreferrer">${inner}</a>` : inner;
+    }
+    const t = n.tagName.toLowerCase();
+    return `<${t}>${inner}</${t}>`;
+  }).join("");
+  return walk(box);
+};
+const inlineMd = (html) => {
+  const box = document.createElement("div");
+  box.innerHTML = String(html || "");
+  const walk = (node) => Array.from(node.childNodes).map(n => {
+    if (n.nodeType === 3) return n.textContent.replace(/\u00a0/g, " ");
+    if (n.nodeType !== 1) return "";
+    const inner = walk(n);
+    const t = n.tagName;
+    if (t === "BR") return "\n";
+    if (!inner.trim()) return inner;
+    const wrap = (m) => { const lead = inner.match(/^\s*/)[0], tail = inner.match(/\s*$/)[0]; return lead + m + inner.trim() + m + tail; };
+    if (t === "B" || t === "STRONG") return wrap("**");
+    if (t === "I" || t === "EM") return wrap("*");
+    if (t === "S") return wrap("~~");
+    if (t === "CODE") return wrap("`");
+    if (t === "A") { const h = n.getAttribute("href") || ""; return /^https?:\/\//i.test(h) ? `[${inner.trim()}](${h})` : inner; }
+    return inner;
+  }).join("");
+  return walk(box).replace(/[ \t]+\n/g, "\n").replace(/ {2,}/g, " ").trim();
+};
+
+const listItemsOf = (d) => (d.items || []).map(it => typeof it === "string" ? { content: it, items: [], meta: {} } : it);
+const docToMd = (doc, base = 3) => {
+  const out = [];
+  const listMd = (items, style, depth) => items.forEach((it, i) => {
+    const pad = "  ".repeat(depth);
+    const mark = style === "ordered" ? `${i + 1}.` : style === "checklist" ? (it.meta && it.meta.checked ? "- [x]" : "- [ ]") : "-";
+    out.push(`${pad}${mark} ${inlineMd(it.content)}`);
+    if (it.items && it.items.length) listMd(listItemsOf(it), style, depth + 1);
+  });
+  ((doc && doc.blocks) || []).forEach(b => {
+    const d = b.data || {};
+    if (b.type === "header") out.push("", "#".repeat(Math.min(6, base + Math.max(0, (d.level || 2) - 2))) + " " + inlineMd(d.text), "");
+    else if (b.type === "paragraph") { const t = inlineMd(d.text); if (t) out.push(t, ""); }
+    else if (b.type === "quote") { const t = inlineMd(d.text); if (t) out.push(t.split("\n").map(l => "> " + l).join("\n"), ""); }
+    else if (b.type === "delimiter") out.push("---", "");
+    else if (b.type === "list") { listMd(listItemsOf(d), d.style || "unordered", 0); out.push(""); }
+    else if (b.type === "table") {
+      const rows = (d.content || []).map(r => r.map(c => inlineMd(c).replace(/\|/g, "\\|").replace(/\n/g, " ")));
+      if (rows.length) {
+        const n = Math.max(...rows.map(r => r.length));
+        const fill = (r) => Array.from({ length: n }, (_, i) => r[i] || "");
+        const head = d.withHeadings ? fill(rows[0]) : Array(n).fill(" ");
+        const body = d.withHeadings ? rows.slice(1) : rows;
+        out.push("| " + head.join(" | ") + " |", "|" + " --- |".repeat(n), ...body.map(r => "| " + fill(r).join(" | ") + " |"), "");
+      }
+    }
+    else if (d.text) out.push(inlineMd(d.text), "");
+  });
+  return out.join("\n");
+};
+const mapToMd = (name, blocks, edges, url) => {
+  const out = ["# " + (name || "Mapa"), ""];
+  if (url) out.push("Link: " + url, "");
+  mapOutline(blocks, edges).forEach(({ block: b, depth }) => {
+    const title = inlineMd(b.title) || "(sem título)";
+    out.push((depth === 0 ? "## " : "### ") + title, "");
+    const body = inlineMd(b.body); if (body) out.push(body, "");
+    if (b.task) out.push(b.task.done ? "Status: feito" : "Status: pendente", "");
+    if (b.doc) out.push(docToMd(b.doc, 4));
+  });
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
+};
+const fileSlug = (name) => (docPlain(name) || "mapa").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "mapa";
+const downloadText = (filename, text, type) => {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement("a"); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+};
+
+// documento do bloco em HTML (leitura corrida)
+function DocRead({ doc }) {
+  const html = (() => {
+    const out = [];
+    const listHtml = (items, style) => {
+      const tag = style === "ordered" ? "ol" : "ul";
+      return `<${tag} class="${style === "checklist" ? "rd-check" : ""}">` + items.map(it =>
+        `<li class="${it.meta && it.meta.checked ? "done" : ""}">${style === "checklist" ? `<span class="rd-box">${it.meta && it.meta.checked ? "✓" : ""}</span>` : ""}${safeInline(it.content)}${it.items && it.items.length ? listHtml(listItemsOf(it), style) : ""}</li>`
+      ).join("") + `</${tag}>`;
+    };
+    ((doc && doc.blocks) || []).forEach(b => {
+      const d = b.data || {};
+      if (b.type === "header") out.push(`<h${Math.min(6, 3 + (d.level || 2))}>${safeInline(d.text)}</h${Math.min(6, 3 + (d.level || 2))}>`);
+      else if (b.type === "paragraph") { if (docPlain(d.text)) out.push(`<p>${safeInline(d.text)}</p>`); }
+      else if (b.type === "quote") out.push(`<blockquote>${safeInline(d.text)}</blockquote>`);
+      else if (b.type === "delimiter") out.push("<hr>");
+      else if (b.type === "list") out.push(listHtml(listItemsOf(d), d.style || "unordered"));
+      else if (b.type === "table") {
+        const rows = d.content || [];
+        out.push(`<div class="rd-table"><table>` + rows.map((r, i) =>
+          `<tr>${r.map(c => (d.withHeadings && i === 0) ? `<th>${safeInline(c)}</th>` : `<td>${safeInline(c)}</td>`).join("")}</tr>`
+        ).join("") + `</table></div>`);
+      }
+      else if (d.text) out.push(`<p>${safeInline(d.text)}</p>`);
+    });
+    return out.join("");
+  })();
+  return <div className="rd-doc" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+function ReadingView({ name, blocks, edges }) {
+  const items = mapOutline(blocks, edges);
+  return (
+    <div className="rd-overlay">
+      <article className="rd-page">
+        <h1 className="rd-title">{name || "Mapa"}</h1>
+        {items.map(({ block: b, depth }) => {
+          const st = b.doc ? docStats(b.doc) : null;
+          const H = depth === 0 ? "h2" : "h3";
+          return (
+            <section key={b.id} className={`rd-sec ${depth === 0 ? "root" : ""}`} style={{ "--rc": b.color || DEFAULT_COLOR }}>
+              <H className="rd-h" dangerouslySetInnerHTML={{ __html: safeInline(b.title) || "(sem título)" }} />
+              {docPlain(b.body) && <p className="rd-body" dangerouslySetInnerHTML={{ __html: safeInline(b.body) }} />}
+              {b.task && <p className="rd-meta">{b.task.done ? "Feito" : "Pendente"}</p>}
+              {st && st.words > 0 && <p className="rd-meta">{st.words.toLocaleString("pt-BR")} palavras · {st.spoken}</p>}
+              {b.doc && <DocRead doc={b.doc} />}
+            </section>
+          );
+        })}
+      </article>
+    </div>
+  );
+}
+
 /* ================== Blocos prontos (modelos) ==================
    Cada modelo é um pedaço de bloco (cor, forma, texto, documento...).
    "Meus modelos" ficam no navegador (localStorage), salvos a partir de um bloco. */
@@ -2649,6 +2878,27 @@ function App() {
   const [myPresets, setMyPresets] = useState(loadMyPresets);
   // link de leitura: estado do mapa compartilhado (loading | ok | missing)
   const [shared, setShared] = useState(VIEW_ONLY ? { status: "loading" } : null);
+  // link de leitura: "map" (canvas) ou "doc" (texto corrido). No celular abre em doc.
+  const [readMode, setReadMode] = useState(() => (VIEW_ONLY && window.innerWidth < 760) ? "doc" : "map");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportMsg, setExportMsg] = useState("");
+  const exportAs = async (kind) => {
+    const nm = (shared && shared.name) || "Mapa";
+    const url = VIEW_ONLY ? shareUrl(SHARE_TOKEN) : "";
+    if (kind === "json") {
+      downloadText(fileSlug(nm) + ".json", JSON.stringify({ name: nm, link: url || undefined, salvoEm: shared && shared.updatedAt, mapa: getDoc() }, null, 2), "application/json");
+      setExportMsg("JSON baixado");
+    } else {
+      const md = mapToMd(nm, blocks, edges, url);
+      if (kind === "md") { downloadText(fileSlug(nm) + ".md", md, "text/markdown;charset=utf-8"); setExportMsg("Markdown baixado"); }
+      else {
+        try { await navigator.clipboard.writeText(md); setExportMsg("Texto copiado. É só colar no Claude."); }
+        catch { downloadText(fileSlug(nm) + ".md", md, "text/markdown;charset=utf-8"); setExportMsg("Não deu pra copiar, baixei o .md"); }
+      }
+    }
+    setExportOpen(false);
+    setTimeout(() => setExportMsg(""), 3500);
+  };
   const docOpenRef = useRef(false);
   useEffect(() => { docOpenRef.current = !!docId; }, [docId]);
   // paleta de colunas/valores (por mapa) — só um helper pra aplicar valores nos blocos
@@ -5848,10 +6098,30 @@ function App() {
             <>
               <b>{shared.name || "Mapa"}</b>
               <span className="share-meta">Só leitura{shared.updatedAt ? " · salvo em " + new Date(shared.updatedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(",", " às") : ""}</span>
-              {blocks.some(b => b.doc) && <span className="share-tip">Clique num bloco com documento pra ler</span>}
+              {readMode === "map" && blocks.some(b => b.doc) && <span className="share-tip">Clique num bloco com documento pra ler</span>}
+              <span className="share-actions">
+                <span className="seg">
+                  <button className={readMode === "map" ? "on" : ""} onClick={() => setReadMode("map")}>Mapa</button>
+                  <button className={readMode === "doc" ? "on" : ""} onClick={() => setReadMode("doc")}>Documento</button>
+                </span>
+                <span className="exp-wrap">
+                  <button className="exp-btn" onClick={() => setExportOpen(o => !o)}>Exportar</button>
+                  {exportOpen && (
+                    <span className="exp-menu">
+                      <button onClick={() => exportAs("copy")}><b>Copiar texto</b><small>Markdown pronto pra colar no Claude</small></button>
+                      <button onClick={() => exportAs("md")}><b>Baixar .md</b><small>Markdown com tudo, na ordem</small></button>
+                      <button onClick={() => exportAs("json")}><b>Baixar .json</b><small>Os dados completos do mapa</small></button>
+                    </span>
+                  )}
+                </span>
+              </span>
+              {exportMsg && <span className="exp-msg">{exportMsg}</span>}
             </>
           )}
         </div>
+      )}
+      {VIEW_ONLY && shared && shared.status === "ok" && readMode === "doc" && (
+        <ReadingView name={shared.name} blocks={blocks} edges={edges} />
       )}
 
       {docId && blocks.some(b => b.id === docId) && (
