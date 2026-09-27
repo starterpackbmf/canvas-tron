@@ -4501,6 +4501,7 @@ function App() {
     let last = null;          // última posição (p/ movementX/Y do pan)
     let pinch = null;         // âncora da pinça {dist, cx, cy, view}
     let lastTap = 0, lastTapXY = null;   // detecção de duplo-toque
+    let startXY = null, moved = false;   // toque sem arrastar = clique
 
     const onStart = (e) => {
       if (onChrome(e.target)) return;
@@ -4508,6 +4509,7 @@ function App() {
         const t = e.touches[0];
         mode = "drag"; touchId = t.identifier;
         last = { x: t.clientX, y: t.clientY };
+        startXY = { x: t.clientX, y: t.clientY }; moved = false;
         fire("mousedown", t.clientX, t.clientY);
         e.preventDefault();
       } else if (e.touches.length === 2) {
@@ -4532,6 +4534,7 @@ function App() {
         if (!t) return;
         const mv = { movementX: t.clientX - last.x, movementY: t.clientY - last.y };
         last = { x: t.clientX, y: t.clientY };
+        if (startXY && Math.hypot(t.clientX - startXY.x, t.clientY - startXY.y) > 10) moved = true;
         fire("mousemove", t.clientX, t.clientY, mv);
         e.preventDefault();
       } else if (mode === "pinch" && e.touches.length >= 2 && pinch) {
@@ -4555,6 +4558,9 @@ function App() {
         if (t) {
           const now = Date.now();
           fire("mouseup", t.clientX, t.clientY, { buttons: 0 });
+          // o touchstart cancela o clique nativo: um toque sem arrastar vira click
+          // (é o que abre o documento no link de leitura, como no mouse)
+          if (!moved) fire("click", t.clientX, t.clientY, { buttons: 0, detail: 1 });
           // duplo-toque → dblclick (editar bloco / criar bloco no vazio)
           if (lastTapXY && now - lastTap < 320 &&
               Math.hypot(t.clientX - lastTapXY.x, t.clientY - lastTapXY.y) < 28) {
