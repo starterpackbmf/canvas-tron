@@ -1119,7 +1119,7 @@
   .doc-editor .cdx-list__item:has(.cdx-list__checkbox--checked) .cdx-list__item-content{color:var(--d-muted);text-decoration:line-through}
   .doc-editor .ce-block--selected .ce-block__content{background:var(--d-sel)}
   .doc-editor ::selection{background:var(--d-sel)}
-  .doc-editor a{color:var(--d-text);text-decoration:underline}
+  .doc-editor a{color:var(--d-text);text-decoration:underline;text-decoration-color:var(--d-faint);text-underline-offset:3px;cursor:pointer}
   .doc-editor .ce-toolbar__plus,.doc-editor .ce-toolbar__settings-btn{color:var(--d-faint);background:transparent}
   .doc-editor .ce-toolbar__plus:hover,.doc-editor .ce-toolbar__settings-btn:hover{color:var(--d-text);background:var(--d-hover)}
   .doc-editor .ce-popover,.doc-editor .ce-inline-toolbar,.doc-editor .ce-popover--inline{
@@ -2685,7 +2685,19 @@ function DocEditor({ block, onSave, onClose, readOnly }) {
             }}
           />
           {status === "loading" && <div className="doc-loading">Carregando editor...</div>}
-          <div ref={holderRef} className="doc-editor" />
+          <div
+            ref={holderRef}
+            className="doc-editor"
+            title={readOnly ? undefined : "Ctrl+clique num link abre ele"}
+            onClick={(e) => {
+              // link no documento: no modo leitura abre com clique; editando, com Ctrl+clique
+              const a = e.target.closest && e.target.closest("a[href]");
+              if (!a) return;
+              const href = a.getAttribute("href") || "";
+              if (!/^https?:\/\//i.test(href)) return;
+              if (readOnly || e.ctrlKey || e.metaKey) { e.preventDefault(); window.open(href, "_blank", "noopener,noreferrer"); }
+            }}
+          />
         </div>
       </div>
     </div>
