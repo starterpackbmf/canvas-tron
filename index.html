@@ -933,6 +933,9 @@
   .pm-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
   .pm-head > span:first-child{font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--cyan);flex:1}
   .pm-key{font-size:11px;color:var(--muted)}
+  .pm-mode{background:none;border:1px solid rgba(0,240,255,.25);color:var(--cyan);font:inherit;font-size:11px;padding:3px 9px;border-radius:999px;cursor:pointer}
+  .pm-mode:hover{background:rgba(0,240,255,.1)}
+  .pm-note{font-size:12px;color:var(--muted);margin:-4px 0 12px}
   .pm-x{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 6px;border-radius:6px}
   .pm-x:hover{color:var(--danger);background:rgba(255,59,92,.1)}
   .pm-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
@@ -2153,7 +2156,10 @@ const presetFromBlock = (b) => {
   return d;
 };
 
-function PresetMenu({ myPresets, onPick, onDeleteMine, onClose }) {
+function PresetMenu({ myPresets, onPick, onApply, applyCount, onDeleteMine, onClose }) {
+  // com bloco selecionado, o menu aplica o modelo neles; o link troca pra "criar novo"
+  const [mode, setMode] = useState(applyCount > 0 ? "apply" : "create");
+  const choose = (it) => (mode === "apply" ? onApply(it) : onPick(it));
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
     window.addEventListener("keydown", onKey, true);
@@ -2168,10 +2174,16 @@ function PresetMenu({ myPresets, onPick, onDeleteMine, onClose }) {
     <div className="pm-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="pm-panel" role="dialog" aria-label="Blocos prontos">
         <div className="pm-head">
-          <span>Blocos prontos</span>
+          <span>{mode === "apply" ? `Aplicar em ${applyCount} ${applyCount === 1 ? "bloco selecionado" : "blocos selecionados"}` : "Blocos prontos"}</span>
+          {applyCount > 0 && (
+            <button className="pm-mode" onClick={() => setMode(mode === "apply" ? "create" : "apply")}>
+              {mode === "apply" ? "criar bloco novo" : `aplicar nos ${applyCount} selecionados`}
+            </button>
+          )}
           <span className="pm-key">tecla M</span>
           <button className="pm-x" onClick={onClose} title="Fechar (Esc)">×</button>
         </div>
+        {mode === "apply" && <div className="pm-note">Muda cor, forma, fundo e destaque. O texto fica. Documento e check entram só se o bloco ainda não tiver.</div>}
         <div className="pm-cols">
           {BUILTIN_PRESETS.map(g => (
             <div key={g.group} className="pm-col">
@@ -2179,7 +2191,7 @@ function PresetMenu({ myPresets, onPick, onDeleteMine, onClose }) {
                 <svg viewBox="0 0 24 24"><path d={PRESET_ICONS[g.group]} /></svg>{g.group}
               </div>
               {g.items.map(it => (
-                <button key={it.key} className="pm-item" style={{ "--pc": it.data.color }} onClick={() => onPick(it)}>
+                <button key={it.key} className="pm-item" style={{ "--pc": it.data.color }} onClick={() => choose(it)}>
                   <Swatch d={it.data} />
                   <span className="pm-txt"><b>{it.name}</b><small>{it.hint}</small></span>
                 </button>
@@ -2193,7 +2205,7 @@ function PresetMenu({ myPresets, onPick, onDeleteMine, onClose }) {
             <div className="pm-mine-list">
               {myPresets.map(m => (
                 <span key={m.id} className="pm-chip" style={{ "--pc": m.data.color || DEFAULT_COLOR }}>
-                  <button className="pm-chip-go" onClick={() => onPick(m)} title="Criar bloco com este modelo"><Swatch d={m.data} />{m.name}</button>
+                  <button className="pm-chip-go" onClick={() => choose(m)} title={mode === "apply" ? "Aplicar este modelo" : "Criar bloco com este modelo"}><Swatch d={m.data} />{m.name}</button>
                   <button className="pm-chip-x" onClick={() => onDeleteMine(m.id)} title="Apagar modelo">×</button>
                 </span>
               ))}
@@ -3252,6 +3264,21 @@ function App() {
     selectOne(id);
     setPresetOpen(false);
   }, [screenToWorld, selectOne]);
+  // aplica o visual do modelo nos blocos selecionados, sem mexer no texto
+  const applyPresetToSelection = useCallback((preset) => {
+    const d = preset.data || {};
+    const ids = selectionRef.current;
+    setBlocks(p => p.map(b => {
+      if (!ids.has(b.id)) return b;
+      const nb = { ...b, color: d.color || DEFAULT_COLOR };
+      ["shape", "fill", "emphasis", "fontSize"].forEach(k => { if (d[k] !== undefined) nb[k] = d[k]; else delete nb[k]; });
+      if (!docPlain(nb.title) && !docPlain(nb.body) && d.title) nb.title = d.title;
+      if (d.doc && !nb.doc) nb.doc = JSON.parse(JSON.stringify(d.doc));
+      if (d.task && !nb.task) nb.task = { done: false };
+      return nb;
+    }));
+    setPresetOpen(false);
+  }, []);
   const saveBlockAsPreset = useCallback(() => {
     const b = blocksRef.current.find(x => selectionRef.current.has(x.id));
     if (!b) return;
@@ -5806,6 +5833,8 @@ function App() {
         <PresetMenu
           myPresets={myPresets}
           onPick={createFromPreset}
+          onApply={applyPresetToSelection}
+          applyCount={blocks.filter(b => selection.has(b.id)).length}
           onDeleteMine={deleteMyPreset}
           onClose={() => setPresetOpen(false)}
         />
