@@ -1199,9 +1199,7 @@
   .board-card-prog{display:flex;align-items:center;gap:8px;margin-top:8px}
   .board-bar{flex:1;height:4px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
   .board-bar-fill{height:100%;background:linear-gradient(90deg,#7c5cff,#00c2ff);border-radius:3px;transition:width .2s ease}
-  .board-frac{display:inline-flex;align-items:center;gap:1px;font-size:11px;color:#6b8aa0}
-  .board-frac input{width:22px;background:transparent;border:none;color:#9fb6c6;font-size:11px;text-align:center;outline:none;-moz-appearance:textfield}
-  .board-frac input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .board-frac{font-size:11px;color:#9fb6c6;font-weight:600;flex:0 0 auto}
   .board-card-due{display:flex;align-items:center;gap:6px;margin-top:7px}
   .board-card-due .ddot{width:5px;height:5px;border-radius:50%;background:#6b8aa0;flex:0 0 auto}
   .board-due{flex:1;background:transparent;border:none;color:#8fa9bb;font-size:11px;font-weight:600;letter-spacing:.3px;outline:none}
@@ -1209,6 +1207,24 @@
   .board-add-card:hover{border-color:var(--cyan,#00f0ff);color:var(--cyan,#00f0ff)}
   .board-add-col{flex:0 0 160px;align-self:flex-start;background:transparent;border:1px dashed rgba(0,240,255,.25);border-radius:12px;color:#9fc2d6;font-size:12px;padding:12px;cursor:pointer}
   .board-add-col:hover{border-color:var(--cyan,#00f0ff);color:var(--cyan,#00f0ff)}
+  .board-steps-toggle{width:100%;margin-top:8px;background:transparent;border:none;color:#6b8aa0;font-size:11px;font-weight:600;letter-spacing:.3px;text-align:left;padding:3px 2px;cursor:pointer}
+  .board-steps-toggle:hover{color:var(--cyan,#00f0ff)}
+  .board-card.open{cursor:default}
+  .board-steps{margin-top:8px;border-top:1px solid rgba(255,255,255,.08);padding-top:9px}
+  .board-steps-h{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cyan,#00f0ff);margin-bottom:7px}
+  .board-step{display:flex;align-items:center;gap:7px;padding:3px 0}
+  .board-chk{flex:0 0 auto;width:16px;height:16px;border-radius:5px;border:1.5px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:11px;color:#0a0f18;cursor:pointer;line-height:1}
+  .board-chk.on{background:linear-gradient(135deg,#7c5cff,#00c2ff);border-color:transparent;font-weight:900}
+  .board-step-txt{flex:1;background:transparent;border:none;color:#dCEAF4;font-size:12.5px;outline:none;font-family:inherit;padding:1px 0}
+  .board-step.done .board-step-txt{text-decoration:line-through;color:#6b8aa0}
+  .board-step-x{flex:0 0 auto;cursor:pointer;color:#6b8aa0;font-size:14px;line-height:1;opacity:0;transition:opacity .15s}
+  .board-step:hover .board-step-x{opacity:1}
+  .board-step-x:hover{color:var(--danger,#ff3b5c)}
+  .board-step-add{display:flex;gap:6px;margin-top:8px}
+  .board-step-add input{flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#dCEAF4;font-size:12px;padding:5px 8px;outline:none;font-family:inherit}
+  .board-step-add input:focus{border-color:var(--cyan,#00f0ff)}
+  .board-step-add button{flex:0 0 auto;background:rgba(0,240,255,.1);border:1px solid rgba(0,240,255,.3);border-radius:6px;color:var(--cyan,#00f0ff);font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer}
+  .board-step-add button:hover{background:rgba(0,240,255,.2)}
   .board-foot{padding:10px 18px;border-top:1px solid rgba(0,240,255,.1);text-align:center}
   .board-saved{font-size:11px;color:#00ff9d;letter-spacing:1px;text-transform:uppercase}
   @media (max-width:640px){
@@ -2772,11 +2788,13 @@ const defaultBoard = () => ({ cols: [
 
 function BoardPanel({ block, onSave, onClose, readOnly }) {
   const [board, setBoard] = useState(() => (block.board && block.board.cols ? block.board : defaultBoard()));
+  const [openCard, setOpenCard] = useState(null);
+  const [stepIn, setStepIn] = useState({});
   const dragRef = useRef(null);
 
   const save = (b) => { setBoard(b); if (!readOnly) onSave(block.id, { board: b }); };
   const patchCard = (colId, cardId, patch) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: c.cards.map(cd => cd.id === cardId ? { ...cd, ...patch } : cd) }) });
-  const addCard = (colId) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: [...c.cards, { id: newId("k"), title: "", tag: "TAREFA", prio: "", done: 0, total: 0, due: "" }] }) });
+  const addCard = (colId) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: [...c.cards, { id: newId("k"), title: "", tag: "TAREFA", prio: "", due: "", steps: [] }] }) });
   const delCard = (colId, cardId) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: c.cards.filter(cd => cd.id !== cardId) }) });
   const addCol = () => save({ cols: [...board.cols, { id: newId("c"), name: "NOVA", cards: [] }] });
   const renameCol = (colId, name) => save({ cols: board.cols.map(c => c.id === colId ? { ...c, name } : c) });
@@ -2792,6 +2810,11 @@ function BoardPanel({ block, onSave, onClose, readOnly }) {
     save({ cols: cols.map(c => c.id === toColId ? { ...c, cards: [...c.cards, card] } : c) });
   };
   const cyclePrio = (colId, cardId, cur) => { const i = BOARD_PRIOS.findIndex(p => p.k === (cur || "")); patchCard(colId, cardId, { prio: BOARD_PRIOS[(i + 1) % BOARD_PRIOS.length].k }); };
+  const setSteps = (colId, cardId, fn) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: c.cards.map(cd => cd.id !== cardId ? cd : { ...cd, steps: fn(cd.steps || []) }) }) });
+  const addStep = (colId, cardId, text) => { const t = (text || "").trim(); if (!t) return; setSteps(colId, cardId, st => [...st, { id: newId("s"), text: t, done: false }]); };
+  const toggleStep = (colId, cardId, stepId) => setSteps(colId, cardId, st => st.map(s => s.id === stepId ? { ...s, done: !s.done } : s));
+  const updateStep = (colId, cardId, stepId, text) => setSteps(colId, cardId, st => st.map(s => s.id === stepId ? { ...s, text } : s));
+  const delStep = (colId, cardId, stepId) => setSteps(colId, cardId, st => st.filter(s => s.id !== stepId));
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onClose(); } };
@@ -2823,9 +2846,13 @@ function BoardPanel({ block, onSave, onClose, readOnly }) {
               <div className="board-col-cards">
                 {col.cards.map(card => {
                   const p = boardPrio(card.prio);
-                  const pct = card.total > 0 ? Math.min(100, Math.round((card.done / card.total) * 100)) : 0;
+                  const steps = card.steps || [];
+                  const total = steps.length;
+                  const done = steps.filter(s => s.done).length;
+                  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                  const open = openCard === card.id;
                   return (
-                    <div className="board-card" key={card.id} draggable={!readOnly}
+                    <div className={`board-card ${open ? "open" : ""}`} key={card.id} draggable={!readOnly && !open}
                       onDragStart={(e) => { dragRef.current = { cardId: card.id, fromColId: col.id }; e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", card.id); } catch {} }}
                       onDragEnd={() => { dragRef.current = null; }}>
                       <div className="board-card-top">
@@ -2838,18 +2865,39 @@ function BoardPanel({ block, onSave, onClose, readOnly }) {
                       </div>
                       <textarea className="board-card-title" rows={1} value={card.title || ""} readOnly={readOnly} placeholder="Título do cartão"
                         onChange={(e) => patchCard(col.id, card.id, { title: e.target.value })} />
-                      <div className="board-card-prog">
-                        <div className="board-bar"><div className="board-bar-fill" style={{ width: pct + "%" }} /></div>
-                        <span className="board-frac">
-                          <input type="number" min="0" value={card.done || 0} readOnly={readOnly} onChange={(e) => patchCard(col.id, card.id, { done: Math.max(0, +e.target.value || 0) })} />
-                          /
-                          <input type="number" min="0" value={card.total || 0} readOnly={readOnly} onChange={(e) => patchCard(col.id, card.id, { total: Math.max(0, +e.target.value || 0) })} />
-                        </span>
-                      </div>
+                      {total > 0 && (
+                        <div className="board-card-prog">
+                          <div className="board-bar"><div className="board-bar-fill" style={{ width: pct + "%" }} /></div>
+                          <span className="board-frac">{done}/{total}</span>
+                        </div>
+                      )}
                       {(card.due || !readOnly) && (
                         <div className="board-card-due">
                           <i className="ddot" />
                           <input className="board-due" value={card.due || ""} readOnly={readOnly} placeholder="prazo (ex: 20/10/2026)" onChange={(e) => patchCard(col.id, card.id, { due: e.target.value })} />
+                        </div>
+                      )}
+                      <button className="board-steps-toggle" onClick={() => setOpenCard(open ? null : card.id)}>
+                        {open ? "▲ fechar etapas" : (total > 0 ? `▦ etapas · ${done}/${total}` : "▦ etapas")}
+                      </button>
+                      {open && (
+                        <div className="board-steps">
+                          <div className="board-steps-h">Fluxo da tarefa</div>
+                          {steps.map(s => (
+                            <div className={`board-step ${s.done ? "done" : ""}`} key={s.id}>
+                              <span className={`board-chk ${s.done ? "on" : ""}`} onClick={() => !readOnly && toggleStep(col.id, card.id, s.id)} title="Concluir etapa">{s.done ? "✓" : ""}</span>
+                              <input className="board-step-txt" value={s.text || ""} readOnly={readOnly} placeholder="Descreva a etapa" onChange={(e) => updateStep(col.id, card.id, s.id, e.target.value)} />
+                              {!readOnly && <span className="board-step-x" onClick={() => delStep(col.id, card.id, s.id)} title="Apagar etapa">×</span>}
+                            </div>
+                          ))}
+                          {!readOnly && (
+                            <div className="board-step-add">
+                              <input value={stepIn[card.id] || ""} placeholder="+ nova etapa"
+                                onChange={(e) => setStepIn({ ...stepIn, [card.id]: e.target.value })}
+                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addStep(col.id, card.id, stepIn[card.id]); setStepIn({ ...stepIn, [card.id]: "" }); } }} />
+                              <button onClick={() => { addStep(col.id, card.id, stepIn[card.id]); setStepIn({ ...stepIn, [card.id]: "" }); }}>Add</button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
