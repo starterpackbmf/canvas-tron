@@ -1163,6 +1163,58 @@
     .doc-scroll{padding:18px 16px calc(40px + env(safe-area-inset-bottom))}
     .doc-title{font-size:24px}
   }
+
+  /* ===== quadro (board/pipeline) dentro do bloco ===== */
+  .board-chip{margin-top:8px;border:1px solid rgba(var(--bc-rgb,0,240,255),.22);border-radius:8px;background:rgba(var(--bc-rgb,0,240,255),.05);padding:7px 9px;text-align:left}
+  .board-chip-head{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--bc,#00f0ff)}
+  .board-chip-head svg{width:13px;height:13px;fill:currentColor}
+  .board-chip-cols{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:5px;font-size:10px;color:#9fc2d6;text-transform:uppercase;letter-spacing:.3px}
+  .board-chip-cols b{color:#fff;font-weight:700}
+  .board-panel{
+    position:relative;width:min(1120px,96vw);height:min(88vh,920px);display:flex;flex-direction:column;
+    background:linear-gradient(180deg,#0a1324,#060c18);border:1px solid rgba(0,240,255,.22);border-radius:16px;
+    box-shadow:0 24px 70px rgba(0,0,0,.6);overflow:hidden;color:#e9fbff;
+  }
+  .board-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(0,240,255,.14)}
+  .board-head h3{margin:0;flex:1;font-size:15px;letter-spacing:.5px;color:#cfeefc;text-transform:uppercase;font-weight:700}
+  .board-cols{flex:1;display:flex;gap:14px;align-items:flex-start;padding:16px;overflow:auto}
+  .board-col{flex:0 0 300px;max-width:300px;display:flex;flex-direction:column;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:12px;max-height:100%}
+  .board-col.drop{border-color:var(--cyan,#00f0ff);box-shadow:inset 0 0 0 1px rgba(0,240,255,.4)}
+  .board-col-head{display:flex;align-items:center;gap:7px;padding:12px 12px 8px}
+  .board-col-dot{width:8px;height:8px;border-radius:50%;background:rgba(160,200,255,.5);flex:0 0 auto}
+  .board-col-name{flex:1;background:transparent;border:none;color:#c6ddea;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;outline:none;min-width:0}
+  .board-col-count{font-size:12px;color:#6b8aa0}
+  .board-col-x{cursor:pointer;color:#6b8aa0;font-size:16px;line-height:1;padding:0 4px}
+  .board-col-x:hover{color:var(--danger,#ff3b5c)}
+  .board-col-cards{display:flex;flex-direction:column;gap:9px;padding:0 10px 12px;overflow:auto}
+  .board-card{background:#0e1726;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 11px;cursor:grab}
+  .board-card:active{cursor:grabbing}
+  .board-card-top{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+  .board-card-tag{flex:0 1 auto;width:84px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:5px;color:#9fb6c6;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:2px 6px;outline:none}
+  .board-prio{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:2px 7px;border-radius:9px;border:1px solid rgba(255,255,255,.12);color:#6b8aa0;cursor:pointer;white-space:nowrap}
+  .board-prio .pdot{width:6px;height:6px;border-radius:50%}
+  .board-card-x{margin-left:auto;cursor:pointer;color:#6b8aa0;font-size:15px;line-height:1}
+  .board-card-x:hover{color:var(--danger,#ff3b5c)}
+  .board-card-title{width:100%;box-sizing:border-box;background:transparent;border:none;resize:none;color:#eaf4fb;font-size:14px;font-weight:600;line-height:1.3;outline:none;font-family:inherit;overflow:hidden;field-sizing:content;min-height:1.3em}
+  .board-card-prog{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .board-bar{flex:1;height:4px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+  .board-bar-fill{height:100%;background:linear-gradient(90deg,#7c5cff,#00c2ff);border-radius:3px;transition:width .2s ease}
+  .board-frac{display:inline-flex;align-items:center;gap:1px;font-size:11px;color:#6b8aa0}
+  .board-frac input{width:22px;background:transparent;border:none;color:#9fb6c6;font-size:11px;text-align:center;outline:none;-moz-appearance:textfield}
+  .board-frac input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .board-card-due{display:flex;align-items:center;gap:6px;margin-top:7px}
+  .board-card-due .ddot{width:5px;height:5px;border-radius:50%;background:#6b8aa0;flex:0 0 auto}
+  .board-due{flex:1;background:transparent;border:none;color:#8fa9bb;font-size:11px;font-weight:600;letter-spacing:.3px;outline:none}
+  .board-add-card{width:100%;margin-top:4px;background:transparent;border:1px dashed rgba(255,255,255,.14);border-radius:8px;color:#6b8aa0;font-size:12px;padding:8px;cursor:pointer}
+  .board-add-card:hover{border-color:var(--cyan,#00f0ff);color:var(--cyan,#00f0ff)}
+  .board-add-col{flex:0 0 160px;align-self:flex-start;background:transparent;border:1px dashed rgba(0,240,255,.25);border-radius:12px;color:#9fc2d6;font-size:12px;padding:12px;cursor:pointer}
+  .board-add-col:hover{border-color:var(--cyan,#00f0ff);color:var(--cyan,#00f0ff)}
+  .board-foot{padding:10px 18px;border-top:1px solid rgba(0,240,255,.1);text-align:center}
+  .board-saved{font-size:11px;color:#00ff9d;letter-spacing:1px;text-transform:uppercase}
+  @media (max-width:640px){
+    .board-panel{width:100vw;height:100%;border-radius:0;border:none}
+    .board-col{flex-basis:84vw;max-width:84vw}
+  }
 </style>
 </head>
 <body>
@@ -1572,7 +1624,7 @@ const bezierMidpoint = (a, b) => {
 };
 
 /* ================== Block ================== */
-function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange, onMeasure, mapMode, onEnterSibling, editReq, onOpenDoc, readOnly }) {
+function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect, onStartDrag, onStartConnection, onStartResize, onDelete, onChange, onEditingBodyChange, onEditingTitleChange, onMeasure, mapMode, onEnterSibling, editReq, onOpenDoc, onOpenBoard, readOnly }) {
   const elRef = useRef(null);
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
@@ -1585,7 +1637,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   const isEmptyHtml = (h) => !h || h.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "";
   const discardIfEmpty = (titleHtml, bodyHtml) => {
     if (!freshRef.current) return false;
-    if (block.image || normAttrs(block.attrs).some(r => r.k || r.v)) { freshRef.current = false; return false; }
+    if (block.image || block.board || block.doc) { freshRef.current = false; return false; }
     if (!isEmptyHtml(titleHtml) || !isEmptyHtml(bodyHtml)) { freshRef.current = false; return false; }
     onDelete?.(block.id);
     return true;
@@ -1710,11 +1762,11 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
         onStartDrag(e);
       }}
       onClick={(e) => {
-        // link de leitura: um clique (sem arrastar) abre o documento
-        if (!readOnly || !block.doc) return;
+        // link de leitura: um clique (sem arrastar) abre o quadro/documento
+        if (!readOnly || !(block.board || block.doc)) return;
         const d = downAtRef.current;
         if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) return;
-        onOpenDoc?.(block.id);
+        if (block.board) onOpenBoard?.(block.id); else onOpenDoc?.(block.id);
       }}
       onDoubleClick={(e) => {
         e.stopPropagation();
@@ -1723,6 +1775,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
         // still correctly resolves to the parent title or body element
         // bloco com documento: título e corpo seguem editáveis; o resto abre o documento
         if (e.target.closest(".title")) setEditingTitle(true);
+        else if (block.board && !e.target.closest(".body")) onOpenBoard?.(block.id);
         else if (block.doc && !e.target.closest(".body")) onOpenDoc?.(block.id);
         else setEditingBody(true);
       }}
@@ -1833,20 +1886,18 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
           </div>
         );
       })()}
-      {(() => {
-        const rs = normAttrs(block.attrs).filter(r => r.k || r.v);
-        if (!rs.length) return null;
-        // agrupa valores por atributo (Tier: Elite, Sala)
-        const groups = [];
-        rs.forEach(r => { const g = groups.find(x => x.k === r.k); if (g) g.vs.push(r.v); else groups.push({ k: r.k, vs: [r.v] }); });
+      {block.board && block.board.cols && (() => {
+        const cols = block.board.cols;
+        const total = cols.reduce((n, c) => n + c.cards.length, 0);
         return (
-          <div className="attr-line">
-            {groups.slice(0, 3).map((g, i) => (
-              <span key={i} className={`attr-tag ${/^tier$/i.test(g.k) ? "tier" : ""}`}>
-                {g.k ? <b>{g.k}:</b> : null} {g.vs.join(", ")}
-              </span>
-            ))}
-            {groups.length > 3 && <span className="attr-tag">+{groups.length - 3}</span>}
+          <div className="board-chip" title="Duplo clique abre o quadro">
+            <div className="board-chip-head">
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="4.5" height="16" rx="1"/><rect x="9.75" y="4" width="4.5" height="11" rx="1"/><rect x="16.5" y="4" width="4.5" height="16" rx="1"/></svg>
+              Quadro · {total} cartão{total !== 1 ? "s" : ""}
+            </div>
+            <div className="board-chip-cols">
+              {cols.map(c => <span key={c.id}>{c.name} <b>{c.cards.length}</b></span>)}
+            </div>
           </div>
         );
       })()}
@@ -2704,85 +2755,113 @@ function DocEditor({ block, onSave, onClose, readOnly }) {
   );
 }
 
-function AttrTable({ cols, setCols, selBlocks, blocks, onApply, onClearCol, onClose }) {
-  const strip = (t) => (t || "").replace(/<[^>]*>/g, "").trim();
-  const [status, setStatus] = useState("");
-  const [adding, setAdding] = useState({});
-  const selCount = selBlocks.length;
-  // valor está "aplicado" se TODOS os blocos selecionados já o têm (destaca o chip)
-  const applied = (colName, v) => selCount > 0 && selBlocks.every(b => normAttrs(b.attrs).some(r => r.k === colName && r.v === v));
+/* ================== BoardPanel (quadro/pipeline dentro do bloco) ========= */
+const BOARD_PRIOS = [
+  { k: "", label: "+ prioridade", color: "" },
+  { k: "alta", label: "ALTA", color: "#ff9d00" },
+  { k: "urgente", label: "URGENTE", color: "#ff3b5c" },
+  { k: "media", label: "MÉDIA", color: "#ffdd00" },
+];
+const boardPrio = (k) => BOARD_PRIOS.find(p => p.k === (k || "")) || BOARD_PRIOS[0];
+const newId = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+const defaultBoard = () => ({ cols: [
+  { id: newId("c"), name: "A FAZER", cards: [] },
+  { id: newId("c"), name: "FAZENDO", cards: [] },
+  { id: newId("c"), name: "FEITO", cards: [] },
+] });
 
-  const addCol = () => setCols([...cols, { name: "Nova coluna", values: [] }]);
-  const renameCol = (i, name) => setCols(cols.map((c, j) => j === i ? { ...c, name } : c));
-  const removeCol = (i) => setCols(cols.filter((_, j) => j !== i));
-  const addVal = (i, v) => { v = (v || "").trim(); if (!v) return; setCols(cols.map((c, j) => (j === i && !c.values.includes(v)) ? { ...c, values: [...c.values, v] } : c)); };
-  const removeVal = (i, v) => setCols(cols.map((c, j) => j === i ? { ...c, values: c.values.filter(x => x !== v) } : c));
+function BoardPanel({ block, onSave, onClose, readOnly }) {
+  const [board, setBoard] = useState(() => (block.board && block.board.cols ? block.board : defaultBoard()));
+  const dragRef = useRef(null);
 
-  const clickVal = (colName, v) => {
-    if (!selCount) { setStatus("Selecione um ou mais blocos primeiro"); return; }
-    onApply(colName, v);
-    setStatus(`${colName} = "${v}" → ${selCount} bloco${selCount > 1 ? "s" : ""}`);
+  const save = (b) => { setBoard(b); if (!readOnly) onSave(block.id, { board: b }); };
+  const patchCard = (colId, cardId, patch) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: c.cards.map(cd => cd.id === cardId ? { ...cd, ...patch } : cd) }) });
+  const addCard = (colId) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: [...c.cards, { id: newId("k"), title: "", tag: "TAREFA", prio: "", done: 0, total: 0, due: "" }] }) });
+  const delCard = (colId, cardId) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: c.cards.filter(cd => cd.id !== cardId) }) });
+  const addCol = () => save({ cols: [...board.cols, { id: newId("c"), name: "NOVA", cards: [] }] });
+  const renameCol = (colId, name) => save({ cols: board.cols.map(c => c.id === colId ? { ...c, name } : c) });
+  const delCol = (colId) => { if (!confirm("Apagar a coluna e seus cartões?")) return; save({ cols: board.cols.filter(c => c.id !== colId) }); };
+  const moveCard = (cardId, fromColId, toColId) => {
+    if (fromColId === toColId) return;
+    let card = null;
+    const cols = board.cols.map(c => {
+      if (c.id === fromColId) { card = c.cards.find(cd => cd.id === cardId); return { ...c, cards: c.cards.filter(cd => cd.id !== cardId) }; }
+      return c;
+    });
+    if (!card) return;
+    save({ cols: cols.map(c => c.id === toColId ? { ...c, cards: [...c.cards, card] } : c) });
   };
-  const clearCol = (colName) => {
-    if (!selCount) { setStatus("Selecione blocos pra limpar"); return; }
-    onClearCol(colName);
-    setStatus(`${colName} removido de ${selCount} bloco${selCount > 1 ? "s" : ""}`);
-  };
+  const cyclePrio = (colId, cardId, cur) => { const i = BOARD_PRIOS.findIndex(p => p.k === (cur || "")); patchCard(colId, cardId, { prio: BOARD_PRIOS[(i + 1) % BOARD_PRIOS.length].k }); };
 
-  // export a partir dos atributos já nos blocos (agrupa múltiplos valores por coluna)
-  const allCols = [...new Set(blocks.flatMap(b => normAttrs(b.attrs).map(r => r.k)).filter(Boolean))];
-  const rows = blocks.filter(b => normAttrs(b.attrs).length).map(b => {
-    const m = {}; normAttrs(b.attrs).forEach(r => { if (r.k) (m[r.k] = m[r.k] || []).push(r.v); });
-    return { produto: strip(b.title) || "(sem título)", cells: allCols.map(c => (m[c] || []).join(", ")) };
-  });
-  const downloadCSV = () => {
-    const esc = (s) => `"${String(s).replace(/"/g, '""')}"`;
-    const csv = [["Produto", ...allCols].map(esc).join(","), ...rows.map(r => [r.produto, ...r.cells].map(esc).join(","))].join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const el = document.createElement("a"); el.href = URL.createObjectURL(blob); el.download = "atribuicoes.csv"; el.click();
-  };
-  const copyJSON = () => {
-    const obj = rows.map(r => Object.assign({ produto: r.produto }, Object.fromEntries(allCols.map((c, j) => [c, r.cells[j]]))));
-    try { navigator.clipboard.writeText(JSON.stringify(obj, null, 2)); } catch {}
-  };
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onClose(); } };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+
+  const boardTitle = (block.title || "").replace(/<[^>]*>/g, "").trim() || "Quadro";
 
   return (
-    <div className="attr-dock" onMouseDown={(e) => e.stopPropagation()}>
-      <div className="attr-dock-head">
-        <h3>▦ Tabela</h3>
-        <span className="cloud-x" onClick={onClose}>×</span>
-      </div>
-      <div className={`attr-dock-hint ${selCount ? "on" : ""}`}>
-        {selCount ? `${selCount} bloco${selCount > 1 ? "s" : ""} selecionado${selCount > 1 ? "s" : ""} — clique num valor pra aplicar` : "Selecione blocos no mapa e clique num valor"}
-      </div>
-      <div className="attr-dock-body">
-        {cols.map((c, i) => (
-          <div className="attr-col" key={i}>
-            <div className="attr-col-head">
-              <input className="attr-col-name" value={c.name} onChange={(e) => renameCol(i, e.target.value)} />
-              <span className="cloud-ic" title="Limpar esse atributo dos blocos selecionados" onClick={() => clearCol(c.name)}>⊘</span>
-              <span className="cloud-ic del" title="Remover coluna" onClick={() => removeCol(i)}>🗑</span>
-            </div>
-            <div className="attr-cells">
-              {c.values.map(v => (
-                <span key={v} className={`attr-cell ${applied(c.name, v) ? "on" : ""}`} onClick={() => clickVal(c.name, v)} title="Clique pra aplicar/tirar dos blocos selecionados">
-                  {v}<i onClick={(e) => { e.stopPropagation(); removeVal(i, v); }}>×</i>
-                </span>
-              ))}
-            </div>
-            <input className="attr-addval" placeholder="+ valor + Enter" value={adding[i] || ""}
-              onChange={(e) => setAdding({ ...adding, [i]: e.target.value })}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addVal(i, adding[i]); setAdding({ ...adding, [i]: "" }); } }} />
-          </div>
-        ))}
-        <button className="cloud-btn" style={{ width: "100%", marginTop: 8 }} onClick={addCol}>＋ Coluna</button>
-      </div>
-      <div className="attr-dock-foot">
-        <div className="attr-dock-status">{status}</div>
-        <div className="cloud-row">
-          <button className="cloud-btn ghost" onClick={downloadCSV}>⤓ CSV</button>
-          <button className="cloud-btn ghost" onClick={copyJSON}>JSON</button>
+    <div className="doc-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="board-panel" role="dialog" aria-label="Quadro do bloco">
+        <div className="board-head">
+          <h3>▦ {boardTitle}</h3>
+          <button className="doc-x" onClick={onClose} title="Fechar (Esc)">×</button>
         </div>
+        <div className="board-cols">
+          {board.cols.map(col => (
+            <div className="board-col" key={col.id}
+              onDragOver={(e) => { if (dragRef.current) { e.preventDefault(); e.currentTarget.classList.add("drop"); } }}
+              onDragLeave={(e) => e.currentTarget.classList.remove("drop")}
+              onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("drop"); const d = dragRef.current; if (d) moveCard(d.cardId, d.fromColId, col.id); dragRef.current = null; }}>
+              <div className="board-col-head">
+                <span className="board-col-dot" />
+                <input className="board-col-name" value={col.name} readOnly={readOnly} onChange={(e) => renameCol(col.id, e.target.value)} />
+                <span className="board-col-count">{col.cards.length}</span>
+                {!readOnly && <span className="board-col-x" title="Apagar coluna" onClick={() => delCol(col.id)}>×</span>}
+              </div>
+              <div className="board-col-cards">
+                {col.cards.map(card => {
+                  const p = boardPrio(card.prio);
+                  const pct = card.total > 0 ? Math.min(100, Math.round((card.done / card.total) * 100)) : 0;
+                  return (
+                    <div className="board-card" key={card.id} draggable={!readOnly}
+                      onDragStart={(e) => { dragRef.current = { cardId: card.id, fromColId: col.id }; e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", card.id); } catch {} }}
+                      onDragEnd={() => { dragRef.current = null; }}>
+                      <div className="board-card-top">
+                        <input className="board-card-tag" value={card.tag || ""} readOnly={readOnly} placeholder="TAG" onChange={(e) => patchCard(col.id, card.id, { tag: e.target.value })} />
+                        <span className={`board-prio ${card.prio ? "on" : ""}`} style={card.prio ? { color: p.color, borderColor: p.color } : undefined}
+                          onClick={() => !readOnly && cyclePrio(col.id, card.id, card.prio)} title="Prioridade (clique pra mudar)">
+                          {card.prio ? <><i className="pdot" style={{ background: p.color }} />{p.label}</> : (readOnly ? "" : "+ prio")}
+                        </span>
+                        {!readOnly && <span className="board-card-x" onClick={() => delCard(col.id, card.id)} title="Apagar cartão">×</span>}
+                      </div>
+                      <textarea className="board-card-title" rows={1} value={card.title || ""} readOnly={readOnly} placeholder="Título do cartão"
+                        onChange={(e) => patchCard(col.id, card.id, { title: e.target.value })} />
+                      <div className="board-card-prog">
+                        <div className="board-bar"><div className="board-bar-fill" style={{ width: pct + "%" }} /></div>
+                        <span className="board-frac">
+                          <input type="number" min="0" value={card.done || 0} readOnly={readOnly} onChange={(e) => patchCard(col.id, card.id, { done: Math.max(0, +e.target.value || 0) })} />
+                          /
+                          <input type="number" min="0" value={card.total || 0} readOnly={readOnly} onChange={(e) => patchCard(col.id, card.id, { total: Math.max(0, +e.target.value || 0) })} />
+                        </span>
+                      </div>
+                      {(card.due || !readOnly) && (
+                        <div className="board-card-due">
+                          <i className="ddot" />
+                          <input className="board-due" value={card.due || ""} readOnly={readOnly} placeholder="prazo (ex: 20/10/2026)" onChange={(e) => patchCard(col.id, card.id, { due: e.target.value })} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {!readOnly && <button className="board-add-card" onClick={() => addCard(col.id)}>+ cartão</button>}
+              </div>
+            </div>
+          ))}
+          {!readOnly && <button className="board-add-col" onClick={addCol}>＋ coluna</button>}
+        </div>
+        <div className="board-foot"><span className="board-saved">● salvo no bloco</span></div>
       </div>
     </div>
   );
@@ -2887,6 +2966,7 @@ function App() {
   const [attrsOpen, setAttrsOpen] = useState(false);
   // bloco-documento aberto na popup (id do bloco) + ref pros atalhos globais
   const [docId, setDocId] = useState(null);
+  const [boardId, setBoardId] = useState(null);
   // blocos prontos: menu aberto + modelos do usuário
   const [presetOpen, setPresetOpen] = useState(false);
   const presetOpenRef = useRef(false);
@@ -3562,6 +3642,17 @@ function App() {
     if (!blocksRef.current.some(b => b.id === id)) return;
     setDocId(id);
   }, []);
+  const openBoard = useCallback((id) => {
+    if (!blocksRef.current.some(b => b.id === id)) return;
+    setBoardId(id);
+  }, []);
+  // cria (se não tiver) um quadro no bloco selecionado e abre
+  const createBoard = useCallback(() => {
+    const b = blocksRef.current.find(x => selectionRef.current.has(x.id));
+    if (!b) return;
+    if (!b.board || !b.board.cols) updateBlock(b.id, { board: defaultBoard() });
+    setBoardId(b.id);
+  }, [updateBlock]);
   const updateNote = useCallback((id, patch) => {
     setNotes(p => p.map(n => n.id === id ? { ...n, ...patch } : n));
   }, []);
@@ -5222,9 +5313,6 @@ function App() {
             <button className={`ic ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Minimapa">⊞</button>
             <button className={`ic ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Fluxo de energia nas conexões">⚡</button>
             <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>
-            <button className={`ic ${attrsOpen?"active":""}`} onClick={() => setAttrsOpen(o => !o)} title="Tabela de atributos (produtos)">
-              <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9 h18 M3 14.5 h18 M9 4 v16"/></svg>
-            </button>
             <button className="ic" onClick={() => setTheme(t => t === "light" ? "dark" : "light")} title={theme === "light" ? "Tema escuro" : "Tema claro (off-white)"}>
               {theme === "light"
                 ? <svg viewBox="0 0 24 24" className="ic-svg"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
@@ -5569,6 +5657,13 @@ function App() {
                   </div>
                   <div className="vsep"/>
                   <div className="group">
+                    <span className="lbl">Quadro</span>
+                    <button className={`shape-btn ${selBlock && selBlock.board ? "active" : ""}`} onClick={createBoard} title={selBlock && selBlock.board ? "Abrir o quadro (pipeline) do bloco" : "Criar um quadro/pipeline dentro do bloco (colunas e cartões)"}>
+                      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="4.5" height="16" rx="1"/><rect x="9.75" y="4" width="4.5" height="11" rx="1"/><rect x="16.5" y="4" width="4.5" height="16" rx="1"/></svg>
+                    </button>
+                  </div>
+                  <div className="vsep"/>
+                  <div className="group">
                     <span className="lbl">Ramo</span>
                     <button className="shape-btn" onClick={addYesNoBranch} title="Cria dois filhos ligados abaixo: NÃO (vermelho) e SIM (verde)">
                       <svg viewBox="0 0 24 24"><path d="M12 3 V9 M12 9 L5 15 M12 9 L19 15"/><circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="18" r="2.4"/></svg>
@@ -5579,13 +5674,6 @@ function App() {
                     <span className="lbl">Ênfase</span>
                     <button className={`shape-btn ${selBlock && selBlock.emphasis ? "active" : ""}`} onClick={toggleBlockEmphasis} title="Destaca o bloco com um brilho pulsante">
                       <svg viewBox="0 0 24 24"><path d="M12 2 L14.2 9.8 L22 12 L14.2 14.2 L12 22 L9.8 14.2 L2 12 L9.8 9.8 Z"/></svg>
-                    </button>
-                  </div>
-                  <div className="vsep"/>
-                  <div className="group">
-                    <span className="lbl">Atributos</span>
-                    <button className={`shape-btn ${selBlock && selBlock.attrs ? "active" : ""}`} onClick={() => setAttrsOpen(true)} title="Atributos do produto (tier, features, cursos) + exportar tabela">
-                      <svg viewBox="0 0 24 24"><path d="M4 7 h9 M4 12 h9 M4 17 h6"/><circle cx="18.5" cy="7" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/></svg>
                     </button>
                   </div>
                 </>
@@ -5957,6 +6045,7 @@ function App() {
               onEnterSibling={createSiblingBlock}
               editReq={editReq}
               onOpenDoc={openDoc}
+              onOpenBoard={openBoard}
               readOnly={VIEW_ONLY}
             />
           ))}
@@ -6089,18 +6178,6 @@ function App() {
         </div>
       )}
 
-      {attrsOpen && (
-        <AttrTable
-          cols={attrCols}
-          setCols={setAttrCols}
-          selBlocks={blocks.filter(b => selection.has(b.id))}
-          blocks={blocks}
-          onApply={applyAttr}
-          onClearCol={clearAttrCol}
-          onClose={() => setAttrsOpen(false)}
-        />
-      )}
-
       {presetOpen && !VIEW_ONLY && (
         <PresetMenu
           myPresets={myPresets}
@@ -6152,6 +6229,16 @@ function App() {
           block={blocks.find(b => b.id === docId)}
           onSave={saveDocPatch}
           onClose={() => setDocId(null)}
+          readOnly={VIEW_ONLY}
+        />
+      )}
+
+      {boardId && blocks.some(b => b.id === boardId) && (
+        <BoardPanel
+          key={boardId}
+          block={blocks.find(b => b.id === boardId)}
+          onSave={updateBlock}
+          onClose={() => setBoardId(null)}
           readOnly={VIEW_ONLY}
         />
       )}
