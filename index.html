@@ -1164,72 +1164,142 @@
     .doc-title{font-size:24px}
   }
 
-  /* ===== quadro (board/pipeline) dentro do bloco ===== */
+  /* ===== quadro (board/pipeline) dentro do bloco: cartões replicados do Valt "Não Esquece" ===== */
   .board-chip{margin-top:8px;border:1px solid rgba(var(--bc-rgb,0,240,255),.22);border-radius:8px;background:rgba(var(--bc-rgb,0,240,255),.05);padding:7px 9px;text-align:left}
   .board-chip-head{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--bc,#00f0ff)}
   .board-chip-head svg{width:13px;height:13px;fill:currentColor}
+  .board-chip-head .late{margin-left:auto;color:#f2a63b}
   .board-chip-cols{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:5px;font-size:10px;color:#9fc2d6;text-transform:uppercase;letter-spacing:.3px}
   .board-chip-cols b{color:#fff;font-weight:700}
   .board-panel{
+    --bs-mono:ui-monospace,"JetBrains Mono",Consolas,monospace;
+    --bs-line:rgba(255,255,255,.09);--bs-line-soft:rgba(255,255,255,.06);--bs-panel:#0e1726;--bs-panel-2:#0b1320;
+    --bs-ink:#e9f4fb;--bs-muted:#8fa9bb;--bs-muted-2:#5f7489;
+    --bs-accent:var(--cyan,#00f0ff);--bs-accent-dim:rgba(0,240,255,.12);--bs-accent-line:rgba(0,240,255,.34);
+    --bs-warn:#f2a63b;--bs-warn-dim:rgba(242,166,59,.13);--bs-warn-line:rgba(242,166,59,.34);
     position:relative;width:min(1120px,96vw);height:min(88vh,920px);display:flex;flex-direction:column;
     background:linear-gradient(180deg,#0a1324,#060c18);border:1px solid rgba(0,240,255,.22);border-radius:16px;
-    box-shadow:0 24px 70px rgba(0,0,0,.6);overflow:hidden;color:#e9fbff;
+    box-shadow:0 24px 70px rgba(0,0,0,.6);overflow:hidden;color:var(--bs-ink);
   }
-  .board-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(0,240,255,.14)}
-  .board-head h3{margin:0;flex:1;font-size:15px;letter-spacing:.5px;color:#cfeefc;text-transform:uppercase;font-weight:700}
+  .board-head{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(0,240,255,.14)}
+  .board-head h3{margin:0;flex:1;font-size:15px;letter-spacing:.5px;color:#cfeefc;text-transform:uppercase;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bs-counts{display:flex;gap:8px}
+  .bs-count{background:var(--bs-panel-2);border:1px solid var(--bs-line-soft);border-radius:10px;padding:6px 11px;display:flex;flex-direction:column;gap:2px;min-width:62px}
+  .bs-count .n{font-weight:700;font-size:17px;line-height:1;font-variant-numeric:tabular-nums}
+  .bs-count .k{font-family:var(--bs-mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--bs-muted-2)}
+  .bs-count.hot{border-color:var(--bs-warn-line);background:var(--bs-warn-dim)}
+  .bs-count.hot .n,.bs-count.hot .k{color:var(--bs-warn)}
   .board-cols{flex:1;display:flex;gap:14px;align-items:flex-start;padding:16px;overflow:auto}
-  .board-col{flex:0 0 300px;max-width:300px;display:flex;flex-direction:column;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:12px;max-height:100%}
-  .board-col.drop{border-color:var(--cyan,#00f0ff);box-shadow:inset 0 0 0 1px rgba(0,240,255,.4)}
+  .board-col{flex:0 0 300px;max-width:300px;display:flex;flex-direction:column;background:rgba(255,255,255,.02);border:1px solid var(--bs-line-soft);border-radius:14px;max-height:100%;transition:border-color .15s,background .15s}
+  .board-col.drop{border-color:var(--bs-accent);box-shadow:inset 0 0 0 1px rgba(0,240,255,.4);background:rgba(255,255,255,.03)}
   .board-col-head{display:flex;align-items:center;gap:7px;padding:12px 12px 8px}
-  .board-col-dot{width:8px;height:8px;border-radius:50%;background:rgba(160,200,255,.5);flex:0 0 auto}
-  .board-col-name{flex:1;background:transparent;border:none;color:#c6ddea;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;outline:none;min-width:0}
-  .board-col-count{font-size:12px;color:#6b8aa0}
-  .board-col-x{cursor:pointer;color:#6b8aa0;font-size:16px;line-height:1;padding:0 4px}
+  .board-col-dot{width:8px;height:8px;border-radius:50%;background:var(--bs-muted-2);flex:0 0 auto}
+  .board-col.is-doing .board-col-dot{background:var(--bs-accent);box-shadow:0 0 8px var(--bs-accent)}
+  .board-col.is-done .board-col-dot{background:var(--bs-muted)}
+  .board-col-name{flex:1;background:transparent;border:none;color:#c6ddea;font-family:var(--bs-mono);font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;outline:none;min-width:0}
+  .board-col-count{font-family:var(--bs-mono);font-size:11px;color:var(--bs-muted-2)}
+  .board-col-x{cursor:pointer;color:var(--bs-muted-2);font-size:16px;line-height:1;padding:0 4px}
   .board-col-x:hover{color:var(--danger,#ff3b5c)}
   .board-col-cards{display:flex;flex-direction:column;gap:9px;padding:0 10px 12px;overflow:auto}
-  .board-card{background:#0e1726;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 11px;cursor:grab}
-  .board-card:active{cursor:grabbing}
-  .board-card-top{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-  .board-card-tag{flex:0 1 auto;width:84px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:5px;color:#9fb6c6;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:2px 6px;outline:none}
-  .board-prio{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:2px 7px;border-radius:9px;border:1px solid rgba(255,255,255,.12);color:#6b8aa0;cursor:pointer;white-space:nowrap}
-  .board-prio .pdot{width:6px;height:6px;border-radius:50%}
-  .board-card-x{margin-left:auto;cursor:pointer;color:#6b8aa0;font-size:15px;line-height:1}
-  .board-card-x:hover{color:var(--danger,#ff3b5c)}
-  .board-card-title{width:100%;box-sizing:border-box;background:transparent;border:none;resize:none;color:#eaf4fb;font-size:14px;font-weight:600;line-height:1.3;outline:none;font-family:inherit;overflow:hidden;field-sizing:content;min-height:1.3em}
-  .board-card-prog{display:flex;align-items:center;gap:8px;margin-top:8px}
-  .board-bar{flex:1;height:4px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
-  .board-bar-fill{height:100%;background:linear-gradient(90deg,#7c5cff,#00c2ff);border-radius:3px;transition:width .2s ease}
-  .board-frac{font-size:11px;color:#9fb6c6;font-weight:600;flex:0 0 auto}
-  .board-card-due{display:flex;align-items:center;gap:6px;margin-top:7px}
-  .board-card-due .ddot{width:5px;height:5px;border-radius:50%;background:#6b8aa0;flex:0 0 auto}
-  .board-due{flex:1;background:transparent;border:none;color:#8fa9bb;font-size:11px;font-weight:600;letter-spacing:.3px;outline:none}
-  .board-add-card{width:100%;margin-top:4px;background:transparent;border:1px dashed rgba(255,255,255,.14);border-radius:8px;color:#6b8aa0;font-size:12px;padding:8px;cursor:pointer}
-  .board-add-card:hover{border-color:var(--cyan,#00f0ff);color:var(--cyan,#00f0ff)}
+  .board-col-empty{color:var(--bs-muted-2);font-size:12px;text-align:center;padding:8px 4px;opacity:.7}
+  /* cartão compacto (igual ao kcard do Valt): tag + prioridade, título, barra, chips de prazo */
+  .board-card{background:var(--bs-panel);border:1px solid var(--bs-line);border-radius:12px;padding:11px 12px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:border-color .15s}
+  .board-card:hover{border-color:var(--bs-muted-2)}
+  .board-card.done-card{opacity:.6}
+  .board-card-top{display:flex;align-items:center;gap:7px}
+  .bs-tag{font-family:var(--bs-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:3px 7px;border-radius:6px;border:1px solid var(--bs-line);color:var(--bs-muted);white-space:nowrap}
+  .bs-tag.video{color:var(--bs-accent);border-color:var(--bs-accent-line);background:var(--bs-accent-dim)}
+  .bs-prio{display:inline-flex;align-items:center;gap:5px;font-family:var(--bs-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid;white-space:nowrap}
+  .bs-prio .pt{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .board-card-title{font-size:14.5px;line-height:1.32;font-weight:500;color:var(--bs-ink);word-break:break-word}
+  .board-card-title.empty{color:var(--bs-muted-2)}
+  .board-card-prog{display:flex;align-items:center;gap:8px}
+  .board-bar{flex:1;height:4px;border-radius:3px;background:var(--bs-line-soft);overflow:hidden}
+  .board-bar-fill{height:100%;background:linear-gradient(90deg,#7c5cff,#00c2ff);border-radius:3px;transition:width .3s}
+  .board-frac{font-family:var(--bs-mono);font-size:10.5px;color:var(--bs-muted-2);font-variant-numeric:tabular-nums}
+  .bs-chip{font-family:var(--bs-mono);font-size:10px;letter-spacing:.04em;padding:4px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;align-self:flex-start;border:1px solid var(--bs-line);color:var(--bs-muted)}
+  .bs-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+  .bs-chip.overdue{color:var(--bs-warn);background:var(--bs-warn-dim);border-color:var(--bs-warn-line)}
+  .bs-chip.soon{color:var(--bs-accent);background:var(--bs-accent-dim);border-color:var(--bs-accent-line)}
+  .board-add-card{width:100%;margin-top:4px;background:transparent;border:1px dashed var(--bs-line);border-radius:9px;color:var(--bs-muted-2);font-family:var(--bs-mono);font-size:11px;padding:9px;cursor:pointer;transition:all .15s}
+  .board-add-card:hover{border-color:var(--bs-accent-line);color:var(--bs-accent)}
   .board-add-col{flex:0 0 160px;align-self:flex-start;background:transparent;border:1px dashed rgba(0,240,255,.25);border-radius:12px;color:#9fc2d6;font-size:12px;padding:12px;cursor:pointer}
-  .board-add-col:hover{border-color:var(--cyan,#00f0ff);color:var(--cyan,#00f0ff)}
-  .board-steps-toggle{width:100%;margin-top:8px;background:transparent;border:none;color:#6b8aa0;font-size:11px;font-weight:600;letter-spacing:.3px;text-align:left;padding:3px 2px;cursor:pointer}
-  .board-steps-toggle:hover{color:var(--cyan,#00f0ff)}
-  .board-card.open{cursor:default}
-  .board-steps{margin-top:8px;border-top:1px solid rgba(255,255,255,.08);padding-top:9px}
-  .board-steps-h{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cyan,#00f0ff);margin-bottom:7px}
-  .board-step{display:flex;align-items:center;gap:7px;padding:3px 0}
-  .board-chk{flex:0 0 auto;width:16px;height:16px;border-radius:5px;border:1.5px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:11px;color:#0a0f18;cursor:pointer;line-height:1}
-  .board-chk.on{background:linear-gradient(135deg,#7c5cff,#00c2ff);border-color:transparent;font-weight:900}
-  .board-step-txt{flex:1;background:transparent;border:none;color:#dCEAF4;font-size:12.5px;outline:none;font-family:inherit;padding:1px 0}
-  .board-step.done .board-step-txt{text-decoration:line-through;color:#6b8aa0}
-  .board-step-x{flex:0 0 auto;cursor:pointer;color:#6b8aa0;font-size:14px;line-height:1;opacity:0;transition:opacity .15s}
-  .board-step:hover .board-step-x{opacity:1}
-  .board-step-x:hover{color:var(--danger,#ff3b5c)}
-  .board-step-add{display:flex;gap:6px;margin-top:8px}
-  .board-step-add input{flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#dCEAF4;font-size:12px;padding:5px 8px;outline:none;font-family:inherit}
-  .board-step-add input:focus{border-color:var(--cyan,#00f0ff)}
-  .board-step-add button{flex:0 0 auto;background:rgba(0,240,255,.1);border:1px solid rgba(0,240,255,.3);border-radius:6px;color:var(--cyan,#00f0ff);font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer}
-  .board-step-add button:hover{background:rgba(0,240,255,.2)}
+  .board-add-col:hover{border-color:var(--bs-accent);color:var(--bs-accent)}
   .board-foot{padding:10px 18px;border-top:1px solid rgba(0,240,255,.1);text-align:center}
-  .board-saved{font-size:11px;color:#00ff9d;letter-spacing:1px;text-transform:uppercase}
+  .board-saved{font-family:var(--bs-mono);font-size:10.5px;color:#00ff9d;letter-spacing:.1em;text-transform:uppercase}
+  /* ficha do cartão (sheet do Valt) por cima do quadro */
+  .bs-scrim{position:absolute;inset:0;z-index:5;background:rgba(5,8,12,.72);backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding:24px 14px;overflow-y:auto}
+  .bs-sheet{background:var(--bs-panel);border:1px solid var(--bs-line);border-radius:18px;width:100%;max-width:520px;padding:20px;display:flex;flex-direction:column;gap:16px;margin:auto 0}
+  .bs-row{display:flex;align-items:center;gap:10px}
+  .bs-title{flex:1;background:transparent;border:none;border-bottom:1px solid transparent;color:var(--bs-ink);font-weight:600;font-size:20px;outline:none;padding:2px 0;min-width:0;font-family:inherit}
+  .bs-title:focus{border-bottom-color:var(--bs-accent-line)}
+  .bs-x{border:1px solid var(--bs-line);background:transparent;color:var(--bs-muted);width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:16px;flex:none;line-height:1}
+  .bs-x:hover{color:var(--bs-ink);border-color:var(--bs-muted-2)}
+  .bs-label{font-family:var(--bs-mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--bs-muted-2);margin-bottom:8px}
+  .bs-label.warn{color:var(--bs-warn)}
+  .bs-duebar{font-family:var(--bs-mono);font-size:12px;padding:10px 12px;border-radius:10px;display:flex;align-items:center;gap:9px}
+  .bs-duebar.overdue{color:var(--bs-warn);background:var(--bs-warn-dim);border:1px solid var(--bs-warn-line)}
+  .bs-duebar.soon{color:var(--bs-accent);background:var(--bs-accent-dim);border:1px solid var(--bs-accent-line)}
+  .bs-seg{display:flex;gap:6px;flex-wrap:wrap}
+  .bs-seg button{flex:1;font-family:var(--bs-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:9px;border-radius:9px;border:1px solid var(--bs-line);background:var(--bs-panel-2);color:var(--bs-muted);cursor:pointer;transition:all .15s;white-space:nowrap}
+  .bs-seg button.act{border-color:var(--bs-accent-line);background:var(--bs-accent-dim);color:var(--bs-accent)}
+  .bs-steps{display:flex;flex-direction:column;gap:2px}
+  .bs-st{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:10px;cursor:pointer;transition:background .12s}
+  .bs-st:hover{background:var(--bs-panel-2)}
+  .bs-st .box{width:21px;height:21px;border-radius:7px;border:1.6px solid var(--bs-muted-2);flex:none;display:grid;place-items:center;transition:all .15s}
+  .bs-st .box svg{width:12px;height:12px;stroke:#04120f;stroke-width:3.4;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.5);transition:all .15s}
+  .bs-st .lb{font-size:14.5px;line-height:1.3;flex:1;color:var(--bs-ink)}
+  .bs-st .last{font-family:var(--bs-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--bs-warn);border:1px solid var(--bs-warn-line);background:var(--bs-warn-dim);padding:3px 6px;border-radius:5px;flex:none}
+  .bs-st .clip{background:none;border:0;color:var(--bs-muted-2);cursor:pointer;font-size:12px;padding:0 4px}
+  .bs-st .clip.tem,.bs-st .clip:hover{color:var(--bs-accent)}
+  .bs-st .del{opacity:0;color:var(--bs-muted-2);border:none;background:none;cursor:pointer;font-size:15px;flex:none;padding:2px 4px}
+  .bs-st:hover .del{opacity:1}
+  .bs-st .del:hover{color:#f07171}
+  .bs-st.done .box{background:var(--bs-accent);border-color:var(--bs-accent)}
+  .bs-st.done .box svg{opacity:1;transform:scale(1)}
+  .bs-st.done .lb{color:var(--bs-muted-2);text-decoration:line-through;text-decoration-color:var(--bs-muted-2)}
+  .bs-step-anexos{margin:2px 0 8px 30px}
+  .bs-add{display:flex;gap:8px;margin-top:8px}
+  .bs-add input{flex:1;background:var(--bs-panel-2);border:1px solid var(--bs-line);border-radius:9px;color:var(--bs-ink);font-size:13.5px;padding:10px 12px;outline:none;font-family:inherit;min-width:0}
+  .bs-add input:focus{border-color:var(--bs-accent-line)}
+  .bs-add input::placeholder{color:var(--bs-muted-2)}
+  .bs-btn{font-family:var(--bs-mono);font-size:11px;letter-spacing:.06em;font-weight:600;border:1px solid var(--bs-accent-line);background:var(--bs-accent-dim);color:var(--bs-accent);padding:9px 13px;border-radius:9px;cursor:pointer;white-space:nowrap}
+  .bs-btn:hover{background:rgba(0,240,255,.22)}
+  .bs-btn.ghost{border-color:var(--bs-line);background:transparent;color:var(--bs-muted)}
+  .bs-btn.ghost:hover{color:var(--bs-ink);border-color:var(--bs-muted-2)}
+  .bs-btn.danger{border-color:rgba(242,90,90,.4);background:rgba(242,90,90,.1);color:#f07171}
+  .bs-btn.danger:hover{background:rgba(242,90,90,.2)}
+  .bs-priopick{display:flex;gap:6px;flex-wrap:wrap}
+  .bs-priopick button{--pc:#6b8aa0;background:var(--bs-panel-2);border:1px solid color-mix(in srgb,var(--pc) 35%,transparent);border-radius:8px;color:var(--pc);font-family:var(--bs-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:8px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .bs-priopick button::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+  .bs-priopick button.sem::before{background:transparent;border:1px solid currentColor}
+  .bs-priopick button:hover{filter:brightness(1.25)}
+  .bs-priopick button.act{background:var(--pc);color:#04120f;border-color:transparent;font-weight:600}
+  .bs-priopick button.act::before{background:rgba(0,0,0,.35)}
+  .bs-prazo{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .bs-prazo input[type=date]{background:var(--bs-panel-2);border:1px solid var(--bs-line);border-radius:9px;color:var(--bs-ink);font-size:13px;padding:9px 11px;outline:none;color-scheme:dark;font-family:inherit}
+  .bs-prazo input[type=date]:focus{border-color:var(--bs-accent-line)}
+  .bs-prazo .rapido{display:flex;gap:6px;flex-wrap:wrap}
+  .bs-prazo .rapido button{background:var(--bs-panel-2);border:1px solid var(--bs-line-soft);border-radius:8px;color:var(--bs-muted);font-family:var(--bs-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:8px 10px;cursor:pointer}
+  .bs-prazo .rapido button:hover{border-color:var(--bs-accent-line);color:var(--bs-ink)}
+  .bs-anexos{display:flex;flex-direction:column;gap:6px}
+  .bs-anexo{display:flex;align-items:center;gap:9px;background:var(--bs-panel-2);border:1px solid var(--bs-line-soft);border-radius:9px;padding:8px 10px;cursor:pointer}
+  .bs-anexo:hover{border-color:var(--bs-accent-line);background:var(--bs-accent-dim)}
+  .bs-anexo .ic{font-size:13px;line-height:1}
+  .bs-anexo .tx{flex:1;font-size:12.5px;color:var(--bs-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bs-anexo .del{background:none;border:0;color:var(--bs-muted-2);cursor:pointer;font-size:15px;padding:0 2px}
+  .bs-anexo .del:hover{color:var(--bs-warn)}
+  .bs-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--bs-line-soft);padding-top:14px}
+  .bs-picker{display:flex;flex-direction:column;gap:10px}
+  .bs-picker .opt{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid var(--bs-line);border-radius:12px;cursor:pointer;transition:all .15s}
+  .bs-picker .opt:hover{border-color:var(--bs-accent-line);background:var(--bs-panel-2)}
+  .bs-picker .opt .ic{font-size:20px;line-height:1}
+  .bs-picker .opt .t{font-weight:600;font-size:15px;color:var(--bs-ink)}
+  .bs-picker .opt .d{font-size:12.5px;color:var(--bs-muted);line-height:1.4;margin-top:2px}
   @media (max-width:640px){
     .board-panel{width:100vw;height:100%;border-radius:0;border:none}
     .board-col{flex-basis:84vw;max-width:84vw}
+    .bs-counts{display:none}
   }
 </style>
 </head>
@@ -1904,12 +1974,13 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
       })()}
       {block.board && block.board.cols && (() => {
         const cols = block.board.cols;
-        const total = cols.reduce((n, c) => n + c.cards.length, 0);
+        const st = boardStats(block.board);
         return (
           <div className="board-chip" title="Duplo clique abre o quadro">
             <div className="board-chip-head">
               <svg viewBox="0 0 24 24"><rect x="3" y="4" width="4.5" height="16" rx="1"/><rect x="9.75" y="4" width="4.5" height="11" rx="1"/><rect x="16.5" y="4" width="4.5" height="16" rx="1"/></svg>
-              Quadro · {total} cartão{total !== 1 ? "s" : ""}
+              Quadro · {st.ativos} ativo{st.ativos !== 1 ? "s" : ""}
+              {st.atrasados > 0 && <span className="late">⚠ {st.atrasados} atrasado{st.atrasados !== 1 ? "s" : ""}</span>}
             </div>
             <div className="board-chip-cols">
               {cols.map(c => <span key={c.id}>{c.name} <b>{c.cards.length}</b></span>)}
@@ -2772,144 +2843,363 @@ function DocEditor({ block, onSave, onClose, readOnly }) {
 }
 
 /* ================== BoardPanel (quadro/pipeline dentro do bloco) ========= */
+/* ---- quadro: helpers (modelo de cartão replicado do Valt "Não Esquece", face/quadro.html) ---- */
 const BOARD_PRIOS = [
-  { k: "", label: "+ prioridade", color: "" },
-  { k: "alta", label: "ALTA", color: "#ff9d00" },
-  { k: "urgente", label: "URGENTE", color: "#ff3b5c" },
-  { k: "media", label: "MÉDIA", color: "#ffdd00" },
+  { k: "urgente", label: "Urgente", color: "#ff6b6b", p: 0 },
+  { k: "alta", label: "Alta", color: "#f2a63b", p: 1 },
+  { k: "media", label: "Média", color: "#7fb4ff", p: 2 },
+  { k: "baixa", label: "Baixa", color: "#8fd6a8", p: 3 },
+  { k: "", label: "Sem", color: "#6b8aa0", p: 4 },
 ];
-const boardPrio = (k) => BOARD_PRIOS.find(p => p.k === (k || "")) || BOARD_PRIOS[0];
+const boardPrio = (k) => BOARD_PRIOS.find(p => p.k === (k || "")) || BOARD_PRIOS[BOARD_PRIOS.length - 1];
+// fluxo pronto por tipo de cartão (o de vídeo termina em "responder comentários", que gera lembrete)
+const BOARD_TEMPLATES = {
+  video: ["Roteiro / pauta", "Gravar", "Editar", "Miniatura", "Descrição + bloco fixo de links", "Publicar", "Responder comentários"],
+  tarefa: ["Definir o que precisa", "Fazer", "Revisar"],
+};
+const BOARD_TYPE_LABEL = { video: "Vídeo", tarefa: "Tarefa" };
 const newId = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 const defaultBoard = () => ({ cols: [
   { id: newId("c"), name: "A FAZER", cards: [] },
   { id: newId("c"), name: "FAZENDO", cards: [] },
   { id: newId("c"), name: "FEITO", cards: [] },
 ] });
+const boardMakeCard = (type) => ({
+  id: newId("k"), type, title: "", prio: "", due: null, commentsDue: null, links: [], createdAt: Date.now(),
+  steps: (BOARD_TEMPLATES[type] || []).map(l => ({ id: newId("s"), label: l, done: false, links: [] })),
+});
+// cartão/etapa da versão anterior (tag livre, etapa com "text", prazo em texto) vira o modelo do Valt
+const boardNormCard = (c) => {
+  const type = c.type || (/v[ií]deo/i.test(c.tag || "") ? "video" : "tarefa");
+  let due = c.due || null;
+  if (due && /^\d{2}\/\d{2}\/\d{4}$/.test(due)) { const [d, m, y] = due.split("/"); due = `${y}-${m}-${d}`; }
+  else if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) due = null;
+  return { ...c, type, due, prio: c.prio || "", commentsDue: c.commentsDue || null, links: Array.isArray(c.links) ? c.links : [],
+    steps: (c.steps || []).map(s => ({ ...s, label: s.label != null ? s.label : (s.text || ""), links: Array.isArray(s.links) ? s.links : [] })) };
+};
+const boardNorm = (b) => ({ ...b, cols: (b.cols || []).map(c => ({ ...c, cards: (c.cards || []).map(boardNormCard) })) });
+// datas: chave yyyy-mm-dd no dado, dd/mm/yyyy na tela
+const bdPad = (n) => (n < 10 ? "0" : "") + n;
+const bdKey = (d = new Date()) => d.getFullYear() + "-" + bdPad(d.getMonth() + 1) + "-" + bdPad(d.getDate());
+const bdAddDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return bdKey(d); };
+const bdFromKey = (k) => { const p = k.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); };
+const bdDiff = (k) => Math.round((bdFromKey(k) - bdFromKey(bdKey())) / 86400000);
+const bdBr = (k) => { const p = k.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; };
+const boardPrazoLabel = (k) => {
+  const d = bdDiff(k);
+  if (d < 0) return { cls: "overdue", txt: "atrasado " + (d === -1 ? "desde ontem" : "há " + (-d) + " dias") };
+  if (d === 0) return { cls: "soon", txt: "prazo hoje" };
+  if (d === 1) return { cls: "soon", txt: "prazo amanhã" };
+  if (d <= 6) return { cls: "soon", txt: "prazo em " + d + " dias" };
+  return { cls: "", txt: "prazo " + bdBr(k) };
+};
+const boardComentsLabel = (k) => {
+  const d = bdDiff(k);
+  if (d < 0) return { cls: "overdue", txt: "responder coments · atrasado " + (d === -1 ? "desde ontem" : "há " + (-d) + " dias") };
+  if (d === 0) return { cls: "soon", txt: "responder coments · hoje" };
+  if (d === 1) return { cls: "soon", txt: "responder coments · amanhã" };
+  return { cls: "soon", txt: "responder coments · " + bdBr(k) };
+};
+const boardProgress = (c) => { const st = c.steps || []; return { done: st.filter(s => s.done).length, total: st.length }; };
+const boardComentsDone = (c) => { const s = (c.steps || []).find(x => /coment/i.test(x.label)); return s ? s.done : false; };
+// atrasado de dois jeitos: lembrete de comentários vencido, ou prazo manual vencido fora da coluna Feito
+const boardCardLate = (c, isDoneCol) => {
+  if (c.commentsDue && bdDiff(c.commentsDue) < 0 && !boardComentsDone(c)) return true;
+  return !!(c.due && bdDiff(c.due) < 0 && !isDoneCol);
+};
+// a ÚLTIMA coluna do quadro é a "Feito" (cartão com todas as etapas vai pra lá sozinho)
+const boardDoneColId = (cols) => (cols.length > 1 ? cols[cols.length - 1].id : null);
+const boardStats = (board) => {
+  const cols = (board && board.cols) || [];
+  const doneId = boardDoneColId(cols);
+  let ativos = 0, atrasados = 0, total = 0;
+  cols.forEach(c => { const isDone = c.id === doneId; (c.cards || []).forEach(cd => { total++; if (!isDone) ativos++; if (boardCardLate(boardNormCard(cd), isDone)) atrasados++; }); });
+  return { ativos, atrasados, total };
+};
+// urgente em cima; empatou, quem tem prazo mais perto vem antes
+const boardSortCards = (cards) => [...cards].sort((a, b) => {
+  const d = boardPrio(a.prio).p - boardPrio(b.prio).p; if (d) return d;
+  const da = a.due || "9999-99-99", db = b.due || "9999-99-99";
+  return da < db ? -1 : (da > db ? 1 : 0);
+});
+const boardEhLink = (v) => /^(https?:|mailto:)/i.test(String(v || "").trim());
+const boardNomeAnexo = (v) => {
+  v = String(v || "").trim();
+  if (boardEhLink(v)) { try { return decodeURIComponent(v.replace(/^https?:\/\//i, "").slice(0, 58)); } catch { return v.slice(0, 58); } }
+  const partes = v.replace(/[\\/]+$/, "").split(/[\\/]/);
+  return partes[partes.length - 1] || v;
+};
 
 function BoardPanel({ block, onSave, onClose, readOnly }) {
-  const [board, setBoard] = useState(() => (block.board && block.board.cols ? block.board : defaultBoard()));
-  const [openCard, setOpenCard] = useState(null);
-  const [stepIn, setStepIn] = useState({});
+  const [board, setBoard] = useState(() => boardNorm(block.board && block.board.cols ? block.board : defaultBoard()));
+  const [openId, setOpenId] = useState(null);   // ficha do cartão aberta
+  const [pickCol, setPickCol] = useState(null); // "+ cartão": escolhe Vídeo ou Tarefa
+  const [stepIn, setStepIn] = useState("");
+  const [anexoIn, setAnexoIn] = useState("");
   const dragRef = useRef(null);
+  const titleRef = useRef(null);
 
   const save = (b) => { setBoard(b); if (!readOnly) onSave(block.id, { board: b }); };
-  const patchCard = (colId, cardId, patch) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: c.cards.map(cd => cd.id === cardId ? { ...cd, ...patch } : cd) }) });
-  const addCard = (colId) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: [...c.cards, { id: newId("k"), title: "", tag: "TAREFA", prio: "", due: "", steps: [] }] }) });
-  const delCard = (colId, cardId) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: c.cards.filter(cd => cd.id !== cardId) }) });
-  const addCol = () => save({ cols: [...board.cols, { id: newId("c"), name: "NOVA", cards: [] }] });
-  const renameCol = (colId, name) => save({ cols: board.cols.map(c => c.id === colId ? { ...c, name } : c) });
-  const delCol = (colId) => { if (!confirm("Apagar a coluna e seus cartões?")) return; save({ cols: board.cols.filter(c => c.id !== colId) }); };
-  const moveCard = (cardId, fromColId, toColId) => {
-    if (fromColId === toColId) return;
-    let card = null;
-    const cols = board.cols.map(c => {
-      if (c.id === fromColId) { card = c.cards.find(cd => cd.id === cardId); return { ...c, cards: c.cards.filter(cd => cd.id !== cardId) }; }
-      return c;
-    });
-    if (!card) return;
-    save({ cols: cols.map(c => c.id === toColId ? { ...c, cards: [...c.cards, card] } : c) });
+  const cols = board.cols;
+  const doneColId = boardDoneColId(cols);
+  const findCard = (id) => { for (const c of cols) { const k = c.cards.find(x => x.id === id); if (k) return { col: c, card: k }; } return null; };
+  const patchCard = (cardId, fn) => save({ cols: cols.map(c => ({ ...c, cards: c.cards.map(cd => cd.id === cardId ? fn(cd) : cd) })) });
+  const moveCard = (cardId, toColId) => {
+    const f = findCard(cardId); if (!f || f.col.id === toColId) return;
+    save({ cols: cols.map(c => c.id === f.col.id ? { ...c, cards: c.cards.filter(cd => cd.id !== cardId) } : (c.id === toColId ? { ...c, cards: [...c.cards, f.card] } : c)) });
   };
-  const cyclePrio = (colId, cardId, cur) => { const i = BOARD_PRIOS.findIndex(p => p.k === (cur || "")); patchCard(colId, cardId, { prio: BOARD_PRIOS[(i + 1) % BOARD_PRIOS.length].k }); };
-  const setSteps = (colId, cardId, fn) => save({ cols: board.cols.map(c => c.id !== colId ? c : { ...c, cards: c.cards.map(cd => cd.id !== cardId ? cd : { ...cd, steps: fn(cd.steps || []) }) }) });
-  const addStep = (colId, cardId, text) => { const t = (text || "").trim(); if (!t) return; setSteps(colId, cardId, st => [...st, { id: newId("s"), text: t, done: false }]); };
-  const toggleStep = (colId, cardId, stepId) => setSteps(colId, cardId, st => st.map(s => s.id === stepId ? { ...s, done: !s.done } : s));
-  const updateStep = (colId, cardId, stepId, text) => setSteps(colId, cardId, st => st.map(s => s.id === stepId ? { ...s, text } : s));
-  const delStep = (colId, cardId, stepId) => setSteps(colId, cardId, st => st.filter(s => s.id !== stepId));
+  const createCard = (colId, type) => {
+    const card = boardMakeCard(type);
+    save({ cols: cols.map(c => c.id === colId ? { ...c, cards: [...c.cards, card] } : c) });
+    setPickCol(null); setOpenId(card.id);
+    setTimeout(() => { if (titleRef.current) titleRef.current.focus(); }, 30);
+  };
+  const delCard = (cardId) => { save({ cols: cols.map(c => ({ ...c, cards: c.cards.filter(cd => cd.id !== cardId) })) }); setOpenId(null); };
+  const addCol = () => save({ cols: [...cols, { id: newId("c"), name: "NOVA", cards: [] }] });
+  const renameCol = (colId, name) => save({ cols: cols.map(c => c.id === colId ? { ...c, name } : c) });
+  const delCol = (colId) => { if (!confirm("Apagar a coluna e seus cartões?")) return; save({ cols: cols.filter(c => c.id !== colId) }); };
+
+  // etapas: marcar move o cartão de coluna sozinho (todas feitas -> Feito; desmarcou no Feito -> volta uma)
+  const toggleStep = (cardId, stepId) => {
+    const f = findCard(cardId); if (!f) return;
+    const card = { ...f.card, steps: f.card.steps.map(s => s.id === stepId ? { ...s, done: !s.done } : s) };
+    const s = card.steps.find(x => x.id === stepId);
+    // vídeo publicado: lembrete de responder comentários pra amanhã (igual ao Valt)
+    if (s && s.done && card.type === "video" && /publicar/i.test(s.label) && !card.commentsDue) card.commentsDue = bdAddDays(1);
+    const allDone = card.steps.length > 0 && card.steps.every(x => x.done);
+    let toColId = f.col.id;
+    if (doneColId) {
+      if (allDone) toColId = doneColId;
+      else if (f.col.id === doneColId) toColId = cols[Math.max(0, cols.length - 2)].id;
+    }
+    save({ cols: cols.map(c => {
+      if (toColId === f.col.id) return c.id === f.col.id ? { ...c, cards: c.cards.map(cd => cd.id === cardId ? card : cd) } : c;
+      if (c.id === f.col.id) return { ...c, cards: c.cards.filter(cd => cd.id !== cardId) };
+      if (c.id === toColId) return { ...c, cards: [...c.cards, card] };
+      return c;
+    }) });
+  };
+  const addStep = (cardId) => { const t = stepIn.trim(); if (!t) return; patchCard(cardId, cd => ({ ...cd, steps: [...cd.steps, { id: newId("s"), label: t, done: false, links: [] }] })); setStepIn(""); };
+  const delStep = (cardId, stepId) => patchCard(cardId, cd => ({ ...cd, steps: cd.steps.filter(s => s.id !== stepId) }));
+  const addStepLink = (cardId, stepId) => {
+    const v = prompt("Link ou caminho do arquivo pra essa etapa:"); if (!v || !v.trim()) return;
+    patchCard(cardId, cd => ({ ...cd, steps: cd.steps.map(s => s.id === stepId ? { ...s, links: [...(s.links || []), v.trim()] } : s) }));
+  };
+  const delStepLink = (cardId, stepId, i) => patchCard(cardId, cd => ({ ...cd, steps: cd.steps.map(s => s.id === stepId ? { ...s, links: s.links.filter((_, j) => j !== i) } : s) }));
+  const addAnexo = (cardId) => { const v = anexoIn.trim(); if (!v) return; patchCard(cardId, cd => ({ ...cd, links: [...(cd.links || []), v] })); setAnexoIn(""); };
+  const delAnexo = (cardId, i) => patchCard(cardId, cd => ({ ...cd, links: cd.links.filter((_, j) => j !== i) }));
+  const abrirAnexo = (v) => {
+    v = String(v || "").trim(); if (!v) return;
+    if (boardEhLink(v)) { window.open(v, "_blank", "noopener,noreferrer"); return; }
+    // caminho do PC: o navegador não abre (no Valt quem abre é o servidor local); aqui copia pra colar no Explorer
+    try { navigator.clipboard.writeText(v); alert("Caminho copiado. Cola no Explorer pra abrir."); } catch { alert(v); }
+  };
+  const closeSheet = () => { setOpenId(null); setPickCol(null); setStepIn(""); setAnexoIn(""); };
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onClose(); } };
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault(); e.stopPropagation();
+      if (openId || pickCol) closeSheet(); else onClose();
+    };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
+  }, [onClose, openId, pickCol]);
 
   const boardTitle = (block.title || "").replace(/<[^>]*>/g, "").trim() || "Quadro";
+  const stats = boardStats(board);
+  const open = openId ? findCard(openId) : null;
+
+  const renderAnexos = (lista, onDel) => (lista && lista.length ? (
+    <div className="bs-anexos">
+      {lista.map((a, i) => (
+        <div className="bs-anexo" key={i} onClick={() => abrirAnexo(a)} title={a}>
+          <span className="ic">{boardEhLink(a) ? "🔗" : "📁"}</span>
+          <span className="tx">{boardNomeAnexo(a)}</span>
+          {!readOnly && <button className="del" title="remover" onClick={(e) => { e.stopPropagation(); onDel(i); }}>×</button>}
+        </div>
+      ))}
+    </div>
+  ) : null);
+
+  const renderCard = (col, card, isDoneCol) => {
+    const pr = boardProgress(card);
+    const pi = boardPrio(card.prio);
+    const pct = pr.total ? Math.round((pr.done / pr.total) * 100) : 0;
+    const prazo = card.due && !isDoneCol ? boardPrazoLabel(card.due) : null;
+    const coments = card.commentsDue && !boardComentsDone(card) ? boardComentsLabel(card.commentsDue) : null;
+    return (
+      <div className={`board-card ${isDoneCol ? "done-card" : ""}`} key={card.id} draggable={!readOnly}
+        onClick={() => setOpenId(card.id)}
+        onDragStart={(e) => { dragRef.current = { cardId: card.id, fromColId: col.id }; e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", card.id); } catch {} }}
+        onDragEnd={() => { dragRef.current = null; }}>
+        <div className="board-card-top">
+          <span className={`bs-tag ${card.type}`}>{BOARD_TYPE_LABEL[card.type] || "Tarefa"}</span>
+          {card.prio && <span className="bs-prio" style={{ color: pi.color, borderColor: pi.color + "6b", background: pi.color + "1a" }}><i className="pt" />{pi.label}</span>}
+        </div>
+        <div className={`board-card-title ${card.title ? "" : "empty"}`}>{card.title || "Sem título"}</div>
+        <div className="board-card-prog">
+          <div className="board-bar"><div className="board-bar-fill" style={{ width: pct + "%" }} /></div>
+          <span className="board-frac">{pr.done}/{pr.total}</span>
+        </div>
+        {prazo && <span className={`bs-chip ${prazo.cls}`}>{prazo.txt}</span>}
+        {coments && <span className={`bs-chip ${coments.cls}`}>{coments.txt}</span>}
+      </div>
+    );
+  };
+
+  const renderPicker = () => pickCol && (
+    <div className="bs-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) setPickCol(null); }}>
+      <div className="bs-sheet" role="dialog" aria-label="Novo cartão">
+        <div className="bs-row">
+          <span className="bs-label" style={{ flex: 1, marginBottom: 0 }}>Novo cartão em {(cols.find(c => c.id === pickCol) || {}).name || ""}</span>
+          <button className="bs-x" onClick={() => setPickCol(null)}>×</button>
+        </div>
+        <div className="bs-picker">
+          <div className="opt" onClick={() => createCard(pickCol, "video")}>
+            <span className="ic">🎬</span>
+            <div><div className="t">Vídeo</div><div className="d">Vem com o fluxo pronto: roteiro, gravar, editar, miniatura, descrição + bloco fixo, publicar e responder comentários. Ao publicar, cria o lembrete pra amanhã.</div></div>
+          </div>
+          <div className="opt" onClick={() => createCard(pickCol, "tarefa")}>
+            <span className="ic">✷</span>
+            <div><div className="t">Tarefa</div><div className="d">Cartão livre. Você adiciona as etapas do fluxo que quiser.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSheet = () => {
+    if (!open) return null;
+    const { col, card } = open;
+    const coments = card.commentsDue && !boardComentsDone(card) ? boardComentsLabel(card.commentsDue) : null;
+    return (
+      <div className="bs-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) closeSheet(); }}>
+        <div className="bs-sheet" role="dialog" aria-label="Ficha do cartão">
+          <div className="bs-row">
+            <span className={`bs-tag ${card.type}`}>{BOARD_TYPE_LABEL[card.type] || "Tarefa"}</span>
+            <input ref={titleRef} className="bs-title" value={card.title || ""} readOnly={readOnly} placeholder="Título do cartão"
+              onChange={(e) => patchCard(card.id, cd => ({ ...cd, title: e.target.value }))} />
+            <button className="bs-x" onClick={closeSheet} title="Fechar (Esc)">×</button>
+          </div>
+          {coments && <div className={`bs-duebar ${coments.cls}`}>🔔 {coments.txt.replace("responder coments · ", "Responder comentários: ")}</div>}
+          <div>
+            <div className="bs-label">Coluna</div>
+            <div className="bs-seg">{cols.map(c => <button key={c.id} className={c.id === col.id ? "act" : ""} onClick={() => !readOnly && moveCard(card.id, c.id)}>{c.name || "sem nome"}</button>)}</div>
+          </div>
+          <div>
+            <div className="bs-label">Fluxo da tarefa</div>
+            <div className="bs-steps">
+              {card.steps.map(s => {
+                const last = card.type === "video" && /coment/i.test(s.label);
+                const n = (s.links || []).length;
+                return (
+                  <React.Fragment key={s.id}>
+                    <div className={`bs-st ${s.done ? "done" : ""}`} onClick={() => !readOnly && toggleStep(card.id, s.id)}>
+                      <span className="box"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6" /></svg></span>
+                      <span className="lb">{s.label}</span>
+                      {last && <span className="last">gera lembrete</span>}
+                      {!readOnly && <button className={`clip ${n ? "tem" : ""}`} title="link ou arquivo nessa etapa" onClick={(e) => { e.stopPropagation(); addStepLink(card.id, s.id); }}>🔗{n ? " " + n : ""}</button>}
+                      {!readOnly && <button className="del" title="remover etapa" onClick={(e) => { e.stopPropagation(); delStep(card.id, s.id); }}>×</button>}
+                    </div>
+                    {n > 0 && <div className="bs-step-anexos">{renderAnexos(s.links, (i) => delStepLink(card.id, s.id, i))}</div>}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+            {!readOnly && (
+              <div className="bs-add">
+                <input value={stepIn} placeholder="+ nova etapa" maxLength={80} autoComplete="off"
+                  onChange={(e) => setStepIn(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addStep(card.id); } }} />
+                <button className="bs-btn ghost" onClick={() => addStep(card.id)}>Add</button>
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="bs-label">Prioridade</div>
+            <div className="bs-priopick">
+              {BOARD_PRIOS.map(p => (
+                <button key={p.k || "sem"} className={`${(card.prio || "") === p.k ? "act" : ""} ${p.k ? "" : "sem"}`} style={{ "--pc": p.color }}
+                  onClick={() => !readOnly && patchCard(card.id, cd => ({ ...cd, prio: p.k }))}>{p.label}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="bs-label">Prazo</div>
+            <div className="bs-prazo">
+              <input type="date" value={card.due || ""} disabled={readOnly} onChange={(e) => patchCard(card.id, cd => ({ ...cd, due: e.target.value || null }))} />
+              {!readOnly && (
+                <div className="rapido">
+                  {[["0", "Hoje"], ["1", "Amanhã"], ["7", "7 dias"], ["x", "Limpar"]].map(([v, l]) => (
+                    <button key={v} onClick={() => patchCard(card.id, cd => ({ ...cd, due: v === "x" ? null : bdAddDays(+v) }))}>{l}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {card.due && <div className={`bs-label ${bdDiff(card.due) < 0 ? "warn" : ""}`} style={{ marginTop: 8, marginBottom: 0 }}>{boardPrazoLabel(card.due).txt}</div>}
+          </div>
+          <div>
+            <div className="bs-label">Links e arquivos</div>
+            {renderAnexos(card.links, (i) => delAnexo(card.id, i))}
+            {!readOnly && (
+              <div className="bs-add">
+                <input value={anexoIn} placeholder="cole um link ou o caminho do arquivo no PC" autoComplete="off"
+                  onChange={(e) => setAnexoIn(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAnexo(card.id); } }} />
+                <button className="bs-btn ghost" onClick={() => addAnexo(card.id)}>Add</button>
+              </div>
+            )}
+          </div>
+          <div className="bs-foot">
+            {!readOnly ? <button className="bs-btn danger" onClick={() => delCard(card.id)}>Apagar cartão</button> : <span />}
+            <button className="bs-btn" onClick={closeSheet}>Fechar</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="doc-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="board-panel" role="dialog" aria-label="Quadro do bloco">
         <div className="board-head">
           <h3>▦ {boardTitle}</h3>
+          <div className="bs-counts">
+            <div className="bs-count"><div className="n">{stats.ativos}</div><div className="k">Ativos</div></div>
+            <div className={`bs-count ${stats.atrasados > 0 ? "hot" : ""}`}><div className="n">{stats.atrasados}</div><div className="k">Atrasados</div></div>
+          </div>
           <button className="doc-x" onClick={onClose} title="Fechar (Esc)">×</button>
         </div>
         <div className="board-cols">
-          {board.cols.map(col => (
-            <div className="board-col" key={col.id}
-              onDragOver={(e) => { if (dragRef.current) { e.preventDefault(); e.currentTarget.classList.add("drop"); } }}
-              onDragLeave={(e) => e.currentTarget.classList.remove("drop")}
-              onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("drop"); const d = dragRef.current; if (d) moveCard(d.cardId, d.fromColId, col.id); dragRef.current = null; }}>
-              <div className="board-col-head">
-                <span className="board-col-dot" />
-                <input className="board-col-name" value={col.name} readOnly={readOnly} onChange={(e) => renameCol(col.id, e.target.value)} />
-                <span className="board-col-count">{col.cards.length}</span>
-                {!readOnly && <span className="board-col-x" title="Apagar coluna" onClick={() => delCol(col.id)}>×</span>}
+          {cols.map((col, i) => {
+            const isDoneCol = col.id === doneColId;
+            const isDoing = !isDoneCol && i > 0;
+            const list = boardSortCards(col.cards);
+            return (
+              <div className={`board-col ${isDoneCol ? "is-done" : ""} ${isDoing ? "is-doing" : ""}`} key={col.id}
+                onDragOver={(e) => { if (dragRef.current) { e.preventDefault(); e.currentTarget.classList.add("drop"); } }}
+                onDragLeave={(e) => e.currentTarget.classList.remove("drop")}
+                onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("drop"); const d = dragRef.current; if (d) moveCard(d.cardId, col.id); dragRef.current = null; }}>
+                <div className="board-col-head">
+                  <span className="board-col-dot" />
+                  <input className="board-col-name" value={col.name} readOnly={readOnly} onChange={(e) => renameCol(col.id, e.target.value)} />
+                  <span className="board-col-count">{col.cards.length}</span>
+                  {!readOnly && <span className="board-col-x" title="Apagar coluna" onClick={() => delCol(col.id)}>×</span>}
+                </div>
+                <div className="board-col-cards">
+                  {list.length === 0 && <div className="board-col-empty">vazio</div>}
+                  {list.map(card => renderCard(col, card, isDoneCol))}
+                  {!readOnly && <button className="board-add-card" onClick={() => setPickCol(col.id)}>+ cartão</button>}
+                </div>
               </div>
-              <div className="board-col-cards">
-                {col.cards.map(card => {
-                  const p = boardPrio(card.prio);
-                  const steps = card.steps || [];
-                  const total = steps.length;
-                  const done = steps.filter(s => s.done).length;
-                  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-                  const open = openCard === card.id;
-                  return (
-                    <div className={`board-card ${open ? "open" : ""}`} key={card.id} draggable={!readOnly && !open}
-                      onDragStart={(e) => { dragRef.current = { cardId: card.id, fromColId: col.id }; e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", card.id); } catch {} }}
-                      onDragEnd={() => { dragRef.current = null; }}>
-                      <div className="board-card-top">
-                        <input className="board-card-tag" value={card.tag || ""} readOnly={readOnly} placeholder="TAG" onChange={(e) => patchCard(col.id, card.id, { tag: e.target.value })} />
-                        <span className={`board-prio ${card.prio ? "on" : ""}`} style={card.prio ? { color: p.color, borderColor: p.color } : undefined}
-                          onClick={() => !readOnly && cyclePrio(col.id, card.id, card.prio)} title="Prioridade (clique pra mudar)">
-                          {card.prio ? <><i className="pdot" style={{ background: p.color }} />{p.label}</> : (readOnly ? "" : "+ prio")}
-                        </span>
-                        {!readOnly && <span className="board-card-x" onClick={() => delCard(col.id, card.id)} title="Apagar cartão">×</span>}
-                      </div>
-                      <textarea className="board-card-title" rows={1} value={card.title || ""} readOnly={readOnly} placeholder="Título do cartão"
-                        onChange={(e) => patchCard(col.id, card.id, { title: e.target.value })} />
-                      {total > 0 && (
-                        <div className="board-card-prog">
-                          <div className="board-bar"><div className="board-bar-fill" style={{ width: pct + "%" }} /></div>
-                          <span className="board-frac">{done}/{total}</span>
-                        </div>
-                      )}
-                      {(card.due || !readOnly) && (
-                        <div className="board-card-due">
-                          <i className="ddot" />
-                          <input className="board-due" value={card.due || ""} readOnly={readOnly} placeholder="prazo (ex: 20/10/2026)" onChange={(e) => patchCard(col.id, card.id, { due: e.target.value })} />
-                        </div>
-                      )}
-                      <button className="board-steps-toggle" onClick={() => setOpenCard(open ? null : card.id)}>
-                        {open ? "▲ fechar etapas" : (total > 0 ? `▦ etapas · ${done}/${total}` : "▦ etapas")}
-                      </button>
-                      {open && (
-                        <div className="board-steps">
-                          <div className="board-steps-h">Fluxo da tarefa</div>
-                          {steps.map(s => (
-                            <div className={`board-step ${s.done ? "done" : ""}`} key={s.id}>
-                              <span className={`board-chk ${s.done ? "on" : ""}`} onClick={() => !readOnly && toggleStep(col.id, card.id, s.id)} title="Concluir etapa">{s.done ? "✓" : ""}</span>
-                              <input className="board-step-txt" value={s.text || ""} readOnly={readOnly} placeholder="Descreva a etapa" onChange={(e) => updateStep(col.id, card.id, s.id, e.target.value)} />
-                              {!readOnly && <span className="board-step-x" onClick={() => delStep(col.id, card.id, s.id)} title="Apagar etapa">×</span>}
-                            </div>
-                          ))}
-                          {!readOnly && (
-                            <div className="board-step-add">
-                              <input value={stepIn[card.id] || ""} placeholder="+ nova etapa"
-                                onChange={(e) => setStepIn({ ...stepIn, [card.id]: e.target.value })}
-                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addStep(col.id, card.id, stepIn[card.id]); setStepIn({ ...stepIn, [card.id]: "" }); } }} />
-                              <button onClick={() => { addStep(col.id, card.id, stepIn[card.id]); setStepIn({ ...stepIn, [card.id]: "" }); }}>Add</button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {!readOnly && <button className="board-add-card" onClick={() => addCard(col.id)}>+ cartão</button>}
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {!readOnly && <button className="board-add-col" onClick={addCol}>＋ coluna</button>}
         </div>
         <div className="board-foot"><span className="board-saved">● salvo no bloco</span></div>
+        {renderPicker()}
+        {renderSheet()}
       </div>
     </div>
   );
