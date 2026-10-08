@@ -1244,16 +1244,20 @@
   .bs-seg button{flex:1;font-family:var(--bs-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:9px;border-radius:9px;border:1px solid var(--bs-line);background:var(--bs-panel-2);color:var(--bs-muted);cursor:pointer;transition:all .15s;white-space:nowrap}
   .bs-seg button.act{border-color:var(--bs-accent-line);background:var(--bs-accent-dim);color:var(--bs-accent)}
   .bs-steps{display:flex;flex-direction:column;gap:2px}
-  .bs-st{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:10px;cursor:pointer;transition:background .12s}
-  .bs-st:hover{background:var(--bs-panel-2)}
-  .bs-st .box{width:21px;height:21px;border-radius:7px;border:1.6px solid var(--bs-muted-2);flex:none;display:grid;place-items:center;transition:all .15s}
+  .bs-st{display:flex;align-items:center;gap:12px;padding:8px 8px;border-radius:10px;transition:background .12s}
+  .bs-st:hover,.bs-st:focus-within{background:var(--bs-panel-2)}
+  .bs-st .box{width:21px;height:21px;border-radius:7px;border:1.6px solid var(--bs-muted-2);flex:none;display:grid;place-items:center;transition:all .15s;cursor:pointer}
+  .bs-st .box:hover{border-color:var(--bs-accent)}
   .bs-st .box svg{width:12px;height:12px;stroke:#04120f;stroke-width:3.4;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.5);transition:all .15s}
-  .bs-st .lb{font-size:14.5px;line-height:1.3;flex:1;color:var(--bs-ink)}
+  /* o texto da etapa é um campo: clica e edita direto na linha */
+  .bs-st .lb{font-size:14.5px;line-height:1.3;flex:1;min-width:0;color:var(--bs-ink);background:transparent;border:none;border-bottom:1px solid transparent;outline:none;font-family:inherit;padding:3px 0;cursor:text}
+  .bs-st .lb:focus{border-bottom-color:var(--bs-accent-line)}
+  .bs-st .lb::placeholder{color:var(--bs-muted-2)}
   .bs-st .last{font-family:var(--bs-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--bs-warn);border:1px solid var(--bs-warn-line);background:var(--bs-warn-dim);padding:3px 6px;border-radius:5px;flex:none}
   .bs-st .clip{background:none;border:0;color:var(--bs-muted-2);cursor:pointer;font-size:12px;padding:0 4px}
   .bs-st .clip.tem,.bs-st .clip:hover{color:var(--bs-accent)}
-  .bs-st .del{opacity:0;color:var(--bs-muted-2);border:none;background:none;cursor:pointer;font-size:15px;flex:none;padding:2px 4px}
-  .bs-st:hover .del{opacity:1}
+  .bs-st .del{opacity:.6;color:var(--bs-muted-2);border:none;background:none;cursor:pointer;font-size:17px;line-height:1;flex:none;padding:2px 6px}
+  .bs-st:hover .del,.bs-st:focus-within .del{opacity:1}
   .bs-st .del:hover{color:#f07171}
   .bs-st.done .box{background:var(--bs-accent);border-color:var(--bs-accent)}
   .bs-st.done .box svg{opacity:1;transform:scale(1)}
@@ -2844,6 +2848,7 @@ function DocEditor({ block, onSave, onClose, readOnly }) {
 
 /* ================== BoardPanel (quadro/pipeline dentro do bloco) ========= */
 /* ---- quadro: helpers (modelo de cartão replicado do Valt "Não Esquece", face/quadro.html) ---- */
+/* ---- quadro: helpers (modelo de cartão replicado do Valt "Não Esquece", face/quadro.html) ---- */
 const BOARD_PRIOS = [
   { k: "urgente", label: "Urgente", color: "#ff6b6b", p: 0 },
   { k: "alta", label: "Alta", color: "#f2a63b", p: 1 },
@@ -2981,6 +2986,7 @@ function BoardPanel({ block, onSave, onClose, readOnly }) {
   };
   const addStep = (cardId) => { const t = stepIn.trim(); if (!t) return; patchCard(cardId, cd => ({ ...cd, steps: [...cd.steps, { id: newId("s"), label: t, done: false, links: [] }] })); setStepIn(""); };
   const delStep = (cardId, stepId) => patchCard(cardId, cd => ({ ...cd, steps: cd.steps.filter(s => s.id !== stepId) }));
+  const renameStep = (cardId, stepId, label) => patchCard(cardId, cd => ({ ...cd, steps: cd.steps.map(s => s.id === stepId ? { ...s, label } : s) }));
   const addStepLink = (cardId, stepId) => {
     const v = prompt("Link ou caminho do arquivo pra essa etapa:"); if (!v || !v.trim()) return;
     patchCard(cardId, cd => ({ ...cd, steps: cd.steps.map(s => s.id === stepId ? { ...s, links: [...(s.links || []), v.trim()] } : s) }));
@@ -3095,9 +3101,11 @@ function BoardPanel({ block, onSave, onClose, readOnly }) {
                 const n = (s.links || []).length;
                 return (
                   <React.Fragment key={s.id}>
-                    <div className={`bs-st ${s.done ? "done" : ""}`} onClick={() => !readOnly && toggleStep(card.id, s.id)}>
-                      <span className="box"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6" /></svg></span>
-                      <span className="lb">{s.label}</span>
+                    <div className={`bs-st ${s.done ? "done" : ""}`}>
+                      <span className="box" title={s.done ? "Desmarcar" : "Concluir etapa"} onClick={() => !readOnly && toggleStep(card.id, s.id)}><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6" /></svg></span>
+                      <input className="lb" value={s.label || ""} readOnly={readOnly} placeholder="Descreva a etapa"
+                        onChange={(e) => renameStep(card.id, s.id, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }} />
                       {last && <span className="last">gera lembrete</span>}
                       {!readOnly && <button className={`clip ${n ? "tem" : ""}`} title="link ou arquivo nessa etapa" onClick={(e) => { e.stopPropagation(); addStepLink(card.id, s.id); }}>🔗{n ? " " + n : ""}</button>}
                       {!readOnly && <button className="del" title="remover etapa" onClick={(e) => { e.stopPropagation(); delStep(card.id, s.id); }}>×</button>}
