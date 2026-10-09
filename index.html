@@ -20,8 +20,6 @@
     presets: [[Babel.availablePresets.react, { runtime: "classic" }]],
   });
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
@@ -1166,165 +1164,6 @@
     .doc-title{font-size:24px}
   }
 
-  /* ===== tema ESTÚDIO (padrão): grafite calmo, cor só como sinal =====
-     Estilo "ferramenta profissional no escuro": profundidade por camadas de cinza e
-     sombra, não por luz. A cor do bloco vira pontinho + título em tom pastel;
-     borda, linha e barras ficam neutras. Tron (dark) e Claro seguem intactos. */
-  body.studio{
-    --bg:#0c0c0e; --bg-2:#111113;
-    --cyan:#e4e4e7; --white:#f4f4f5; --muted:#71717a;
-    --blk-bg:#1a1a1e; --body-text:#a1a1aa;
-    --st-surface:rgba(22,22,25,.94); --st-card:#1a1a1e; --st-well:#141417;
-    --st-line:rgba(255,255,255,.07); --st-line-2:rgba(255,255,255,.13);
-    --st-ink:#f4f4f5; --st-text:#a1a1aa; --st-muted:#71717a; --st-faint:#52525b;
-    --st-hover:rgba(255,255,255,.06); --st-active:rgba(255,255,255,.10);
-    --st-shadow:0 10px 30px rgba(0,0,0,.45);
-    --st-edge:rgba(228,228,231,.30);
-  }
-  body.studio,body.studio #root{font-family:Inter,"Segoe UI",system-ui,sans-serif}
-  /* barras de rolagem nativas no escuro (sem isso a do quadro aparecia branca) */
-  body.studio{color-scheme:dark}
-
-  /* fundo: preto liso + grade de pontos que anda com pan/zoom (--gx/--gy/--gs vêm do App) */
-  body.studio .bg{background:#0c0c0e}
-  body.studio .bg::before{
-    background-image:radial-gradient(circle,rgba(255,255,255,.085) 1px,transparent 1.3px);
-    background-size:var(--gs,24px) var(--gs,24px);
-    background-position:var(--gx,0) var(--gy,0);
-    -webkit-mask-image:none;mask-image:none;
-  }
-  body.studio .bg::after,body.studio .bg-particles{display:none}
-
-  /* barras e painéis flutuantes: superfície grafite, borda fina, sem brilho */
-  body.studio .toolbar,body.studio .hint,body.studio .drawbar,body.studio .palette,body.studio .presentbar,
-  body.studio .breadcrumb,body.studio .zoom,body.studio .minimap,body.studio .cloud-panel,
-  body.studio .exp-menu,body.studio .pm-panel{
-    background:var(--st-surface);border-color:var(--st-line);
-    box-shadow:var(--st-shadow);backdrop-filter:blur(12px);
-  }
-  body.studio .ic{color:var(--st-text)}
-  body.studio .ic:hover{background:var(--st-hover);border-color:transparent;color:var(--st-ink);box-shadow:none}
-  body.studio .ic.active{background:var(--st-active);border-color:var(--st-line-2);color:var(--st-ink);box-shadow:none}
-  body.studio .ic.danger:hover{background:rgba(239,68,68,.12);border-color:transparent;color:#f87171;box-shadow:none}
-  body.studio .dvr,body.studio .drawbar .vsep{background:var(--st-line)}
-  body.studio .toolbar .tb-lbl{color:var(--st-faint);letter-spacing:.8px}
-  body.studio .toolbar .tb-danger .tb-lbl{color:rgba(248,113,113,.55)}
-  body.studio .toolbar .tb-danger .ic{color:rgba(248,113,113,.8);border-color:transparent}
-  body.studio .shape-btn,body.studio .fmt-btn,body.studio .tool,body.studio .width-btn{border-color:var(--st-line);color:var(--st-text)}
-  body.studio .shape-btn:hover,body.studio .fmt-btn:hover,body.studio .tool:hover,body.studio .width-btn:hover{background:var(--st-hover);border-color:var(--st-line-2);color:var(--st-ink);box-shadow:none}
-  body.studio .shape-btn.active,body.studio .fmt-btn.active,body.studio .tool.active,body.studio .width-btn.active{background:var(--st-active);border-color:var(--st-line-2);color:var(--st-ink);box-shadow:none}
-  body.studio .shape-btn.eraser.active{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.4);color:#f87171;box-shadow:none}
-  body.studio .width-btn .dot{box-shadow:none}
-  body.studio .sep{background:var(--st-line)}
-  body.studio .swatch{box-shadow:none !important;border-color:rgba(255,255,255,.12)}
-  body.studio .zbtn{background:var(--st-surface);border-color:var(--st-line);color:var(--st-text);font-weight:500;box-shadow:var(--st-shadow)}
-  body.studio .zbtn:hover{border-color:var(--st-line-2);color:var(--st-ink);box-shadow:var(--st-shadow)}
-  body.studio .swatch:hover{border-color:#fff}
-  body.studio .hint{color:var(--st-muted)}
-  body.studio .hint b{color:var(--st-text);font-weight:600}
-  body.studio .zoom{color:var(--st-text);font-weight:500}
-  body.studio .presentbar .pcount{color:var(--st-ink);text-shadow:none}
-  body.studio .drawbar .lbl,body.studio .palette .lbl{color:var(--st-faint)}
-  body.studio .drawbar .clear-strokes{color:var(--st-text);border-color:var(--st-line)}
-  body.studio .drawbar .clear-strokes:hover:not(:disabled){box-shadow:none}
-  body.studio .breadcrumb .crumb:hover{color:var(--st-ink);background:var(--st-hover)}
-  body.studio .breadcrumb .crumb.current{color:var(--st-ink);text-shadow:none}
-  body.studio .cloud-head{border-bottom-color:var(--st-line)}
-  body.studio .cloud-head h3{color:var(--st-ink);text-shadow:none;text-transform:none;letter-spacing:0;font-weight:600}
-  body.studio .minimap .mm-view{fill:rgba(255,255,255,.08)}
-  body.studio .marquee-rect{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.04);box-shadow:none}
-
-  /* blocos: cartão chumbo, borda neutra, sombra suave */
-  body.studio .block{
-    background:var(--st-card);
-    border:var(--bw,1px) solid var(--st-line);
-    color:var(--st-ink);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 24px rgba(0,0,0,.35);
-  }
-  body.studio .block.selected{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--bc) 60%,#fff),0 10px 28px rgba(0,0,0,.45)}
-  body.studio .block.emphasis{box-shadow:0 0 0 1px color-mix(in srgb,var(--bc) 45%,transparent),0 8px 24px rgba(0,0,0,.35)}
-  body.studio .block.focused{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--bc) 65%,#fff),0 22px 54px rgba(0,0,0,.6)}
-  body.studio .block.fill-soft{background:color-mix(in srgb,var(--bc) 12%,var(--st-card));border-color:color-mix(in srgb,var(--bc) 24%,transparent)}
-  body.studio .block.fill-solid{background:color-mix(in srgb,var(--bc) 80%,#18181b);border-color:transparent;--dot:rgba(0,0,0,.45)}
-  /* título: tom pastel da cor do bloco, sem caixa-alta forçada */
-  body.studio .block .title{
-    color:color-mix(in srgb,var(--bc) 50%,#f4f4f5);
-    text-transform:none;letter-spacing:0;font-weight:600;
-    font-size:calc(var(--title-size,13px) + 1px);
-  }
-  body.studio .block.fill-solid .title{color:#0c0c0e}
-  body.studio .block .body{color:var(--st-text);line-height:1.5}
-  body.studio .block.fill-solid .body{color:rgba(12,12,14,.8)}
-  /* retângulo/arredondado: cabeçalho à esquerda com o pontinho da cor (pílula, elipse e
-     losango/hexágono continuam centralizados, sem pontinho) */
-  body.studio .block.shp-rect .title,body.studio .block.shp-rounded .title{
-    text-align:left;padding-left:15px;
-    background-image:radial-gradient(circle,var(--dot,var(--bc)) 3.5px,transparent 4px);
-    background-repeat:no-repeat;background-size:8px 8px;background-position:0 calc(.725em - 4px);
-  }
-  body.studio .block.shp-rect .body,body.studio .block.shp-rounded .body{text-align:left}
-  body.studio .block [contenteditable="true"]{background-color:rgba(255,255,255,.045)}
-  body.studio .block .block-img{border-radius:8px;background:var(--st-well)}
-  body.studio .skin-poly{stroke:rgba(255,255,255,.13) !important;filter:drop-shadow(0 8px 18px rgba(0,0,0,.4)) !important}
-  body.studio .block.selected .skin-poly,body.studio .block.focused .skin-poly{stroke:color-mix(in srgb,var(--bc) 60%,#fff) !important}
-  body.studio .doc-chip,body.studio .board-chip{border-color:var(--st-line);background:var(--st-well)}
-  body.studio .doc-chip-head,body.studio .board-chip-head{color:color-mix(in srgb,var(--bc) 50%,#f4f4f5);letter-spacing:.3px}
-  body.studio .board-chip-cols{color:var(--st-muted)}
-  /* portas: pontinho da cor do bloco "furando" a borda do cartão */
-  body.studio .port{background:var(--bc);border:2px solid var(--st-card);opacity:.9;box-shadow:0 0 0 1px rgba(255,255,255,.06)}
-  body.studio .port:hover,body.studio .port.hot{background:var(--bc);box-shadow:0 0 0 3px color-mix(in srgb,var(--bc) 25%,transparent);opacity:1}
-  body.studio .resize{background:#f4f4f5;border:1.5px solid var(--st-card);border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
-  body.studio .resize:hover{box-shadow:0 1px 4px rgba(0,0,0,.5)}
-  body.studio .del{background:var(--st-card);border:1px solid var(--st-line-2);color:var(--st-text);line-height:17px}
-  body.studio .del:hover{background:#ef4444;border-color:#ef4444;color:#fff;box-shadow:none}
-
-  /* ligações: cinza fino, sem gradiente, sem brilho; fluxo de energia some, pulso vira traço discreto */
-  body.studio .edges path.edge-line{stroke:var(--st-edge);stroke-width:1.5px}
-  body.studio .edges path.edge-line.sel{stroke:rgba(244,244,245,.85);stroke-width:2px;filter:none !important}
-  body.studio .edges path.edge-arrow{fill:rgba(228,228,231,.55) !important}
-  body.studio .edges path.stub{stroke:var(--st-edge);stroke-width:1.5px}
-  body.studio .edges path.flow-glow,body.studio .edges path.flow,body.studio .edges path.flow-spark{display:none}
-  body.studio .edges path.pulse{stroke:#f4f4f5 !important;filter:none;mix-blend-mode:normal;stroke-width:2.5;opacity:.7}
-  body.studio .edges path.anchor,body.studio .edges path.anchor.selected{filter:none}
-  body.studio .edges path.preview{stroke:rgba(244,244,245,.6);filter:none}
-  body.studio .collapse-badge,body.studio .edge-style-btn{background:var(--st-card);border:1px solid var(--st-line-2);box-shadow:0 4px 12px rgba(0,0,0,.4)}
-  body.studio .collapse-badge:hover{box-shadow:0 4px 14px rgba(0,0,0,.5)}
-  body.studio .edge-handle{background:var(--st-card);box-shadow:none}
-  body.studio .edge-handle:hover{box-shadow:none;background:var(--st-active)}
-
-  /* anotações e imagens */
-  body.studio .note{
-    background:rgba(26,26,30,.92);border-color:var(--st-line);
-    color:color-mix(in srgb,var(--nc) 55%,#f4f4f5);font-weight:500;
-    text-shadow:none;box-shadow:0 8px 22px rgba(0,0,0,.35);
-  }
-  body.studio .note.selected{border-color:color-mix(in srgb,var(--nc) 55%,#fff);box-shadow:0 0 0 1px color-mix(in srgb,var(--nc) 40%,transparent),0 8px 22px rgba(0,0,0,.4)}
-  body.studio .note[contenteditable="true"]{background:#1a1a1e}
-  body.studio .note.bare{background:transparent;border-color:transparent;box-shadow:none;text-shadow:none}
-  body.studio .imgnode.selected{border-color:rgba(255,255,255,.6);box-shadow:0 0 0 1px rgba(255,255,255,.4),0 8px 24px rgba(0,0,0,.5)}
-  /* desenhos à mão: sem halo neon */
-  body.studio .strokes .stroke-line{filter:none}
-  body.studio .strokes g.selected .stroke-line{filter:drop-shadow(0 0 1.5px rgba(255,255,255,.8))}
-  body.studio .strokes g.hot .stroke-line{filter:drop-shadow(0 0 2px rgba(255,255,255,.9))}
-  body.studio .world.present .strokes g.lit .stroke-line{filter:none}
-
-  /* painéis grandes (documento e quadro) no mesmo grafite */
-  body.studio .doc-panel{--d-bg:#18181b;--d-pop:#222226;--d-line:rgba(255,255,255,.08)}
-  body.studio .board-panel{
-    background:#111113;border-color:var(--st-line);color:var(--st-ink);
-    --bs-panel:#1a1a1e;--bs-panel-2:#141417;--bs-line:rgba(255,255,255,.08);--bs-line-soft:rgba(255,255,255,.05);
-    --bs-ink:#f4f4f5;--bs-muted:#a1a1aa;--bs-muted-2:#71717a;
-    --bs-accent:#f4f4f5;--bs-accent-dim:rgba(255,255,255,.07);--bs-accent-line:rgba(255,255,255,.2);
-  }
-  body.studio .board-head,body.studio .board-foot{border-color:var(--st-line)}
-  body.studio .board-head h3{color:var(--st-ink);text-transform:none;letter-spacing:0;font-weight:600}
-  body.studio .board-col.is-doing .board-col-dot{box-shadow:none}
-  body.studio .board-col-name{color:var(--st-text)}
-  body.studio .board-col.drop{box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
-  body.studio .board-bar-fill{background:#d4d4d8}
-  body.studio .board-add-col{border-color:var(--st-line);color:var(--st-muted)}
-  body.studio .board-add-col:hover{border-color:var(--st-line-2);color:var(--st-ink)}
-
   /* ===== quadro (board/pipeline) dentro do bloco: cartões replicados do Valt "Não Esquece" ===== */
   .board-chip{margin-top:8px;border:1px solid rgba(var(--bc-rgb,0,240,255),.22);border-radius:8px;background:rgba(var(--bc-rgb,0,240,255),.05);padding:7px 9px;text-align:left}
   .board-chip-head{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--bc,#00f0ff)}
@@ -1991,7 +1830,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} shp-${shapeDef.key} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
@@ -2034,7 +1873,6 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
       {useSkin && (
         <svg className="block-skin" viewBox="0 0 100 100" preserveAspectRatio="none">
           <polygon
-            className="skin-poly"
             points={shapeDef.points}
             style={{
               fill: block.fill === "solid" ? color : block.fill === "soft" ? `rgba(${hexToRgb(color)},.22)` : "var(--blk-bg)",
@@ -3464,13 +3302,11 @@ function App() {
   const arrowModeRef = useRef(arrowMode); useEffect(() => { arrowModeRef.current = arrowMode; });
   const marqueeRef = useRef(null);            // {sx, sy, additive, rect}
   const [marquee, setMarquee] = useState(null); // {x,y,w,h} em coordenadas do mundo
-  // Tema: studio (padrão, grafite calmo) | dark (Tron neon) | light (off-white).
-  // Preferência da pessoa, não do mapa. Chave "theme2" pra quem tinha "dark" salvo cair no estúdio.
-  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("canvas-tron:theme2") || "studio"; } catch { return "studio"; } });
+  // Tema claro/escuro: preferência da pessoa, não do mapa (fica no localStorage)
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("canvas-tron:theme") || "dark"; } catch { return "dark"; } });
   useEffect(() => {
     document.body.classList.toggle("light", theme === "light");
-    document.body.classList.toggle("studio", theme === "studio");
-    try { localStorage.setItem("canvas-tron:theme2", theme); } catch {}
+    try { localStorage.setItem("canvas-tron:theme", theme); } catch {}
   }, [theme]);
   // ----- nuvem (Supabase, login email+senha) -----
   const [cloudOpen, setCloudOpen] = useState(false);
@@ -5295,7 +5131,7 @@ function App() {
       const out = document.createElement("canvas");
       out.width = Math.round(W * S); out.height = Math.round(H * S);
       const ctx = out.getContext("2d");
-      ctx.fillStyle = theme === "light" ? "#f4f1ea" : theme === "studio" ? "#0c0c0e" : "#030612"; ctx.fillRect(0, 0, out.width, out.height);
+      ctx.fillStyle = theme === "light" ? "#f4f1ea" : "#030612"; ctx.fillRect(0, 0, out.width, out.height);
       // aplica a mesma transformação da tela (escala 2 p/ qualidade)
       const worldTransform = () => { ctx.setTransform(S, 0, 0, S, 0, 0); ctx.translate(v.x, v.y); ctx.scale(v.scale, v.scale); };
       // 1) ligações + setas (atrás dos blocos)
@@ -5307,9 +5143,9 @@ function App() {
             if (p.stubD) { ctx.strokeStyle = p.color; ctx.lineWidth = 2.6; ctx.stroke(new Path2D(p.stubD)); }
             return;
           }
-          ctx.strokeStyle = theme === "studio" ? "rgba(228,228,231,.32)" : p.color; ctx.lineWidth = theme === "studio" ? 1.5 : 2.2;
+          ctx.strokeStyle = p.color; ctx.lineWidth = 2.2;
           if (p.curveD) ctx.stroke(new Path2D(p.curveD));
-          if (p.arrowD) { ctx.fillStyle = theme === "studio" ? "rgba(228,228,231,.55)" : (p.toColor || p.color); ctx.fill(new Path2D(p.arrowD)); }
+          if (p.arrowD) { ctx.fillStyle = p.toColor || p.color; ctx.fill(new Path2D(p.arrowD)); }
         } catch {}
       });
       // 2) camada HTML (blocos/notas/imagens) — SVG escondido, fundo transparente
@@ -5751,7 +5587,7 @@ function App() {
   /* ----- render ----- */
   return (
     <>
-      <div className="bg" style={{ "--gx": view.x + "px", "--gy": view.y + "px", "--gs": Math.max(8, 24 * view.scale) + "px" }} />
+      <div className="bg" />
       <div className="bg-particles" />
 
       {!present && (
@@ -5825,12 +5661,9 @@ function App() {
             <button className={`ic ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Minimapa">⊞</button>
             <button className={`ic ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Fluxo de energia nas conexões">⚡</button>
             <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>
-            <button className="ic" onClick={() => setTheme(t => t === "studio" ? "dark" : t === "dark" ? "light" : "studio")}
-              title={theme === "studio" ? "Tema: Estúdio (clique: Tron)" : theme === "dark" ? "Tema: Tron (clique: Claro)" : "Tema: Claro (clique: Estúdio)"}>
-              {theme === "studio"
-                ? <svg viewBox="0 0 24 24" className="ic-svg"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>
-                : theme === "dark"
-                ? <svg viewBox="0 0 24 24" className="ic-svg"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
+            <button className="ic" onClick={() => setTheme(t => t === "light" ? "dark" : "light")} title={theme === "light" ? "Tema escuro" : "Tema claro (off-white)"}>
+              {theme === "light"
+                ? <svg viewBox="0 0 24 24" className="ic-svg"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
                 : <svg viewBox="0 0 24 24" className="ic-svg"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>}
             </button>
             <button className="ic" onClick={enterPresent} title="Apresentar (P)">▶</button>
@@ -6402,7 +6235,7 @@ function App() {
                   {/* Full curve — visible when not collapsed */}
                   <path
                     d={p.curveD}
-                    className={"edge-line " + (p.collapsed ? "gone" : "") + (isSel ? " sel" : "")}
+                    className={p.collapsed ? "gone" : ""}
                     stroke={strokeVal}
                     data-stroke={p.color}
                     strokeWidth={isSel ? 4 : 2.2}
@@ -6427,7 +6260,6 @@ function App() {
                   {p.arrowD && (
                     <path
                       d={p.arrowD}
-                      className="edge-arrow"
                       style={{ fill: p.toColor || p.color, stroke: "none" }}
                     />
                   )}
