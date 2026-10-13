@@ -1302,13 +1302,19 @@
   body.fume .block [contenteditable="true"]{background-color:rgba(255,255,255,.045)}
   /* retângulo/arredondado: cabeçalho com bolinha 6px que brilha + miolo num painel interno */
   body.fume .block.shp-rect,body.fume .block.shp-rounded{padding:0 0 6px;justify-content:flex-start}
+  /* título centralizado; a bolinha é um elemento em linha antes da primeira palavra,
+     então anda colada no texto mesmo quando o título quebra em várias linhas.
+     :not(:empty) evita colidir com o placeholder (que usa ::before com o título vazio). */
   body.fume .block.shp-rect .title,body.fume .block.shp-rounded .title{
-    text-align:left;margin:0;padding:10px 10px 9px 26px;
-    background-image:radial-gradient(circle,var(--bc) 2.6px,rgba(var(--bc-rgb),.45) 3.4px,transparent 8px);
-    background-repeat:no-repeat;background-size:16px 16px;background-position:7px calc(10px + .725em - 8px);
+    text-align:center;margin:0;padding:10px 12px 9px;
+  }
+  body.fume .block.shp-rect .title:not(:empty)::before,body.fume .block.shp-rounded .title:not(:empty)::before{
+    content:"";display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:var(--bc);box-shadow:0 0 8px var(--bc);
+    margin-right:8px;vertical-align:.12em;
   }
   body.fume .block.shp-rect .body,body.fume .block.shp-rounded .body{
-    text-align:left;margin:0 6px;background:var(--panel);border:1px solid rgba(255,255,255,.045);border-radius:11px;padding:10px;
+    text-align:center;margin:0 6px;background:var(--panel);border:1px solid rgba(255,255,255,.045);border-radius:11px;padding:10px;
   }
   body.fume .block.shp-rect .body:empty:not([contenteditable="true"]),body.fume .block.shp-rounded .body:empty:not([contenteditable="true"]){display:none}
   body.fume .block.shp-rect > .block-img,body.fume .block.shp-rounded > .block-img{width:calc(100% - 12px);margin:0 6px 6px;border-radius:11px;background:var(--field)}
@@ -1325,16 +1331,19 @@
   body.fume .board-chip-cols b{color:var(--ink-2);font-weight:500}
   body.fume .doc-chip-line{color:var(--ink-2)}
   body.fume .doc-chip-meta{font-family:var(--mono);color:var(--ink-3)}
-  /* porta: bolinha 9px na cor do bloco, anel escuro e brilho; cresce 1,35x */
-  body.fume .port{width:9px;height:9px;background:var(--bc);border:0;opacity:1;
-    box-shadow:0 0 0 2.5px #141417,0 0 10px var(--bc);transition:transform .15s,box-shadow .15s}
-  body.fume .port.top{top:-4.5px}
-  body.fume .port.bottom{bottom:-4.5px}
-  body.fume .port.left{left:-4.5px}
-  body.fume .port.right{right:-4.5px}
-  body.fume .port:hover,body.fume .port.hot{background:var(--bc);box-shadow:0 0 0 2.5px #141417,0 0 10px var(--bc)}
-  body.fume .port.top:hover,body.fume .port.top.hot,body.fume .port.bottom:hover,body.fume .port.bottom.hot{transform:translateX(-50%) scale(1.35)}
-  body.fume .port.left:hover,body.fume .port.left.hot,body.fume .port.right:hover,body.fume .port.right.hot{transform:translateY(-50%) scale(1.35)}
+  /* porta: discreta pra não competir com o bloco (pedido do Mateus, 13/10). Pontinho de 5px
+     sem brilho e meio apagado; acende quando o mouse passa no bloco ou ele está selecionado,
+     e só brilha quando o mouse está na própria porta. A área de clique continua grande (::before). */
+  body.fume .port{width:5px;height:5px;background:var(--bc);border:0;opacity:.45;
+    box-shadow:0 0 0 2px #141417;transition:transform .15s,box-shadow .15s,opacity .15s}
+  body.fume .port.top{top:-2.5px}
+  body.fume .port.bottom{bottom:-2.5px}
+  body.fume .port.left{left:-2.5px}
+  body.fume .port.right{right:-2.5px}
+  body.fume .block:hover .port,body.fume .block.selected .port{opacity:.9}
+  body.fume .port:hover,body.fume .port.hot{background:var(--bc);opacity:1;box-shadow:0 0 0 2px #141417,0 0 8px var(--bc)}
+  body.fume .port.top:hover,body.fume .port.top.hot,body.fume .port.bottom:hover,body.fume .port.bottom.hot{transform:translateX(-50%) scale(1.6)}
+  body.fume .port.left:hover,body.fume .port.left.hot,body.fume .port.right:hover,body.fume .port.right.hot{transform:translateY(-50%) scale(1.6)}
   body.fume .resize{background:var(--ink);border:1.5px solid #141417;border-radius:3px;box-shadow:0 2px 6px rgba(0,0,0,.6)}
   body.fume .resize:hover{box-shadow:0 2px 6px rgba(0,0,0,.6)}
   body.fume .del{width:22px;height:22px;top:-11px;right:-11px;line-height:19px;font-size:14px;font-weight:500;
