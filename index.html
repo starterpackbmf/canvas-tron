@@ -20,6 +20,8 @@
     presets: [[Babel.availablePresets.react, { runtime: "classic" }]],
   });
 </script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
 <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
@@ -1164,6 +1166,281 @@
     .doc-title{font-size:24px}
   }
 
+  /* ===== tema FUMÊ (padrão): sistema visual do canvas-fluxos =====
+     Fonte da verdade: C:\Users\mateu\canvas-fluxos\PROMPT-VISUAL.md (valores exatos).
+     Ferramenta escura e silenciosa: fundo quase preto com grade de pontos, cards de
+     vidro fumê, cor só em detalhe (bolinha, porta, brilho no canto, chip).
+     Tron (dark) e Claro seguem intactos atrás do botão de tema. */
+  body.fume{
+    color-scheme:dark;
+    --bg:#0c0c0e;
+    --grid:rgba(255,255,255,.075);
+    --panel:#17171a;
+    --panel-2:#1e1e22;
+    --chrome:rgba(24,24,28,.78);
+    --line:rgba(255,255,255,.08);
+    --line-2:rgba(255,255,255,.15);
+    --ink:#ececf1;
+    --ink-2:#a4a4b0;
+    --ink-3:#6c6c78;
+    --edge:rgba(225,225,235,.30);
+    --rel:#d8b46a;
+    --t-texto:#6fe3a6;
+    --t-ideia:#f3cf62;
+    --t-imagem:#6ea8ff;
+    --t-roteiro:#ff8db3;
+    --t-entrega:#b49cff;
+    --ok:#6fe3a6;
+    --run:#ff9ec4;
+    --mono:"Geist Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+    --field:#121215;
+    /* vars antigas do app apontando pro sistema novo */
+    --bg-2:#0c0c0e; --cyan:#ececf1; --white:#ececf1; --muted:#6c6c78;
+    --blk-bg:#17171a; --body-text:#a4a4b0;
+  }
+  body.fume,body.fume #root{
+    font-family:"Geist",ui-sans-serif,system-ui,"Segoe UI",sans-serif;
+    font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;
+  }
+  body.fume :focus-visible{outline:1.5px solid rgba(255,255,255,.6);outline-offset:2px}
+
+  /* ---------- fundo: grade de pontos (22px x zoom, anda com a câmera) + vinheta ---------- */
+  body.fume .bg{
+    background-color:var(--bg);
+    background-image:radial-gradient(circle,var(--grid) 1px,transparent 1.3px);
+    background-size:var(--gs,22px) var(--gs,22px);
+    background-position:var(--gx,0) var(--gy,0);
+  }
+  body.fume .bg::before{display:none}
+  body.fume .bg::after{background:radial-gradient(120% 90% at 50% 40%,transparent 55%,rgba(0,0,0,.55))}
+  body.fume .bg-particles{display:none}
+
+  /* ---------- barras flutuantes de vidro ---------- */
+  body.fume .toolbar,body.fume .hint,body.fume .drawbar,body.fume .palette,body.fume .presentbar,
+  body.fume .breadcrumb,body.fume .zoom,body.fume .zbtn,body.fume .minimap,body.fume .cloud-panel,
+  body.fume .exp-menu,body.fume .pm-panel{
+    background:var(--chrome);border:1px solid var(--line);
+    backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
+    box-shadow:0 12px 30px -12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  body.fume .toolbar{top:14px;border-radius:14px;padding:5px 7px}
+  body.fume .drawbar,body.fume .palette,body.fume .presentbar{border-radius:14px}
+  body.fume .breadcrumb,body.fume .minimap{border-radius:11px}
+  body.fume .exp-menu{border-radius:12px;padding:6px}
+  body.fume .zoomctl{bottom:16px;right:16px}
+  body.fume .zoom,body.fume .zbtn{height:34px;border-radius:11px;color:var(--ink-2);font-weight:500}
+  body.fume .zoom{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;letter-spacing:.04em}
+  body.fume .zbtn{width:34px;font-size:17px}
+  body.fume .zbtn:hover{background:rgba(255,255,255,.07);border-color:var(--line);color:var(--ink);box-shadow:0 12px 30px -12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05)}
+  /* dica do rodapé: pílula de vidro, atalhos como kbd */
+  body.fume .hint{bottom:16px;border-radius:999px;font-size:12px;color:var(--ink-2);letter-spacing:0;padding:7px 14px}
+  body.fume .hint b{font:500 10.5px/1 var(--mono);color:var(--ink);background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:5px;padding:2px 5px}
+  /* botões de ícone */
+  body.fume .ic{color:var(--ink-2);border-radius:8px;border-color:transparent}
+  body.fume .ic:hover{background:rgba(255,255,255,.07);border-color:transparent;color:var(--ink);box-shadow:none}
+  body.fume .ic.active{background:rgba(255,255,255,.1);border-color:transparent;color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  body.fume .ic.danger:hover{background:rgba(255,255,255,.07);border-color:transparent;color:var(--run);box-shadow:none}
+  body.fume .dvr,body.fume .drawbar .vsep,body.fume .sep{background:var(--line)}
+  body.fume .toolbar .tb-lbl{font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+  body.fume .toolbar .tb-danger .tb-lbl{color:var(--ink-3)}
+  body.fume .toolbar .tb-danger .ic{color:var(--ink-3);border-color:transparent}
+  body.fume .toolbar .tb-danger .ic:hover{color:var(--run)}
+  /* seletores segmentados e botões das barras de seleção/desenho */
+  body.fume .shape-btn,body.fume .fmt-btn,body.fume .tool,body.fume .width-btn{
+    border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:8px;color:var(--ink-2);
+  }
+  body.fume .tool{font:500 12px/1 "Geist",ui-sans-serif,system-ui,sans-serif;text-transform:none;letter-spacing:0;border-radius:9px;padding:6px 11px}
+  body.fume .shape-btn:hover,body.fume .fmt-btn:hover,body.fume .tool:hover,body.fume .width-btn:hover{
+    background:rgba(255,255,255,.08);border-color:var(--line);color:var(--ink);box-shadow:none;
+  }
+  body.fume .shape-btn.active,body.fume .fmt-btn.active,body.fume .tool.active,body.fume .width-btn.active{
+    background:rgba(255,255,255,.1);border-color:var(--line-2);color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  body.fume .shape-btn.eraser.active{background:rgba(255,158,196,.1);border-color:rgba(255,158,196,.35);color:var(--run);box-shadow:none}
+  body.fume .width-btn .dot{box-shadow:none}
+  body.fume .swatch{box-shadow:none !important;border-color:rgba(255,255,255,.15)}
+  body.fume .swatch:hover{border-color:var(--ink)}
+  body.fume .drawbar .lbl,body.fume .palette .lbl{font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+  body.fume .drawbar .clear-strokes{color:var(--ink-2);border-color:var(--line);background:rgba(255,255,255,.04)}
+  body.fume .drawbar .clear-strokes:hover:not(:disabled){background:rgba(255,255,255,.08);border-color:var(--line);color:var(--run);box-shadow:none}
+  body.fume .presentbar .pcount{font:500 12px/1 var(--mono);color:var(--ink);text-shadow:none}
+  body.fume .breadcrumb .crumb{color:var(--ink-3)}
+  body.fume .breadcrumb .crumb:hover{color:var(--ink);background:rgba(255,255,255,.07)}
+  body.fume .breadcrumb .crumb.current{color:var(--ink);font-weight:500;text-shadow:none;filter:none}
+  body.fume .cloud-head{border-bottom-color:var(--line)}
+  body.fume .cloud-head h3{font-size:18px;font-weight:500;letter-spacing:-.01em;text-transform:none;color:var(--ink);text-shadow:none}
+  body.fume .cloud-panel input{background:var(--field);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:8px 9px;color:var(--ink)}
+  body.fume .cloud-panel input:focus{border-color:rgba(255,255,255,.18);outline:none}
+  body.fume .minimap .mm-view{fill:rgba(255,255,255,.08)}
+  body.fume .marquee-rect{border:1px dashed var(--line-2);background:rgba(255,255,255,.04);box-shadow:none}
+
+  /* ---------- card (bloco): vidro fumê, topo mais claro, brilho de cor num canto ---------- */
+  body.fume .block{
+    --glow:rgba(var(--bc-rgb),.16);
+    background:
+      radial-gradient(150px 70px at 100% 0%,var(--glow),transparent 72%),
+      linear-gradient(180deg,rgba(255,255,255,.075) 0px,rgba(255,255,255,.015) 31px,transparent 52px),
+      linear-gradient(180deg,rgba(52,52,60,.50) 0px,rgba(30,30,35,.80) 64px,rgba(23,23,27,.95) 140px);
+    border:1px solid var(--line);
+    color:var(--ink);font-size:13px;line-height:1.45;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 24px 48px -24px rgba(0,0,0,.9);
+    backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+  }
+  body.fume .block.selected{border-color:var(--line-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 0 0 1px rgba(255,255,255,.14),0 24px 48px -24px rgba(0,0,0,.9)}
+  body.fume .block.focused{border-color:var(--line-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 0 0 1px rgba(255,255,255,.14),0 24px 48px -24px rgba(0,0,0,.9),0 0 60px -10px rgba(var(--bc-rgb),.5)}
+  body.fume .block.emphasis{box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 24px 48px -24px rgba(0,0,0,.9),0 0 60px -10px rgba(var(--bc-rgb),.5)}
+  /* "fundo" do bloco não vira cor chapada: só aumenta o brilho do canto */
+  body.fume .block.fill-soft{--glow:rgba(var(--bc-rgb),.30)}
+  body.fume .block.fill-solid{--glow:rgba(var(--bc-rgb),.45);border-color:rgba(var(--bc-rgb),.28)}
+  body.fume .block.fill-solid .title,body.fume .block.fill-solid .body{color:inherit}
+  /* título: 12,5px peso 500, cor de texto (a cor do bloco fica na bolinha) */
+  body.fume .block .title{
+    color:var(--ink);font-weight:500;letter-spacing:0;text-transform:none;text-shadow:none;
+    font-size:calc(var(--body-size,15px) * .8333);line-height:1.45;
+  }
+  body.fume .block .body{color:var(--ink-2);font-size:calc(var(--body-size,15px) * .8333);line-height:1.5}
+  body.fume .block [contenteditable="true"]{background-color:rgba(255,255,255,.045)}
+  /* retângulo/arredondado: cabeçalho com bolinha 6px que brilha + miolo num painel interno */
+  body.fume .block.shp-rect,body.fume .block.shp-rounded{padding:0 0 6px;justify-content:flex-start}
+  body.fume .block.shp-rect .title,body.fume .block.shp-rounded .title{
+    text-align:left;margin:0;padding:10px 10px 9px 26px;
+    background-image:radial-gradient(circle,var(--bc) 2.6px,rgba(var(--bc-rgb),.45) 3.4px,transparent 8px);
+    background-repeat:no-repeat;background-size:16px 16px;background-position:7px calc(10px + .725em - 8px);
+  }
+  body.fume .block.shp-rect .body,body.fume .block.shp-rounded .body{
+    text-align:left;margin:0 6px;background:var(--panel);border:1px solid rgba(255,255,255,.045);border-radius:11px;padding:10px;
+  }
+  body.fume .block.shp-rect .body:empty:not([contenteditable="true"]),body.fume .block.shp-rounded .body:empty:not([contenteditable="true"]){display:none}
+  body.fume .block.shp-rect > .block-img,body.fume .block.shp-rounded > .block-img{width:calc(100% - 12px);margin:0 6px 6px;border-radius:11px;background:var(--field)}
+  body.fume .block.shp-rect .doc-chip,body.fume .block.shp-rounded .doc-chip,
+  body.fume .block.shp-rect .board-chip,body.fume .block.shp-rounded .board-chip{margin:6px 6px 0}
+  /* losango/hexágono: o contorno SVG vira borda fina neutra */
+  body.fume .skin-poly{fill:var(--panel) !important;stroke:var(--line-2) !important;filter:drop-shadow(0 18px 24px rgba(0,0,0,.6)) !important}
+  body.fume .block.selected .skin-poly,body.fume .block.focused .skin-poly{stroke:rgba(255,255,255,.4) !important}
+  /* chips dentro do bloco (documento, quadro) */
+  body.fume .doc-chip,body.fume .board-chip{background:var(--field);border:1px solid rgba(255,255,255,.06);border-radius:8px}
+  body.fume .doc-chip-head,body.fume .board-chip-head{font:500 10px/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  body.fume .board-chip-head .late{color:var(--rel)}
+  body.fume .board-chip-cols{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--ink-3)}
+  body.fume .board-chip-cols b{color:var(--ink-2);font-weight:500}
+  body.fume .doc-chip-line{color:var(--ink-2)}
+  body.fume .doc-chip-meta{font-family:var(--mono);color:var(--ink-3)}
+  /* porta: bolinha 9px na cor do bloco, anel escuro e brilho; cresce 1,35x */
+  body.fume .port{width:9px;height:9px;background:var(--bc);border:0;opacity:1;
+    box-shadow:0 0 0 2.5px #141417,0 0 10px var(--bc);transition:transform .15s,box-shadow .15s}
+  body.fume .port.top{top:-4.5px}
+  body.fume .port.bottom{bottom:-4.5px}
+  body.fume .port.left{left:-4.5px}
+  body.fume .port.right{right:-4.5px}
+  body.fume .port:hover,body.fume .port.hot{background:var(--bc);box-shadow:0 0 0 2.5px #141417,0 0 10px var(--bc)}
+  body.fume .port.top:hover,body.fume .port.top.hot,body.fume .port.bottom:hover,body.fume .port.bottom.hot{transform:translateX(-50%) scale(1.35)}
+  body.fume .port.left:hover,body.fume .port.left.hot,body.fume .port.right:hover,body.fume .port.right.hot{transform:translateY(-50%) scale(1.35)}
+  body.fume .resize{background:var(--ink);border:1.5px solid #141417;border-radius:3px;box-shadow:0 2px 6px rgba(0,0,0,.6)}
+  body.fume .resize:hover{box-shadow:0 2px 6px rgba(0,0,0,.6)}
+  body.fume .del{width:22px;height:22px;top:-11px;right:-11px;line-height:19px;font-size:14px;font-weight:500;
+    background:var(--chrome);border:1px solid var(--line);color:var(--ink-3);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  body.fume .del:hover{background:rgba(255,255,255,.12);border-color:var(--line-2);color:var(--run);box-shadow:none}
+
+  /* ---------- conexões: bezier fina que não engrossa com o zoom ---------- */
+  body.fume .edges path.edge-line{stroke:var(--edge);stroke-width:1.25;vector-effect:non-scaling-stroke;transition:stroke .2s,opacity .3s}
+  body.fume .edges path.edge-line.sel{stroke:#fff;stroke-width:1.6;filter:none !important}
+  body.fume .edges path.edge-arrow{fill:var(--ink-3) !important}
+  body.fume .edges path.stub{stroke:var(--edge);stroke-width:1.25;vector-effect:non-scaling-stroke}
+  /* ⚡ fluxo ligado = "rodando": rosa tracejado 3 7 andando */
+  body.fume .edges path.flow-glow,body.fume .edges path.flow-spark{display:none}
+  body.fume .edges path.flow{stroke:var(--run);stroke-width:1.25;vector-effect:non-scaling-stroke;stroke-dasharray:3 7;opacity:1;animation:fume-run .7s linear infinite}
+  @keyframes fume-run{to{stroke-dashoffset:-10}}
+  body.fume .edges path.pulse{stroke:var(--run) !important;filter:none;mix-blend-mode:normal;stroke-width:2;opacity:.9}
+  /* fio desenho↔bloco = relação livre: dourado tracejado 5 5 */
+  body.fume .edges path.anchor{stroke:var(--rel) !important;stroke-dasharray:5 5;stroke-width:1.25;vector-effect:non-scaling-stroke;opacity:.85;filter:none}
+  body.fume .edges path.anchor.selected{opacity:1;filter:none}
+  body.fume .edges path.preview{stroke:var(--ink-2);stroke-dasharray:3 7;filter:none;vector-effect:non-scaling-stroke;stroke-width:1.25}
+  body.fume .collapse-badge{background:var(--field);border:1px solid rgba(255,255,255,.06);box-shadow:0 0 0 3px var(--bg);font:500 10.5px/1 var(--mono);letter-spacing:.04em}
+  body.fume .collapse-badge:hover{box-shadow:0 0 0 3px var(--bg)}
+  body.fume .edge-style-btn{background:var(--chrome);border:1px solid var(--line);font:500 10px/1 var(--mono);letter-spacing:.06em;box-shadow:0 12px 30px -12px rgba(0,0,0,.7);backdrop-filter:blur(16px)}
+  body.fume .edge-handle{background:#141417;box-shadow:none}
+  body.fume .edge-handle:hover{box-shadow:none;background:var(--panel-2)}
+  @media (prefers-reduced-motion: reduce){ body.fume .edges path.flow{animation:none} }
+
+  /* ---------- anotações, imagens, desenhos ---------- */
+  body.fume .note{
+    background:var(--chrome);border:1px solid var(--line);border-radius:11px;
+    color:color-mix(in srgb,var(--nc) 60%,#ececf1);font-weight:500;font-size:13px;
+    text-shadow:none;box-shadow:0 12px 30px -12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);
+    backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
+  }
+  body.fume .note.selected{border-color:var(--line-2);box-shadow:0 0 0 1px rgba(255,255,255,.14),0 12px 30px -12px rgba(0,0,0,.7)}
+  body.fume .note[contenteditable="true"]{background:var(--panel);border-color:var(--line-2)}
+  body.fume .note.bare{background:transparent;border-color:transparent;box-shadow:none;text-shadow:none;backdrop-filter:none}
+  body.fume .imgnode{border-radius:11px;box-shadow:0 24px 48px -24px rgba(0,0,0,.9)}
+  body.fume .imgnode img{border-radius:10px}
+  body.fume .imgnode.selected{border-color:var(--line-2);box-shadow:0 0 0 1px rgba(255,255,255,.14),0 24px 48px -24px rgba(0,0,0,.9)}
+  body.fume .strokes .stroke-line{filter:none}
+  body.fume .strokes g.selected .stroke-line,body.fume .strokes g.hot .stroke-line{filter:drop-shadow(0 0 1.5px rgba(255,255,255,.7))}
+  body.fume .world.present .strokes g.lit .stroke-line{filter:none}
+
+  /* ---------- modais: documento (leitura estilo Notion) e quadro ---------- */
+  body.fume .doc-overlay,body.fume .cloud-overlay{background:rgba(6,6,8,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  body.fume .doc-panel{
+    --d-bg:#17171a;--d-text:#e4e4ea;--d-muted:#a4a4b0;--d-faint:#6c6c78;
+    --d-line:rgba(255,255,255,.08);--d-hover:rgba(255,255,255,.07);--d-pop:#1e1e22;
+    --d-sel:rgba(255,255,255,.1);--d-head:rgba(255,255,255,.04);--d-check:#6fe3a6;
+    border-radius:18px;border-color:var(--line);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 24px 48px -24px rgba(0,0,0,.9);
+  }
+  body.fume .board-panel{
+    --bs-mono:"Geist Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+    --bs-line:rgba(255,255,255,.08);--bs-line-soft:rgba(255,255,255,.045);
+    --bs-panel:#17171a;--bs-panel-2:#121215;
+    --bs-ink:#ececf1;--bs-muted:#a4a4b0;--bs-muted-2:#6c6c78;
+    --bs-accent:#ececf1;--bs-accent-dim:rgba(255,255,255,.07);--bs-accent-line:rgba(255,255,255,.15);
+    --bs-warn:#d8b46a;--bs-warn-dim:rgba(216,180,106,.1);--bs-warn-line:rgba(216,180,106,.22);
+    border-radius:18px;border-color:var(--line);color:var(--ink);
+    background:linear-gradient(180deg,rgba(40,40,46,.92) 0px,rgba(23,23,27,.98) 140px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 24px 48px -24px rgba(0,0,0,.9);
+  }
+  body.fume .board-head,body.fume .board-foot{border-color:var(--line)}
+  body.fume .board-head h3{font-size:18px;font-weight:500;letter-spacing:-.01em;text-transform:none;color:var(--ink);text-wrap:balance}
+  body.fume .bs-count{background:var(--field);border-color:rgba(255,255,255,.06)}
+  body.fume .board-col{background:rgba(255,255,255,.02);border-color:var(--bs-line-soft)}
+  body.fume .board-col.is-doing .board-col-dot{background:var(--run);box-shadow:0 0 8px var(--run)}
+  body.fume .board-col.is-done .board-col-dot{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  body.fume .board-col-name{color:var(--ink-3);letter-spacing:.08em;font-weight:500}
+  body.fume .board-col.drop{border-color:var(--line-2);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+  body.fume .board-card{
+    background:linear-gradient(180deg,rgba(52,52,60,.50) 0px,rgba(30,30,35,.80) 64px,rgba(23,23,27,.95) 140px);
+    border-color:var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 24px 48px -24px rgba(0,0,0,.9);
+  }
+  body.fume .board-card:hover{border-color:var(--line-2)}
+  body.fume .board-card-title{font-size:12.5px;font-weight:500}
+  body.fume .board-bar{height:2px}
+  body.fume .board-bar-fill{background:linear-gradient(90deg,#b49cff,var(--run))}
+  body.fume .bs-tag{font-size:10px;letter-spacing:.06em;color:var(--ink-3);border-color:var(--line);background:transparent}
+  body.fume .bs-tag.video{color:var(--run);border-color:rgba(255,158,196,.3);background:rgba(255,158,196,.08)}
+  body.fume .board-add-col{border-color:var(--line);color:var(--ink-3)}
+  body.fume .board-add-col:hover{border-color:var(--line-2);color:var(--ink)}
+  body.fume .board-saved{font-family:var(--mono);color:var(--ok)}
+  body.fume .bs-scrim{background:rgba(6,6,8,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  body.fume .bs-sheet{
+    border-radius:18px;border-color:var(--line);
+    background:linear-gradient(180deg,rgba(40,40,46,.92) 0px,rgba(23,23,27,.98) 140px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 24px 48px -24px rgba(0,0,0,.9);
+  }
+  body.fume .bs-title{font-size:18px;font-weight:500;letter-spacing:-.01em}
+  body.fume .bs-label{color:var(--ink-3);letter-spacing:.08em}
+  body.fume .bs-st.done .box{background:var(--ok);border-color:var(--ok)}
+  body.fume .bs-add input,body.fume .bs-prazo input[type=date]{background:var(--field);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:8px 9px}
+  body.fume .bs-add input:focus,body.fume .bs-prazo input[type=date]:focus{border-color:rgba(255,255,255,.18)}
+  body.fume .bs-btn{font:500 12px/1 "Geist",ui-sans-serif,system-ui,sans-serif;letter-spacing:0;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink);border-radius:9px;padding:8px 11px}
+  body.fume .bs-btn:hover{background:rgba(255,255,255,.08)}
+  body.fume .bs-btn.ghost{color:var(--ink)}
+  body.fume .bs-btn.danger{color:var(--run);border-color:var(--line);background:rgba(255,255,255,.04)}
+  body.fume .bs-btn.danger:hover{background:rgba(255,158,196,.1)}
+  /* ação principal da ficha: o único botão branco sólido da área */
+  body.fume .bs-foot .bs-btn:not(.danger):not(.ghost){background:#f4f4f6;color:#121214;border-color:#f4f4f6}
+  body.fume .bs-foot .bs-btn:not(.danger):not(.ghost):hover{background:#ffffff}
+
   /* ===== quadro (board/pipeline) dentro do bloco: cartões replicados do Valt "Não Esquece" ===== */
   .board-chip{margin-top:8px;border:1px solid rgba(var(--bc-rgb,0,240,255),.22);border-radius:8px;background:rgba(var(--bc-rgb,0,240,255),.05);padding:7px 9px;text-align:left}
   .board-chip-head{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--bc,#00f0ff)}
@@ -1830,7 +2107,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} shp-${shapeDef.key} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
@@ -1873,6 +2150,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
       {useSkin && (
         <svg className="block-skin" viewBox="0 0 100 100" preserveAspectRatio="none">
           <polygon
+            className="skin-poly"
             points={shapeDef.points}
             style={{
               fill: block.fill === "solid" ? color : block.fill === "soft" ? `rgba(${hexToRgb(color)},.22)` : "var(--blk-bg)",
@@ -3302,11 +3580,13 @@ function App() {
   const arrowModeRef = useRef(arrowMode); useEffect(() => { arrowModeRef.current = arrowMode; });
   const marqueeRef = useRef(null);            // {sx, sy, additive, rect}
   const [marquee, setMarquee] = useState(null); // {x,y,w,h} em coordenadas do mundo
-  // Tema claro/escuro: preferência da pessoa, não do mapa (fica no localStorage)
-  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("canvas-tron:theme") || "dark"; } catch { return "dark"; } });
+  // Tema: fume (padrão, vidro fumê do canvas-fluxos) | dark (Tron neon) | light (off-white).
+  // Preferência da pessoa, não do mapa. Chave "theme3" pra todo mundo abrir no Fumê uma vez.
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("canvas-tron:theme3") || "fume"; } catch { return "fume"; } });
   useEffect(() => {
     document.body.classList.toggle("light", theme === "light");
-    try { localStorage.setItem("canvas-tron:theme", theme); } catch {}
+    document.body.classList.toggle("fume", theme === "fume");
+    try { localStorage.setItem("canvas-tron:theme3", theme); } catch {}
   }, [theme]);
   // ----- nuvem (Supabase, login email+senha) -----
   const [cloudOpen, setCloudOpen] = useState(false);
@@ -5131,7 +5411,7 @@ function App() {
       const out = document.createElement("canvas");
       out.width = Math.round(W * S); out.height = Math.round(H * S);
       const ctx = out.getContext("2d");
-      ctx.fillStyle = theme === "light" ? "#f4f1ea" : "#030612"; ctx.fillRect(0, 0, out.width, out.height);
+      ctx.fillStyle = theme === "light" ? "#f4f1ea" : theme === "fume" ? "#0c0c0e" : "#030612"; ctx.fillRect(0, 0, out.width, out.height);
       // aplica a mesma transformação da tela (escala 2 p/ qualidade)
       const worldTransform = () => { ctx.setTransform(S, 0, 0, S, 0, 0); ctx.translate(v.x, v.y); ctx.scale(v.scale, v.scale); };
       // 1) ligações + setas (atrás dos blocos)
@@ -5143,9 +5423,9 @@ function App() {
             if (p.stubD) { ctx.strokeStyle = p.color; ctx.lineWidth = 2.6; ctx.stroke(new Path2D(p.stubD)); }
             return;
           }
-          ctx.strokeStyle = p.color; ctx.lineWidth = 2.2;
+          ctx.strokeStyle = theme === "fume" ? "rgba(225,225,235,.30)" : p.color; ctx.lineWidth = theme === "fume" ? 1.25 : 2.2;
           if (p.curveD) ctx.stroke(new Path2D(p.curveD));
-          if (p.arrowD) { ctx.fillStyle = p.toColor || p.color; ctx.fill(new Path2D(p.arrowD)); }
+          if (p.arrowD) { ctx.fillStyle = theme === "fume" ? "rgba(225,225,235,.55)" : (p.toColor || p.color); ctx.fill(new Path2D(p.arrowD)); }
         } catch {}
       });
       // 2) camada HTML (blocos/notas/imagens) — SVG escondido, fundo transparente
@@ -5587,7 +5867,7 @@ function App() {
   /* ----- render ----- */
   return (
     <>
-      <div className="bg" />
+      <div className="bg" style={{ "--gx": view.x + "px", "--gy": view.y + "px", "--gs": Math.max(6, 22 * view.scale) + "px" }} />
       <div className="bg-particles" />
 
       {!present && (
@@ -5661,9 +5941,12 @@ function App() {
             <button className={`ic ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Minimapa">⊞</button>
             <button className={`ic ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Fluxo de energia nas conexões">⚡</button>
             <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>
-            <button className="ic" onClick={() => setTheme(t => t === "light" ? "dark" : "light")} title={theme === "light" ? "Tema escuro" : "Tema claro (off-white)"}>
-              {theme === "light"
-                ? <svg viewBox="0 0 24 24" className="ic-svg"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+            <button className="ic" onClick={() => setTheme(t => t === "fume" ? "dark" : t === "dark" ? "light" : "fume")}
+              title={theme === "fume" ? "Tema: Fumê (clique: Tron)" : theme === "dark" ? "Tema: Tron (clique: Claro)" : "Tema: Claro (clique: Fumê)"}>
+              {theme === "fume"
+                ? <svg viewBox="0 0 24 24" className="ic-svg"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>
+                : theme === "dark"
+                ? <svg viewBox="0 0 24 24" className="ic-svg"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
                 : <svg viewBox="0 0 24 24" className="ic-svg"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>}
             </button>
             <button className="ic" onClick={enterPresent} title="Apresentar (P)">▶</button>
@@ -6235,7 +6518,7 @@ function App() {
                   {/* Full curve — visible when not collapsed */}
                   <path
                     d={p.curveD}
-                    className={p.collapsed ? "gone" : ""}
+                    className={"edge-line " + (p.collapsed ? "gone" : "") + (isSel ? " sel" : "")}
                     stroke={strokeVal}
                     data-stroke={p.color}
                     strokeWidth={isSel ? 4 : 2.2}
@@ -6260,6 +6543,7 @@ function App() {
                   {p.arrowD && (
                     <path
                       d={p.arrowD}
+                      className="edge-arrow"
                       style={{ fill: p.toColor || p.color, stroke: "none" }}
                     />
                   )}
