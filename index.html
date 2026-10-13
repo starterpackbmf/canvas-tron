@@ -1302,16 +1302,9 @@
   body.fume .block [contenteditable="true"]{background-color:rgba(255,255,255,.045)}
   /* retângulo/arredondado: cabeçalho com bolinha 6px que brilha + miolo num painel interno */
   body.fume .block.shp-rect,body.fume .block.shp-rounded{padding:0 0 6px;justify-content:flex-start}
-  /* título centralizado; a bolinha é um elemento em linha antes da primeira palavra,
-     então anda colada no texto mesmo quando o título quebra em várias linhas.
-     :not(:empty) evita colidir com o placeholder (que usa ::before com o título vazio). */
+  /* título centralizado, sem bolinha: a cor do bloco mora só no brilho do canto (pedido 13/10) */
   body.fume .block.shp-rect .title,body.fume .block.shp-rounded .title{
     text-align:center;margin:0;padding:10px 12px 9px;
-  }
-  body.fume .block.shp-rect .title:not(:empty)::before,body.fume .block.shp-rounded .title:not(:empty)::before{
-    content:"";display:inline-block;width:6px;height:6px;border-radius:50%;
-    background:var(--bc);box-shadow:0 0 8px var(--bc);
-    margin-right:8px;vertical-align:.12em;
   }
   body.fume .block.shp-rect .body,body.fume .block.shp-rounded .body{
     text-align:center;margin:0 6px;background:var(--panel);border:1px solid rgba(255,255,255,.045);border-radius:11px;padding:10px;
@@ -1331,10 +1324,10 @@
   body.fume .board-chip-cols b{color:var(--ink-2);font-weight:500}
   body.fume .doc-chip-line{color:var(--ink-2)}
   body.fume .doc-chip-meta{font-family:var(--mono);color:var(--ink-3)}
-  /* porta: discreta pra não competir com o bloco (pedido do Mateus, 13/10). Pontinho de 5px
-     sem brilho e meio apagado; acende quando o mouse passa no bloco ou ele está selecionado,
-     e só brilha quando o mouse está na própria porta. A área de clique continua grande (::before). */
-  body.fume .port{width:5px;height:5px;background:var(--bc);border:0;opacity:.45;
+  /* porta: discreta e neutra (pedidos de 13/10: "chamando muita atenção" e "cor só no brilho").
+     Pontinho cinza de 5px meio apagado; acende no hover do bloco ou seleção, e só ganha a cor
+     do bloco (com brilho) com o mouse na própria porta. Área de clique continua grande (::before). */
+  body.fume .port{width:5px;height:5px;background:var(--ink-2);border:0;opacity:.45;
     box-shadow:0 0 0 2px #141417;transition:transform .15s,box-shadow .15s,opacity .15s}
   body.fume .port.top{top:-2.5px}
   body.fume .port.bottom{bottom:-2.5px}
