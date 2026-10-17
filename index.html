@@ -402,6 +402,10 @@
   }
 
   /* ===== blocks ===== */
+  /* estilo sólido: bloco colorido, só o texto, sem descrição (17/10) */
+  .block.estilo-solido{background:var(--bc);border-color:var(--bc);color:#0b0d10;justify-content:center;padding:12px 16px}
+  .block.estilo-solido .title{color:#0b0d10;text-align:center;margin:0}
+  .block.estilo-solido .body{display:none}
   .block{
     --bc:#00f0ff;
     --bc-rgb:0,240,255;
@@ -1289,6 +1293,19 @@
   body.fume .block.selected{border-color:var(--line-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 0 0 1px rgba(255,255,255,.14),0 24px 48px -24px rgba(0,0,0,.9)}
   body.fume .block.focused{border-color:var(--line-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 0 0 1px rgba(255,255,255,.14),0 24px 48px -24px rgba(0,0,0,.9),0 0 60px -10px rgba(var(--bc-rgb),.5)}
   body.fume .block.emphasis{box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 24px 48px -24px rgba(0,0,0,.9),0 0 60px -10px rgba(var(--bc-rgb),.5)}
+  /* sólido no Fumê: a cor enche o bloco, com o mesmo reflexo de vidro no topo */
+  body.fume .block.estilo-solido{
+    background:linear-gradient(180deg,rgba(255,255,255,.22) 0px,rgba(255,255,255,.06) 40%,rgba(0,0,0,.06) 100%),var(--bc);
+    border:1px solid rgba(255,255,255,.22);color:#0b0d10;padding:0;justify-content:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 18px 40px -22px rgba(var(--bc-rgb),.7),0 24px 48px -24px rgba(0,0,0,.9);
+    backdrop-filter:none;-webkit-backdrop-filter:none;
+  }
+  body.fume .block.estilo-solido.selected,body.fume .block.estilo-solido.focused{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 0 0 2px rgba(255,255,255,.75),0 18px 40px -22px rgba(var(--bc-rgb),.8)}
+  body.fume .block.estilo-solido .title,body.fume .block.shp-rect.estilo-solido .title,body.fume .block.shp-rounded.estilo-solido .title{
+    color:#0b0d10;font-weight:600;font-size:var(--body-size,15px);line-height:1.35;text-align:center;padding:14px 16px;margin:0;
+  }
+  body.fume .block.estilo-solido .body{display:none}
+  body.fume .block.estilo-solido [contenteditable="true"]{background-color:rgba(0,0,0,.08)}
   /* "fundo" do bloco não vira cor chapada: só aumenta o brilho do canto */
   body.fume .block.fill-soft{--glow:rgba(var(--bc-rgb),.30)}
   body.fume .block.fill-solid{--glow:rgba(var(--bc-rgb),.45);border-color:rgba(var(--bc-rgb),.28)}
@@ -1313,6 +1330,7 @@
   body.fume .block.shp-rect > .block-img,body.fume .block.shp-rounded > .block-img{width:calc(100% - 12px);margin:0 6px 6px;border-radius:11px;background:var(--field)}
   body.fume .block.shp-rect .doc-chip,body.fume .block.shp-rounded .doc-chip,
   body.fume .block.shp-rect .board-chip,body.fume .block.shp-rounded .board-chip{margin:6px 6px 0}
+  body.fume .block.shp-rect.estilo-solido,body.fume .block.shp-rounded.estilo-solido{justify-content:center;padding:0}
   /* losango/hexágono: o contorno SVG vira borda fina neutra */
   body.fume .skin-poly{fill:var(--panel) !important;stroke:var(--line-2) !important;filter:drop-shadow(0 18px 24px rgba(0,0,0,.6)) !important}
   body.fume .block.selected .skin-poly,body.fume .block.focused .skin-poly{stroke:rgba(255,255,255,.4) !important}
@@ -1637,6 +1655,9 @@ const bumpNidFromData = (d) => {
 };
 
 const DEFAULT_COLOR = "#00f0ff";
+// estilo do bloco: "solido" (bloco colorido, só o texto) ou "card" (título + descrição). Bloco antigo sem estilo = card.
+const estiloPadrao = () => { try { return localStorage.getItem("canvas-tron:estilo") || "solido"; } catch (e) { return "solido"; } };
+const lembrarEstilo = (v) => { try { localStorage.setItem("canvas-tron:estilo", v); } catch (e) {} };
 const PRESET_COLORS = [
   "#00f0ff", // cyan
   "#ff9d00", // orange
@@ -2109,7 +2130,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} shp-${shapeDef.key} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} shp-${shapeDef.key} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : ""} ${block.estilo === "solido" ? "estilo-solido" : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
@@ -2143,7 +2164,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
         // Use closest() so clicking on inner spans (from bold/italic/color formatting)
         // still correctly resolves to the parent title or body element
         // bloco com documento: título e corpo seguem editáveis; o resto abre o documento
-        if (e.target.closest(".title")) setEditingTitle(true);
+        if (e.target.closest(".title") || (block.estilo === "solido" && !block.board && !block.doc)) setEditingTitle(true);
         else if (block.board && !e.target.closest(".body")) onOpenBoard?.(block.id);
         else if (block.doc && !e.target.closest(".body")) onOpenDoc?.(block.id);
         else setEditingBody(true);
@@ -3828,7 +3849,7 @@ function App() {
   const pendingEditRef = useRef(null);
   const createBlock = useCallback((x, y) => {
     const id = uid();
-    const b = { id, x: x - 100, y: y - 25, w: 240, h: 80, title: "", body: "", color: DEFAULT_COLOR };
+    const b = { id, x: x - 100, y: y - 25, w: 240, h: 80, title: "", body: "", color: DEFAULT_COLOR, estilo: estiloPadrao() };
     pendingEditRef.current = id;
     setBlocks(p => [...p, b]);
     selectOne(id);
@@ -3897,7 +3918,7 @@ function App() {
     const id = uid();
     const child = {
       id, x: parent.x + w / 2 - CW / 2, y: parent.y + h + 90, w: CW, h: CH,
-      title: "", body: "", color: parent.color || DEFAULT_COLOR,
+      title: "", body: "", color: parent.color || DEFAULT_COLOR, estilo: parent.estilo || "card",
     };
     if (mapOnRef.current) {
       const eds = edgesRef.current;
@@ -3959,6 +3980,10 @@ function App() {
   }, [selection]);
 
   // Aplica a forma nos blocos selecionados (retângulo = volta ao padrão).
+  const setBlockEstilo = useCallback((estilo) => {
+    lembrarEstilo(estilo);
+    setBlocks(p => p.map(b => selection.has(b.id) ? { ...b, estilo } : b));
+  }, [selection]);
   const setBlockFill = useCallback((fill) => {
     setBlocks(p => p.map(b => {
       if (!selection.has(b.id)) return b;
@@ -4221,7 +4246,7 @@ function App() {
       for (const [dx, dy] of cands) if (!hits(x0 + dx, y0 + dy)) { x0 += dx; y0 += dy; break outer; }
     }
     const id = uid();
-    const b = { id, x: x0, y: y0, title: "", body: "", color: DEFAULT_COLOR, ...d, w, h };
+    const b = { id, x: x0, y: y0, title: "", body: "", color: DEFAULT_COLOR, estilo: estiloPadrao(), ...d, w, h };
     const extraBlocks = [], extraEdges = [];
     if (preset.after === "yesno") {
       const CW = 150, CH = 64;
@@ -4636,7 +4661,7 @@ function App() {
     const pe = ed.find(e => e.to.id === id && bl.some(b => b.id === e.from.id));
     if (!pe) { createChildBlock(id); return; }
     const CW = 200, CH = 70, newId = uid();
-    const child = { id: newId, x: cur.x, y: cur.y + (sizesRef.current[id]?.h ?? cur.h ?? 80) + 30, w: CW, h: CH, title: "", body: "", color: cur.color || DEFAULT_COLOR };
+    const child = { id: newId, x: cur.x, y: cur.y + (sizesRef.current[id]?.h ?? cur.h ?? 80) + 30, w: CW, h: CH, title: "", body: "", color: cur.color || DEFAULT_COLOR, estilo: cur.estilo || "card" };
     if (mapStructRef.current === "radial") {
       const parentIsRoot = !ed.some(e => e.to.id === pe.from.id && bl.some(b => b.id === e.from.id));
       if (parentIsRoot) { freezeSides(pe.from.id); const rc = blockCenter(bl.find(b => b.id === pe.from.id)); child.side = cur.side || (blockCenter(cur).x < rc.x ? "L" : "R"); }
@@ -5034,6 +5059,7 @@ function App() {
             id: newId, x: nx, y: ny, w: W, h: H,
             title: "", body: "",
             color: (sourceBlock && sourceBlock.color) || DEFAULT_COLOR,
+            estilo: (sourceBlock && sourceBlock.estilo) || (sourceBlock ? "card" : estiloPadrao()),
           };
           pendingEditRef.current = newId;
           setBlocks(p => [...p, newBlock]);
@@ -6210,8 +6236,19 @@ function App() {
             {hasBlockSel && (() => {
               const selShape = blocks.find(b => selection.has(b.id))?.shape || "rounded";
               const selFill = blocks.find(b => selection.has(b.id))?.fill || "none";
+              const selEstilo = blocks.find(b => selection.has(b.id))?.estilo || "card";
               return (
                 <>
+                  <div className="vsep"/>
+                  <div className="group">
+                    <span className="lbl">Estilo</span>
+                    <button className={`shape-btn ${selEstilo === "solido" ? "active" : ""}`} onClick={() => setBlockEstilo("solido")} title="Sólido: bloco colorido só com o texto">
+                      <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3" style={{fill:"currentColor",fillOpacity:.85}}/></svg>
+                    </button>
+                    <button className={`shape-btn ${selEstilo === "card" ? "active" : ""}`} onClick={() => setBlockEstilo("card")} title="Com descrição: título em cima e o texto num painel">
+                      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M6 8.5h12"/><rect x="6" y="11" width="12" height="6" rx="1.5" style={{fill:"currentColor",fillOpacity:.25}}/></svg>
+                    </button>
+                  </div>
                   <div className="vsep"/>
                   <div className="group">
                     <span className="lbl">Fundo</span>
