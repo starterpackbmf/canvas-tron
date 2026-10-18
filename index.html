@@ -1293,20 +1293,33 @@
   body.fume .block.selected{border-color:var(--line-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 0 0 1px rgba(255,255,255,.14),0 24px 48px -24px rgba(0,0,0,.9)}
   body.fume .block.focused{border-color:var(--line-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 0 0 1px rgba(255,255,255,.14),0 24px 48px -24px rgba(0,0,0,.9),0 0 60px -10px rgba(var(--bc-rgb),.5)}
   body.fume .block.emphasis{box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 24px 48px -24px rgba(0,0,0,.9),0 0 60px -10px rgba(var(--bc-rgb),.5)}
-  /* sólido no Fumê: o mesmo vidro dos outros blocos, tingido com a cor do bloco; só o título, sem o painel de baixo */
+  /* sólido no Fumê: vidro fosco tingido pela cor do bloco. Luz suave vindo de cima, reflexo leve embaixo,
+     brilho espalhado (sem mancha num canto) e um halo discreto em volta. Só o título, sem o painel de baixo. */
   body.fume .block.estilo-solido{
     background:
-      radial-gradient(160px 80px at 100% 0%,rgba(var(--bc-rgb),.55),transparent 72%),
-      radial-gradient(140px 70px at 0% 100%,rgba(var(--bc-rgb),.22),transparent 70%),
-      linear-gradient(180deg,rgba(255,255,255,.085) 0px,rgba(255,255,255,.02) 30px,transparent 52px),
-      linear-gradient(180deg,rgba(var(--bc-rgb),.20),rgba(var(--bc-rgb),.08)),
-      linear-gradient(180deg,rgba(52,52,60,.55) 0px,rgba(30,30,35,.85) 64px,rgba(23,23,27,.95) 140px);
-    border:1px solid rgba(var(--bc-rgb),.38);color:var(--ink);padding:0;justify-content:center;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 18px 40px -24px rgba(var(--bc-rgb),.55),0 24px 48px -24px rgba(0,0,0,.9);
+      radial-gradient(120% 150% at 30% -35%,rgba(var(--bc-rgb),.46),transparent 64%),
+      radial-gradient(110% 130% at 75% 140%,rgba(var(--bc-rgb),.24),transparent 66%),
+      linear-gradient(180deg,rgba(255,255,255,.09) 0%,rgba(255,255,255,.025) 38%,rgba(255,255,255,0) 70%),
+      linear-gradient(180deg,rgba(var(--bc-rgb),.14),rgba(var(--bc-rgb),.06)),
+      linear-gradient(180deg,rgba(38,38,44,.70),rgba(20,20,24,.88));
+    border:1px solid rgba(var(--bc-rgb),.18);color:var(--ink);padding:0;justify-content:center;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.13),
+      inset 0 -12px 26px -18px rgba(var(--bc-rgb),.40),
+      0 12px 36px -20px rgba(var(--bc-rgb),.38),
+      0 22px 44px -26px rgba(0,0,0,.9);
+    backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);
+    transition:box-shadow .25s,border-color .25s;
   }
-  body.fume .block.estilo-solido.selected,body.fume .block.estilo-solido.focused{border-color:rgba(var(--bc-rgb),.75);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 1px rgba(var(--bc-rgb),.45),0 0 40px -10px rgba(var(--bc-rgb),.6),0 24px 48px -24px rgba(0,0,0,.9)}
+  body.fume .block.estilo-solido:hover{border-color:rgba(var(--bc-rgb),.32)}
+  body.fume .block.estilo-solido.selected,body.fume .block.estilo-solido.focused{
+    border-color:rgba(var(--bc-rgb),.55);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.15),inset 0 -12px 26px -18px rgba(var(--bc-rgb),.45),
+      0 0 0 3px rgba(var(--bc-rgb),.10),0 0 44px -14px rgba(var(--bc-rgb),.55),0 22px 44px -26px rgba(0,0,0,.9);
+  }
   body.fume .block.estilo-solido .title,body.fume .block.shp-rect.estilo-solido .title,body.fume .block.shp-rounded.estilo-solido .title{
-    color:var(--ink);font-weight:500;font-size:var(--body-size,15px);line-height:1.35;text-align:center;padding:14px 16px;margin:0;
+    color:#f3f3f6;font-weight:500;font-size:var(--body-size,15px);line-height:1.35;text-align:center;padding:14px 16px;margin:0;
+    text-shadow:0 1px 14px rgba(var(--bc-rgb),.30);
   }
   body.fume .block.estilo-solido .body{display:none}
   body.fume .block.estilo-solido [contenteditable="true"]{background-color:rgba(255,255,255,.06)}
