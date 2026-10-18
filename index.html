@@ -1297,12 +1297,12 @@
      brilho espalhado (sem mancha num canto) e um halo discreto em volta. Só o título, sem o painel de baixo. */
   body.fume .block.estilo-solido{
     background:
-      radial-gradient(120% 150% at 30% -35%,rgba(var(--bc-rgb),.46),transparent 64%),
-      radial-gradient(110% 130% at 75% 140%,rgba(var(--bc-rgb),.24),transparent 66%),
+      radial-gradient(120% 150% at 30% -35%,rgba(var(--bc-rgb),var(--sa1,.46)),transparent 64%),
+      radial-gradient(110% 130% at 75% 140%,rgba(var(--bc-rgb),var(--sa2,.24)),transparent 66%),
       linear-gradient(180deg,rgba(255,255,255,.09) 0%,rgba(255,255,255,.025) 38%,rgba(255,255,255,0) 70%),
-      linear-gradient(180deg,rgba(var(--bc-rgb),.14),rgba(var(--bc-rgb),.06)),
+      linear-gradient(180deg,rgba(var(--bc-rgb),var(--sa3,.14)),rgba(var(--bc-rgb),calc(var(--sa3,.14) * .45))),
       linear-gradient(180deg,rgba(38,38,44,.70),rgba(20,20,24,.88));
-    border:1px solid rgba(var(--bc-rgb),.18);color:var(--ink);padding:0;justify-content:center;
+    border:1px solid rgba(var(--bc-rgb),var(--sb,.18));color:var(--ink);padding:0;justify-content:center;
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,.13),
       inset 0 -12px 26px -18px rgba(var(--bc-rgb),.40),
@@ -1311,6 +1311,10 @@
     backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);
     transition:box-shadow .25s,border-color .25s;
   }
+  /* Fundo no sólido: só o vidro / cor suave (padrão) / cor forte */
+  body.fume .block.estilo-solido.fill-none{--sa1:.20;--sa2:.10;--sa3:.04;--sb:.14}
+  body.fume .block.estilo-solido.fill-soft{--sa1:.46;--sa2:.24;--sa3:.14;--sb:.18}
+  body.fume .block.estilo-solido.fill-solid{--sa1:.78;--sa2:.46;--sa3:.36;--sb:.40}
   body.fume .block.estilo-solido:hover{border-color:rgba(var(--bc-rgb),.32)}
   body.fume .block.estilo-solido.selected,body.fume .block.estilo-solido.focused{
     border-color:rgba(var(--bc-rgb),.55);
@@ -2147,7 +2151,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   return (
     <div
       ref={elRef}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} shp-${shapeDef.key} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : ""} ${block.estilo === "solido" ? "estilo-solido" : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} shp-${shapeDef.key} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : block.fill === "none" ? "fill-none" : ""} ${block.estilo === "solido" ? "estilo-solido" : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
@@ -4004,7 +4008,7 @@ function App() {
   const setBlockFill = useCallback((fill) => {
     setBlocks(p => p.map(b => {
       if (!selection.has(b.id)) return b;
-      if (!fill || fill === "none") { const { fill: _drop, ...rest } = b; return rest; }
+      if (!fill || fill === "none") { if (b.estilo === "solido") return { ...b, fill: "none" }; const { fill: _drop, ...rest } = b; return rest; }
       return { ...b, fill };
     }));
   }, [selection]);
@@ -6254,6 +6258,7 @@ function App() {
               const selShape = blocks.find(b => selection.has(b.id))?.shape || "rounded";
               const selFill = blocks.find(b => selection.has(b.id))?.fill || "none";
               const selEstilo = blocks.find(b => selection.has(b.id))?.estilo || "card";
+              const selFillVis = (() => { const b = blocks.find(x => selection.has(x.id)); return b && b.estilo === "solido" ? (b.fill || "soft") : selFill; })();
               return (
                 <>
                   <div className="vsep"/>
@@ -6269,13 +6274,13 @@ function App() {
                   <div className="vsep"/>
                   <div className="group">
                     <span className="lbl">Fundo</span>
-                    <button className={`shape-btn ${selFill === "none" ? "active" : ""}`} onClick={() => setBlockFill("none")} title="Sem preenchimento (só a borda)">
+                    <button className={`shape-btn ${selFillVis === "none" ? "active" : ""}`} onClick={() => setBlockFill("none")} title="Sem preenchimento (só a borda)">
                       <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/></svg>
                     </button>
-                    <button className={`shape-btn ${selFill === "soft" ? "active" : ""}`} onClick={() => setBlockFill("soft")} title="Preenchimento suave (cor translúcida)">
+                    <button className={`shape-btn ${selFillVis === "soft" ? "active" : ""}`} onClick={() => setBlockFill("soft")} title="Preenchimento suave (cor translúcida)">
                       <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3" style={{fill:"currentColor",fillOpacity:.3}}/></svg>
                     </button>
-                    <button className={`shape-btn ${selFill === "solid" ? "active" : ""}`} onClick={() => setBlockFill("solid")} title="Preenchimento sólido (cor cheia, destaque máximo)">
+                    <button className={`shape-btn ${selFillVis === "solid" ? "active" : ""}`} onClick={() => setBlockFill("solid")} title="Preenchimento sólido (cor cheia, destaque máximo)">
                       <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3" style={{fill:"currentColor"}}/></svg>
                     </button>
                   </div>
