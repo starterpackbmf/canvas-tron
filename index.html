@@ -4952,6 +4952,7 @@ function App() {
 
   /* ----- fundo vivo, busca (Ctrl F) e atalhos (?): os mesmos do Fluxo e do Mapa mental ----- */
   const buscaRef = useRef(null), atalhosRef = useRef(null), comumRef = useRef({});
+  const [fundoVivo, setFundoVivo] = useState(() => !window.FundoVivo || FundoVivo.modo() !== "leve");
   comumRef.current = { centerOnBlock, selectOne, hidden: hiddenBlockIds };
   useEffect(() => {
     if (window.FundoVivo && wsRef.current) FundoVivo.montar(wsRef.current, () => ({ x: viewRef.current.x, y: viewRef.current.y }));
@@ -6207,6 +6208,18 @@ function App() {
           </div>
           <span className="tb-lbl">Ver</span>
         </div>
+        {PC && <>
+        <div className="dvr"/>
+        {/* EXTRAS do Canvas: busca, fundo vivo e atalhos (iguais ao Fluxo e ao Mapa mental) */}
+        <div className="tb-group">
+          <div className="tb-row">
+            <button className="ic" onClick={() => buscaRef.current && buscaRef.current.abrir()} title="Buscar (Ctrl F)"><svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
+            <button className="ic" style={{ color: fundoVivo ? "#f3cf62" : undefined }} onClick={() => { if (!window.FundoVivo) return; const v = FundoVivo.modo() === "leve"; FundoVivo.definir(v ? "vivo" : "leve"); setFundoVivo(v); }} title="Fundo vivo (desligue se o PC pesar)"><svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></button>
+            <button className="ic" onClick={() => atalhosRef.current && atalhosRef.current.abrir()} title="Atalhos (?)"><svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></button>
+          </div>
+          <span className="tb-lbl">Extras</span>
+        </div>
+        </>}
         {!PC && <>
         <div className="dvr"/>
         {/* ARQUIVO */}
