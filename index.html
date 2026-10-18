@@ -1650,6 +1650,131 @@
     .bs-counts{display:none}
   }
 </style>
+<style id="fv-css">
+/* fundo vivo (o mesmo do Mapa mental): feixes de luz, poeira e vinheta */
+.fv-feixes,.fv-poeira,.fv-vinheta{position:absolute;inset:0;pointer-events:none}
+.fv-feixes{overflow:hidden;opacity:.6}
+.fv-feixe{position:absolute;top:-40%;width:22%;height:180%;transform:rotate(24deg);will-change:transform;
+  background:linear-gradient(90deg,transparent,rgba(236,236,241,.052) 45%,rgba(236,236,241,.077) 50%,rgba(236,236,241,.052) 55%,transparent);
+  animation:fvDeriva 19s cubic-bezier(.22,1,.36,1) infinite alternate}
+.fv-feixe:nth-child(1){left:8%}
+.fv-feixe:nth-child(2){left:46%;width:12%;animation-duration:23s;animation-delay:-6s;opacity:.7}
+.fv-feixe:nth-child(3){left:72%;width:28%;animation-duration:27s;animation-delay:-12s;opacity:.55}
+@keyframes fvDeriva{from{transform:translateX(-6%) rotate(24deg)}to{transform:translateX(9%) rotate(24deg)}}
+.fv-poeira{width:100%;height:100%}
+.fv-vinheta{background:linear-gradient(180deg,rgba(236,236,241,.035),transparent 30%)}
+.fv-leve .fv-feixes,.fv-leve .fv-poeira{display:none}
+@media (prefers-reduced-motion:reduce){.fv-feixe{animation:none}}
+/* busca (Ctrl F) e atalhos (?), iguais nos três canvas */
+.cc-glass{background:rgba(20,20,23,.92);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);box-shadow:0 12px 30px -12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);color:#ececf1;font-family:"Geist",ui-sans-serif,system-ui,"Segoe UI",sans-serif}
+.cc-busca{position:fixed;left:50%;top:62px;transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:8px;height:36px;padding:0 6px 0 12px;border-radius:11px;width:min(380px,calc(100vw - 32px));box-sizing:border-box}
+.cc-busca[hidden],.cc-atalhos[hidden]{display:none!important}
+.cc-busca svg{width:14px;height:14px;color:#6c6c78;flex:none}
+.cc-busca input{flex:1;min-width:0;border:0!important;background:transparent!important;outline:none!important;box-shadow:none!important;color:#ececf1;font:13px inherit;font-family:inherit}
+.cc-busca input::placeholder{color:#6c6c78}
+.cc-busca .cc-conta{font:500 11px "Geist Mono",ui-monospace,Consolas,monospace;color:#6c6c78;font-variant-numeric:tabular-nums}
+.cc-busca button{border:0;background:transparent;color:#6c6c78;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;padding:0;cursor:pointer}
+.cc-busca button:hover{background:rgba(255,255,255,.08);color:#ececf1}
+[data-achado]{outline:1.5px solid rgba(243,207,98,.55)!important;outline-offset:3px}
+[data-achado="atual"]{outline:2px solid #f3cf62!important;box-shadow:0 0 0 6px rgba(243,207,98,.14),0 0 30px rgba(243,207,98,.25)!important}
+.cc-atalhos{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(0,0,0,.5)}
+.cc-atalhos .cc-caixa{width:min(680px,calc(100vw - 32px));max-height:calc(100vh - 80px);overflow:auto;border-radius:16px;padding:18px 20px;box-sizing:border-box}
+.cc-atalhos h3{margin:0 0 4px;font-size:15px;font-weight:600;display:flex;align-items:center}
+.cc-atalhos h3 button{margin-left:auto;border:0;background:transparent;color:#6c6c78;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;cursor:pointer}
+.cc-atalhos h3 button:hover{background:rgba(255,255,255,.08);color:#ececf1}
+.cc-atalhos h3 svg{width:14px;height:14px}
+.cc-atalhos .cc-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 24px}
+.cc-atalhos h5{margin:14px 0 6px;font:500 10px/1 "Geist Mono",ui-monospace,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;color:#6c6c78}
+.cc-atalhos .cc-l{display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-size:12.5px;color:#a4a4b0}
+.cc-atalhos kbd{font:500 11px "Geist Mono",ui-monospace,Consolas,monospace;color:#ececf1;background:rgba(255,255,255,.07);border-radius:5px;padding:2px 6px;white-space:nowrap}
+</style>
+<script>
+/* window.FundoVivo.montar(elemento, () => ({x, y})): põe o fundo vivo atrás do conteúdo.
+   Turbo/Leve fica em localStorage 'cf-fundo' e vale pros três canvas (mesma origem). */
+(function () {
+  const CHAVE = 'cf-fundo';
+  const lerModo = () => { try { return localStorage.getItem(CHAVE) === 'leve' ? 'leve' : 'vivo'; } catch (e) { return 'vivo'; } };
+  const calmo = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const montados = [];
+  function montar(el, cam) {
+    const f = document.createElement('div'); f.className = 'fv-feixes';
+    for (let i = 0; i < 3; i++) { const x = document.createElement('div'); x.className = 'fv-feixe'; f.appendChild(x); }
+    const v = document.createElement('div'); v.className = 'fv-vinheta';
+    const c = document.createElement('canvas'); c.className = 'fv-poeira';
+    el.prepend(c); el.prepend(v); el.prepend(f);
+    const ps = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), z: .3 + Math.random() * .7, v: .00004 + Math.random() * .00012, ph: Math.random() * 6.28 }));
+    const m = { el, aplicar() { el.classList.toggle('fv-leve', lerModo() === 'leve'); } };
+    m.aplicar(); montados.push(m);
+    function quadro(t) {
+      requestAnimationFrame(quadro);
+      if (document.hidden || calmo || lerModo() === 'leve') return;
+      const ctx = c.getContext('2d'); if (!ctx) return;
+      const dpr = Math.min(1.5, devicePixelRatio || 1), w = c.clientWidth, h = c.clientHeight; if (!w || !h) return;
+      if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+      const k = (cam && cam()) || { x: 0, y: 0 };
+      for (const p of ps) {
+        p.y -= p.v; if (p.y < -.02) p.y = 1.02;
+        const px = (((p.x * w + k.x * .06 * p.z) % w) + w) % w, py = (((p.y * h + k.y * .06 * p.z) % h) + h) % h;
+        ctx.fillStyle = `rgba(236,236,241,${((.25 + .35 * Math.sin(t * .0012 + p.ph)) * p.z).toFixed(3)})`;
+        const s = 1 + p.z * 1.2; ctx.fillRect(px, py, s, s);
+      }
+    }
+    requestAnimationFrame(quadro);
+    return m;
+  }
+  function definir(modo) { try { localStorage.setItem(CHAVE, modo); } catch (e) {} montados.forEach(m => m.aplicar()); }
+  addEventListener('storage', e => { if (e.key === CHAVE) montados.forEach(m => m.aplicar()); });
+  window.FundoVivo = { montar, definir, modo: lerModo };
+})();
+
+/* window.CanvasBusca({ itens: () => [{ id, texto, el }], ir: item => {} }): caixa de busca no topo.
+   Marca os achados com data-achado no elemento (o atual = "atual") e leva até ele. */
+window.CanvasBusca = function (cfg) {
+  const X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  const box = document.createElement('div'); box.className = 'cc-busca cc-glass'; box.hidden = true;
+  box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input placeholder="Buscar nos blocos (Enter vai pro próximo)" autocomplete="off"><span class="cc-conta"></span><button title="Fechar  Esc">' + X + '</button>';
+  document.body.appendChild(box);
+  const inp = box.querySelector('input'), conta = box.querySelector('.cc-conta');
+  let achados = [], i = 0;
+  const limpar = () => document.querySelectorAll('[data-achado]').forEach(e => e.removeAttribute('data-achado'));
+  function rodar(ir) {
+    limpar();
+    const t = inp.value.trim().toLocaleLowerCase('pt-BR');
+    achados = t ? cfg.itens().filter(x => (x.texto || '').toLocaleLowerCase('pt-BR').includes(t)) : [];
+    if (i >= achados.length) i = 0;
+    achados.forEach((x, j) => { if (x.el) x.el.setAttribute('data-achado', j === i ? 'atual' : 'sim'); });
+    conta.textContent = achados.length ? `${i + 1}/${achados.length}` : t ? '0' : '';
+    if (ir && achados[i]) cfg.ir(achados[i]);
+  }
+  function abrir() { box.hidden = false; inp.focus(); inp.select(); rodar(true); }
+  function fechar() { box.hidden = true; inp.value = ''; achados = []; limpar(); if (cfg.fechou) cfg.fechou(); }
+  inp.addEventListener('input', () => { i = 0; rodar(true); });
+  inp.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); fechar(); }
+    if (e.key === 'Enter') { e.preventDefault(); if (achados.length) i = (i + (e.shiftKey ? -1 : 1) + achados.length) % achados.length; rodar(true); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); inp.select(); }
+  });
+  box.querySelector('button').addEventListener('click', fechar);
+  return { abrir, fechar, aberta: () => !box.hidden, refazer: () => { if (!box.hidden) rodar(false); } };
+};
+
+/* window.CanvasAtalhos('Atalhos do Fluxo', [['Criar', [['Nome', 'Tecla'], ...]], ...]): janela do "?" */
+window.CanvasAtalhos = function (titulo, grupos) {
+  const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  const el = document.createElement('div'); el.className = 'cc-atalhos'; el.hidden = true;
+  const meio = Math.ceil(grupos.length / 2);
+  const col = gs => '<div>' + gs.map(([g, ls]) => '<h5>' + esc(g) + '</h5>' + ls.map(([n, k]) => '<div class="cc-l">' + esc(n) + ' <kbd>' + esc(k) + '</kbd></div>').join('')).join('') + '</div>';
+  el.innerHTML = '<div class="cc-caixa cc-glass"><h3>' + esc(titulo) + '<button title="Fechar  Esc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h3><div class="cc-cols">' + col(grupos.slice(0, meio)) + col(grupos.slice(meio)) + '</div></div>';
+  document.body.appendChild(el);
+  const fechar = () => { el.hidden = true; };
+  el.addEventListener('click', e => { if (e.target === el || e.target.closest('h3 button')) fechar(); });
+  addEventListener('keydown', e => { if (!el.hidden && (e.key === 'Escape' || e.key === '?')) { e.preventDefault(); e.stopPropagation(); fechar(); } }, true);
+  return { abrir: () => { el.hidden = false; }, fechar, aberto: () => !el.hidden };
+};
+</script>
+
 </head>
 <body>
 <div id="root"></div>
@@ -2188,6 +2313,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
   return (
     <div
       ref={elRef}
+      data-bid={block.id}
       className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} shp-${shapeDef.key} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : block.fill === "none" ? "fill-none" : ""} ${block.estilo === "solido" ? "estilo-solido" : ""}`}
       style={{
         left: block.x, top: block.y,
@@ -4824,6 +4950,27 @@ function App() {
     tweenView({ scale: sc, x: window.innerWidth / 2 - cx * sc, y: window.innerHeight / 2 - cy * sc });
   }, [tweenView]);
 
+  /* ----- fundo vivo, busca (Ctrl F) e atalhos (?): os mesmos do Fluxo e do Mapa mental ----- */
+  const buscaRef = useRef(null), atalhosRef = useRef(null), comumRef = useRef({});
+  comumRef.current = { centerOnBlock, selectOne, hidden: hiddenBlockIds };
+  useEffect(() => {
+    if (window.FundoVivo && wsRef.current) FundoVivo.montar(wsRef.current, () => ({ x: viewRef.current.x, y: viewRef.current.y }));
+    const semTag = h => String(h || "").replace(/<[^>]+>/g, " ");
+    if (window.CanvasBusca) buscaRef.current = CanvasBusca({
+      itens: () => blocksRef.current.filter(b => !comumRef.current.hidden.has(b.id)).map(b => ({
+        id: b.id, el: document.querySelector('[data-bid="' + b.id + '"]'),
+        texto: (b.title || "") + " " + semTag(b.body) + " " + (b.doc ? docToMd(b.doc, 4) : ""),
+      })),
+      ir: x => { const b = blocksRef.current.find(y => y.id === x.id); if (!b) return; comumRef.current.centerOnBlock(b); comumRef.current.selectOne(b.id); },
+    });
+    if (window.CanvasAtalhos) atalhosRef.current = CanvasAtalhos("Atalhos do Canvas livre", [
+      ["Criar", [["Bloco novo", "2 cliques no vazio"], ["Ferramenta bloco", "B"], ["Bloco filho", "Tab"], ["Bloco irmão (modo mapa)", "Enter"], ["Duplicar", "Ctrl D"]]],
+      ["Editar", [["Editar o título", "F2"], ["Apagar", "Delete"], ["Seleção", "V"], ["Sair, cancelar", "Esc"]]],
+      ["Ver", [["Andar entre blocos (modo mapa)", "Setas"], ["Mover o canvas", "Espaço segurado"], ["Trocar mão e seta", "Ctrl segurado"], ["Apresentação", "P"], ["Buscar", "Ctrl F"], ["Esta lista", "?"]]],
+      ["Desfazer", [["Desfazer", "Ctrl Z"], ["Refazer", "Ctrl Y"]]],
+    ]);
+  }, []);
+
   /* ----- presentation / focus mode ----- */
   // Visible blocks in reading order (top-to-bottom, then left-to-right by row)
   const presentOrder = useMemo(() =>
@@ -5233,6 +5380,7 @@ function App() {
         if (k === "z")      { e.preventDefault(); e.shiftKey ? redo() : undo(); }
         else if (k === "y") { e.preventDefault(); redo(); }
         else if (k === "d") { e.preventDefault(); duplicateSelection(); }
+        else if (k === "f" && buscaRef.current) { e.preventDefault(); buscaRef.current.abrir(); }
         return; // never let a Ctrl/Cmd combo fall through to tool shortcuts
       }
       if (present) {
@@ -5241,6 +5389,7 @@ function App() {
         else if (e.key === "Escape") exitPresent();
         return;
       }
+      if (e.key === "?" && atalhosRef.current) { e.preventDefault(); atalhosRef.current.abrir(); return; }
       if (e.key === " ") { spaceRef.current = true; e.preventDefault(); }
       if (e.key === "Delete" || e.key === "Backspace") deleteSelection();
       if (e.key === "b" || e.key === "B") setTool("block");
