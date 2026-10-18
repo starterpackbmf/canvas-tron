@@ -1757,7 +1757,7 @@ window.CanvasBusca = function (cfg) {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); inp.select(); }
   });
   box.querySelector('button').addEventListener('click', fechar);
-  return { abrir, fechar, aberta: () => !box.hidden, refazer: () => { if (!box.hidden) rodar(false); } };
+  return { abrir, fechar, alternar: () => (box.hidden ? abrir() : fechar()), aberta: () => !box.hidden, refazer: () => { if (!box.hidden) rodar(false); } };
 };
 
 /* window.CanvasAtalhos('Atalhos do Fluxo', [['Criar', [['Nome', 'Tecla'], ...]], ...]): janela do "?" */
@@ -4952,6 +4952,8 @@ function App() {
 
   /* ----- fundo vivo, busca (Ctrl F) e atalhos (?): os mesmos do Fluxo e do Mapa mental ----- */
   const buscaRef = useRef(null), atalhosRef = useRef(null), comumRef = useRef({});
+  useEffect(() => { if (PC && mapOn) setMapOn(false); }, [mapOn]);
+  useEffect(() => { if (PC && spotlight) setSpotlight(false); }, [spotlight]);
   const [fundoVivo, setFundoVivo] = useState(() => !window.FundoVivo || FundoVivo.modo() !== "leve");
   comumRef.current = { centerOnBlock, selectOne, hidden: hiddenBlockIds };
   useEffect(() => {
@@ -4965,9 +4967,9 @@ function App() {
       ir: x => { const b = blocksRef.current.find(y => y.id === x.id); if (!b) return; comumRef.current.centerOnBlock(b); comumRef.current.selectOne(b.id); },
     });
     if (window.CanvasAtalhos) atalhosRef.current = CanvasAtalhos("Atalhos do Canvas livre", [
-      ["Criar", [["Bloco novo", "2 cliques no vazio"], ["Ferramenta bloco", "B"], ["Bloco filho", "Tab"], ["Bloco irmão (modo mapa)", "Enter"], ["Duplicar", "Ctrl D"]]],
+      ["Criar", [["Bloco novo", "2 cliques no vazio"], ["Ferramenta bloco", "B"], ["Bloco filho", "Tab"], ["Duplicar", "Ctrl D"]]],
       ["Editar", [["Editar o título", "F2"], ["Apagar", "Delete"], ["Seleção", "V"], ["Sair, cancelar", "Esc"]]],
-      ["Ver", [["Andar entre blocos (modo mapa)", "Setas"], ["Mover o canvas", "Espaço segurado"], ["Trocar mão e seta", "Ctrl segurado"], ["Apresentação", "P"], ["Buscar", "Ctrl F"], ["Esta lista", "?"]]],
+      ["Ver", [["Mover o canvas", "Espaço segurado"], ["Trocar mão e seta", "Ctrl segurado"], ["Buscar", "Ctrl F"], ["Esta lista", "?"]]],
       ["Desfazer", [["Desfazer", "Ctrl Z"], ["Refazer", "Ctrl Y"]]],
     ]);
   }, []);
@@ -5398,7 +5400,7 @@ function App() {
       if (!PC && (e.key === "n" || e.key === "N")) { clearSelection(); setTool("draw"); setDrawShape("text"); }
       if (!PC && (e.key === "d" || e.key === "D")) { clearSelection(); setTool("draw"); setDrawShape(lastDrawShapeRef.current); }
       if (e.key === "v" || e.key === "V") setTool("select");
-      if (e.key === "p" || e.key === "P") enterPresent();
+      if (!PC && (e.key === "p" || e.key === "P")) enterPresent();
       if (e.key === "Escape") { clearSelection(); setTool("select"); }
     };
     const onKeyUp = (e) => {
@@ -6145,6 +6147,7 @@ function App() {
           </div>
           <span className="tb-lbl">Criar</span>
         </div>
+        {!PC && <>
         <div className="dvr"/>
         {/* MAPA: layout automático (estilo XMind) + estrutura */}
         <div className="tb-group">
@@ -6166,6 +6169,7 @@ function App() {
           </div>
           <span className="tb-lbl">Mapa</span>
         </div>
+        </>}
         <div className="dvr"/>
         {/* EDITAR */}
         <div className="tb-group">
@@ -6182,7 +6186,7 @@ function App() {
             <button className="ic" onClick={fitAll} title="Enquadrar tudo">⊡</button>
             <button className={`ic ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Minimapa">⊞</button>
             <button className={`ic ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Fluxo de energia nas conexões">⚡</button>
-            <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>
+            {!PC && <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>}
             <span className="tema-wrap">
             <button className={`ic ${temaOpen ? "active" : ""}`} onClick={(e) => { e.stopPropagation(); setTemaOpen(v => !v); }}
               title={`Tema: ${theme === "fume" ? "Fumê" : theme === "dark" ? "Tron" : "Claro"} (clique pra escolher)`}>
@@ -6203,7 +6207,7 @@ function App() {
               </div>
             )}
             </span>
-            <button className="ic" onClick={enterPresent} title="Apresentar (P)">▶</button>
+            {!PC && <button className="ic" onClick={enterPresent} title="Apresentar (P)">▶</button>}
             <button className={`ic ${isFullscreen?"active":""}`} onClick={toggleFullscreen} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>{isFullscreen ? "⤧" : "⛶"}</button>
           </div>
           <span className="tb-lbl">Ver</span>
@@ -6213,7 +6217,7 @@ function App() {
         {/* EXTRAS do Canvas: busca, fundo vivo e atalhos (iguais ao Fluxo e ao Mapa mental) */}
         <div className="tb-group">
           <div className="tb-row">
-            <button className="ic" onClick={() => buscaRef.current && buscaRef.current.abrir()} title="Buscar (Ctrl F)"><svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
+            <button className="ic" onClick={() => buscaRef.current && buscaRef.current.alternar()} title="Buscar (Ctrl F)"><svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
             <button className="ic" style={{ color: fundoVivo ? "#f3cf62" : undefined }} onClick={() => { if (!window.FundoVivo) return; const v = FundoVivo.modo() === "leve"; FundoVivo.definir(v ? "vivo" : "leve"); setFundoVivo(v); }} title="Fundo vivo (desligue se o PC pesar)"><svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></button>
             <button className="ic" onClick={() => atalhosRef.current && atalhosRef.current.abrir()} title="Atalhos (?)"><svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></button>
           </div>
