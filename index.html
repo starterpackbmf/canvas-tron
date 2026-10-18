@@ -170,6 +170,10 @@
   .bbx-t b{width:20px;text-align:center;color:#ececf1;font-weight:600}
   .bbx-t:hover{background:rgba(255,255,255,.07);color:#ececf1}
   .bbx-t.on{background:rgba(255,255,255,.1);color:#ececf1}
+  /* cursor da seta do Fluxo no quadro todo */
+  html.pc .workspace,html.pc .workspace .block,html.pc .workspace.marquee{cursor:var(--cc-seta)}
+  html.pc .workspace.hand{cursor:var(--cc-mao)}
+  html.pc .workspace.panning,html.pc .workspace.panning *{cursor:var(--cc-pega)!important}
   html.pc .tema-pop{left:calc(100% + 12px);top:50%;transform:translateY(-50%)}
   /* ===== seletor de tema ===== */
   .tema-wrap{position:relative;display:inline-flex}
@@ -1688,6 +1692,8 @@
   }
 </style>
 <style id="fv-css">
+/* cursores do Canvas (a seta do Fluxo), iguais nos três */
+:root{--cc-seta:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24'%3E%3Cdefs%3E%3Cfilter id='s' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-color='%23000' flood-opacity='.45'/%3E%3C/filter%3E%3C/defs%3E%3Cpath filter='url%28%23s%29' d='M6.2 3.3C5.4 2.7 4.3 3.3 4.4 4.3L5.6 20.2C5.7 21.3 7.1 21.7 7.8 20.8L11.2 16.4C11.6 15.9 12.2 15.6 12.8 15.6L19.6 15.4C20.7 15.4 21.2 14 20.3 13.3Z' fill='%23f7f7fa' stroke='%230b0b0d' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E") 5 4,default;--cc-mao:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24'%3E%3Cpath d='M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15' fill='none' stroke='%230b0b0d' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15' fill='none' stroke='%23f4f4f7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 13 13,grab;--cc-pega:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24'%3E%3Cpath d='M18 11.5V9a2 2 0 0 0-4 0v1.4M14 10V8a2 2 0 0 0-4 0v2M10 9.9V9a2 2 0 0 0-4 0v5M6 14a2 2 0 0 0-4 0M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8' fill='none' stroke='%230b0b0d' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M18 11.5V9a2 2 0 0 0-4 0v1.4M14 10V8a2 2 0 0 0-4 0v2M10 9.9V9a2 2 0 0 0-4 0v5M6 14a2 2 0 0 0-4 0M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8' fill='none' stroke='%23f4f4f7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 13 13,grabbing}
 /* fundo vivo (o mesmo do Mapa mental): feixes de luz, poeira e vinheta */
 .fv-feixes,.fv-poeira,.fv-vinheta{position:absolute;inset:0;pointer-events:none}
 .fv-feixes{overflow:hidden;opacity:.6}
@@ -3826,7 +3832,7 @@ function App() {
   const [panMode, setPanMode] = useState(() => { try { return localStorage.getItem("canvas-tron:panmode") || "hand"; } catch { return "hand"; } });
   useEffect(() => { try { localStorage.setItem("canvas-tron:panmode", panMode); } catch {} }, [panMode]);
   const [ctrlHeld, setCtrlHeld] = useState(false);
-  const arrowMode = (panMode === "arrow") !== ctrlHeld;
+  const arrowMode = ((PC ? "arrow" : panMode) === "arrow") !== ctrlHeld;
   const arrowModeRef = useRef(arrowMode); useEffect(() => { arrowModeRef.current = arrowMode; });
   const marqueeRef = useRef(null);            // {sx, sy, additive, rect}
   const [marquee, setMarquee] = useState(null); // {x,y,w,h} em coordenadas do mundo
@@ -4997,6 +5003,20 @@ function App() {
   const buscaRef = useRef(null), atalhosRef = useRef(null), comumRef = useRef({});
   useEffect(() => { if (PC && mapOn) setMapOn(false); }, [mapOn]);
   useEffect(() => { if (PC && spotlight) setSpotlight(false); }, [spotlight]);
+  useEffect(() => {
+    const ws = wsRef.current; if (!PC || !ws) return;
+    const campo = (el) => el && el.closest && el.closest('[contenteditable="true"], input, textarea, select');
+    const down = (e) => {
+      if (e.button !== 2 && e.button !== 1) return;
+      if (campo(e.target)) return;
+      e.stopPropagation(); e.preventDefault();
+      panRef.current = true; ws.classList.add("panning");
+    };
+    const ctx = (e) => { if (!campo(e.target)) e.preventDefault(); };
+    ws.addEventListener("mousedown", down, true);
+    ws.addEventListener("contextmenu", ctx);
+    return () => { ws.removeEventListener("mousedown", down, true); ws.removeEventListener("contextmenu", ctx); };
+  }, []);
   const [barraPop, setBarraPop] = useState(null);
   const selChave = [...selection].join(",");
   useEffect(() => { setBarraPop(null); }, [selChave]);
@@ -5021,7 +5041,7 @@ function App() {
     if (window.CanvasAtalhos) atalhosRef.current = CanvasAtalhos("Atalhos do Canvas livre", [
       ["Criar", [["Bloco novo", "2 cliques no vazio"], ["Ferramenta bloco", "B"], ["Bloco filho", "Tab"], ["Duplicar", "Ctrl D"]]],
       ["Editar", [["Editar o título", "F2"], ["Apagar", "Delete"], ["Seleção", "V"], ["Sair, cancelar", "Esc"]]],
-      ["Ver", [["Mover o canvas", "Espaço segurado"], ["Trocar mão e seta", "Ctrl segurado"], ["Buscar", "Ctrl F"], ["Esta lista", "?"]]],
+      ["Ver", [["Seleção em área", "Arrastar no vazio"], ["Mover o canvas", "Botão direito arrastando, ou Espaço"], ["Buscar", "Ctrl F"], ["Esta lista", "?"]]],
       ["Desfazer", [["Desfazer", "Ctrl Z"], ["Refazer", "Ctrl Y"]]],
     ]);
   }, []);
@@ -6176,13 +6196,15 @@ function App() {
         {/* CRIAR: ferramentas que colocam coisa no mapa */}
         <div className="tb-group">
           <div className="tb-row">
-            <button className={`ic ${tool==="select"?"active":""}`} onClick={() => setTool("select")} title="Selecionar / mover (V)">◉</button>
+            <button className={`ic ${tool==="select"?"active":""}`} onClick={() => setTool("select")} title={PC ? "Seta: arrastar no vazio seleciona, botão direito arrastando move (V)" : "Selecionar / mover (V)"}>{PC ? <svg viewBox="0 0 24 24" className="ic-svg"><path d="M5 3l14 8.5-6.2 1.6L9.5 20z"/></svg> : "◉"}</button>
+            {!PC && <>
             <button className={`ic ${!arrowMode?"active":""}`} onClick={() => setPanMode("hand")} title="Mão: arrastar o fundo move o mapa (Ctrl segurado vira seta)">
               <svg viewBox="0 0 24 24" className="ic-svg"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V4.5a1.5 1.5 0 0 1 3 0V12M14 11.5V6a1.5 1.5 0 0 1 3 0v7.5M17 12a1.5 1.5 0 0 1 3 0v3.5A6.5 6.5 0 0 1 13.5 22h-1.2a6.5 6.5 0 0 1-5.2-2.6L4 15.4a1.6 1.6 0 0 1 2.5-2L8 15.2"/></svg>
             </button>
             <button className={`ic ${arrowMode?"active":""}`} onClick={() => setPanMode("arrow")} title="Seta: arrastar no fundo seleciona em área (Ctrl segurado vira mão)">
               <svg viewBox="0 0 24 24" className="ic-svg"><path d="M5 3l14 8.5-6.2 1.6L9.5 20z"/></svg>
             </button>
+            </>}
             <button className={`ic ${tool==="block"?"active":""}`} onClick={() => setTool("block")} title="Bloco (B)">▭</button>
             {!PC && <>
             <button className={`ic ${presetOpen?"active":""}`} onClick={() => setPresetOpen(true)} title="Blocos prontos: roteiro, aula, brainstorm e os seus (M)">
@@ -7160,7 +7182,7 @@ function App() {
       <div className="hint">
         {mapOn
           ? (<><b>Tab</b> filho • <b>Enter</b> irmão • <b>Ctrl+Enter</b> corpo • <b>setas</b> navegar • <b>F2</b> editar • <b>arrasta</b> reordena • <b>Del</b> apaga o ramo • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer</>)
-          : PC ? (<><b>B</b> bloco • <b>Tab</b> filho • <b>Ctrl</b> mão/seta • <b>Ctrl+F</b> buscar • <b>?</b> atalhos • <b>Ctrl+Z</b> desfazer • <b>duplo-clique</b> editar • <b>Del</b> apagar</>)
+          : PC ? (<><b>B</b> bloco • <b>Tab</b> filho • <b>botão direito</b> arrasta • <b>Ctrl+F</b> buscar • <b>?</b> atalhos • <b>Ctrl+Z</b> desfazer • <b>duplo-clique</b> editar • <b>Del</b> apagar</>)
           : (<><b>B</b> bloco • <b>Tab</b> filho • <b>N</b> texto • <b>D</b> desenho • <b>Ctrl</b> mão/seta • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>clica na linha</b> editar/estilo • <b>duplo-clique</b> editar • <b>Del</b> apagar</>)}
       </div>
 
