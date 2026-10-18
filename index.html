@@ -139,6 +139,36 @@
   html.pc .toolbar .tb-lbl{display:none}
   html.pc .toolbar .dvr{width:22px;height:1px;align-self:center;margin:4px 0;background:var(--line,rgba(255,255,255,.08))}
   html.pc .toolbar .ic{width:34px;height:34px}
+  /* barra do bloco no app: mesma pílula de vidro da barra do topo do Canvas */
+  .bbx{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:2px;height:40px;padding:0 5px;border-radius:12px;box-sizing:border-box;
+    background:rgba(24,24,28,.78);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
+    box-shadow:0 12px 30px -12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);font-family:"Geist",ui-sans-serif,system-ui,"Segoe UI",sans-serif;animation:bbxIn .16s ease}
+  @keyframes bbxIn{from{opacity:0;transform:translate(-50%,-4px)}to{opacity:1;transform:translate(-50%,0)}}
+  .bbx-b{position:relative;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:#a4a4b0;display:grid;place-items:center;padding:0;cursor:pointer}
+  .bbx-b svg{width:16px;height:16px}
+  .bbx-b:hover{background:rgba(255,255,255,.07);color:#ececf1}
+  .bbx-b.on{background:rgba(255,255,255,.11);color:#ececf1;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .bbx-b[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:38px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#0a0a0c;border:1px solid rgba(255,255,255,.08);color:#ececf1;font:400 11px/1.2 "Geist",sans-serif;padding:5px 8px;border-radius:7px;pointer-events:none;z-index:2}
+  .bbx-sep{width:1px;height:18px;background:rgba(255,255,255,.08);margin:0 4px}
+  .bbx-n{font:500 11px/1 "Geist Mono",ui-monospace,Consolas,monospace;color:#a4a4b0;padding:0 6px 0 4px}
+  .bbx-dot{width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 1.5px rgba(255,255,255,.18),0 0 10px -2px currentColor}
+  .bbx-g{font-size:16px;line-height:1}
+  .bbx-aa{font:600 12.5px/1 "Geist",sans-serif;width:34px}
+  .bbx-w{position:relative;display:flex}
+  .bbx-pop{position:absolute;top:40px;left:50%;transform:translateX(-50%);z-index:3;padding:8px;border-radius:12px;background:rgba(20,20,23,.96);border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 40px -14px rgba(0,0,0,.85);backdrop-filter:blur(16px);animation:bbxIn .14s ease}
+  .bbx-pop.bbx-cores{left:-4px;transform:none}
+  .bbx-cores{display:grid;grid-template-columns:repeat(5,22px);gap:8px}
+  .bbx-sw{width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,.16);padding:0;cursor:pointer;position:relative;overflow:hidden}
+  .bbx-sw:hover{transform:scale(1.1)}
+  .bbx-sw.on{box-shadow:0 0 0 2px #121215,0 0 0 3.5px #ececf1}
+  .bbx-livre{background:conic-gradient(#ff8db3,#f3cf62,#6fe3a6,#6ea8ff,#b49cff,#ff8db3)}
+  .bbx-livre input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .bbx-formas{display:grid;grid-template-columns:repeat(3,30px);gap:4px}
+  .bbx-tams{display:flex;flex-direction:column;gap:2px;min-width:130px}
+  .bbx-t{display:flex;align-items:center;gap:10px;border:0;background:transparent;color:#a4a4b0;border-radius:8px;padding:5px 8px;cursor:pointer;font:400 12.5px "Geist",sans-serif;text-align:left}
+  .bbx-t b{width:20px;text-align:center;color:#ececf1;font-weight:600}
+  .bbx-t:hover{background:rgba(255,255,255,.07);color:#ececf1}
+  .bbx-t.on{background:rgba(255,255,255,.1);color:#ececf1}
   html.pc .tema-pop{left:calc(100% + 12px);top:50%;transform:translateY(-50%)}
   /* ===== seletor de tema ===== */
   .tema-wrap{position:relative;display:inline-flex}
@@ -1841,6 +1871,10 @@ const DEFAULT_COLOR = "#00f0ff";
 // estilo do bloco: "solido" (bloco colorido, só o texto) ou "card" (título + descrição). Bloco antigo sem estilo = card.
 const estiloPadrao = () => { try { return localStorage.getItem("canvas-tron:estilo") || "solido"; } catch (e) { return "solido"; } };
 const lembrarEstilo = (v) => { try { localStorage.setItem("canvas-tron:estilo", v); } catch (e) {} };
+// no app (modo PC) o bloco novo nasce com o fundo vazado (só vidro); a última escolha vira o padrão
+const fundoPadrao = () => { try { return localStorage.getItem("canvas-tron:fundo") || "none"; } catch (e) { return "none"; } };
+const lembrarFundo = (v) => { try { localStorage.setItem("canvas-tron:fundo", v); } catch (e) {} };
+const CORES_PC = ["#ececf1", "#6ea8ff", "#7fd3e6", "#6fe3a6", "#f3cf62", "#ff9d6b", "#ff8db3", "#b49cff"];
 const PRESET_COLORS = [
   "#00f0ff", // cyan
   "#ff9d00", // orange
@@ -4036,7 +4070,7 @@ function App() {
   const pendingEditRef = useRef(null);
   const createBlock = useCallback((x, y) => {
     const id = uid();
-    const b = { id, x: x - 100, y: y - 25, w: 240, h: 80, title: "", body: "", color: DEFAULT_COLOR, estilo: estiloPadrao() };
+    const b = { id, x: x - 100, y: y - 25, w: 240, h: 80, title: "", body: "", color: DEFAULT_COLOR, estilo: estiloPadrao(), ...(PC ? { fill: fundoPadrao() } : {}) };
     pendingEditRef.current = id;
     setBlocks(p => [...p, b]);
     selectOne(id);
@@ -4172,6 +4206,7 @@ function App() {
     setBlocks(p => p.map(b => selection.has(b.id) ? { ...b, estilo } : b));
   }, [selection]);
   const setBlockFill = useCallback((fill) => {
+    if (PC) lembrarFundo(fill || "none");
     setBlocks(p => p.map(b => {
       if (!selection.has(b.id)) return b;
       if (!fill || fill === "none") { if (b.estilo === "solido") return { ...b, fill: "none" }; const { fill: _drop, ...rest } = b; return rest; }
@@ -4433,7 +4468,7 @@ function App() {
       for (const [dx, dy] of cands) if (!hits(x0 + dx, y0 + dy)) { x0 += dx; y0 += dy; break outer; }
     }
     const id = uid();
-    const b = { id, x: x0, y: y0, title: "", body: "", color: DEFAULT_COLOR, estilo: estiloPadrao(), ...d, w, h };
+    const b = { id, x: x0, y: y0, title: "", body: "", color: DEFAULT_COLOR, estilo: estiloPadrao(), ...(PC ? { fill: fundoPadrao() } : {}), ...d, w, h };
     const extraBlocks = [], extraEdges = [];
     if (preset.after === "yesno") {
       const CW = 150, CH = 64;
@@ -4954,6 +4989,15 @@ function App() {
   const buscaRef = useRef(null), atalhosRef = useRef(null), comumRef = useRef({});
   useEffect(() => { if (PC && mapOn) setMapOn(false); }, [mapOn]);
   useEffect(() => { if (PC && spotlight) setSpotlight(false); }, [spotlight]);
+  const [barraPop, setBarraPop] = useState(null);
+  const selChave = [...selection].join(",");
+  useEffect(() => { setBarraPop(null); }, [selChave]);
+  useEffect(() => {
+    if (!barraPop) return;
+    const fora = (e) => { if (!(e.target.closest && e.target.closest(".bbx"))) setBarraPop(null); };
+    window.addEventListener("mousedown", fora);
+    return () => window.removeEventListener("mousedown", fora);
+  }, [barraPop]);
   const [fundoVivo, setFundoVivo] = useState(() => !window.FundoVivo || FundoVivo.modo() !== "leve");
   comumRef.current = { centerOnBlock, selectOne, hidden: hiddenBlockIds };
   useEffect(() => {
@@ -6445,6 +6489,58 @@ function App() {
         </div>
       )}
 
+
+      {/* BARRA DO BLOCO no app: pílula de vidro no topo, só ícone; cor, forma e tamanho abrem em popover */}
+      {PC && !editingBodyId && !editingTitleId && !editingNoteId && !strokes.some(x => selection.has(x.id)) && !notes.some(x => selection.has(x.id)) && (() => {
+        const sel = blocks.filter(b => selection.has(b.id));
+        if (!sel.length) return null;
+        const b0 = sel[0];
+        const cor = b0.color || DEFAULT_COLOR, est = b0.estilo || "card";
+        const fundo = est === "solido" ? (b0.fill || "soft") : (b0.fill || "none");
+        const forma = SHAPE_BY_KEY[b0.shape || "rect"] || SHAPES[0];
+        const tam = b0.fontSize || 15;
+        const SV = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
+        const pop = barraPop;
+        const abre = k => setBarraPop(v => v === k ? null : k);
+        return (
+          <div className="bbx" onMouseDown={(e) => e.stopPropagation()}>
+            {sel.length > 1 && <span className="bbx-n">{sel.length}</span>}
+            <span className="bbx-w">
+              <button className={`bbx-b ${pop === "cor" ? "on" : ""}`} data-tip="Cor" onClick={() => abre("cor")}><i className="bbx-dot" style={{ background: cor }}/></button>
+              {pop === "cor" && <div className="bbx-pop bbx-cores">
+                {CORES_PC.map(c => <button key={c} className={`bbx-sw ${cor.toLowerCase() === c ? "on" : ""}`} style={{ background: c }} title={c} onClick={() => { setBlockColor(c); setBarraPop(null); }}/>)}
+                <label className="bbx-sw bbx-livre" title="Cor livre"><input type="color" value={/^#[0-9a-f]{6}$/i.test(cor) ? cor : "#888888"} onChange={(e) => setBlockColor(e.target.value)}/></label>
+              </div>}
+            </span>
+            <i className="bbx-sep"/>
+            <button className={`bbx-b ${est === "solido" ? "on" : ""}`} data-tip="Só o título" onClick={() => setBlockEstilo("solido")}><svg {...SV}><rect x="3.5" y="7" width="17" height="10" rx="3"/><path d="M8 12h8"/></svg></button>
+            <button className={`bbx-b ${est === "card" ? "on" : ""}`} data-tip="Título e descrição" onClick={() => setBlockEstilo("card")}><svg {...SV}><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M7 8.5h10M7 12.5h10M7 16h6"/></svg></button>
+            <i className="bbx-sep"/>
+            <button className={`bbx-b ${fundo === "none" ? "on" : ""}`} data-tip="Fundo vazado (só vidro)" onClick={() => setBlockFill("none")}><svg {...SV}><rect x="4" y="5" width="16" height="14" rx="3.5" strokeDasharray="2.5 2.5"/></svg></button>
+            <button className={`bbx-b ${fundo === "soft" ? "on" : ""}`} data-tip="Cor suave" onClick={() => setBlockFill("soft")}><svg {...SV}><rect x="4" y="5" width="16" height="14" rx="3.5" fill="currentColor" fillOpacity=".28"/></svg></button>
+            <button className={`bbx-b ${fundo === "solid" ? "on" : ""}`} data-tip="Cor forte" onClick={() => setBlockFill("solid")}><svg {...SV}><rect x="4" y="5" width="16" height="14" rx="3.5" fill="currentColor"/></svg></button>
+            <i className="bbx-sep"/>
+            <span className="bbx-w">
+              <button className={`bbx-b ${pop === "forma" ? "on" : ""}`} data-tip={"Forma: " + forma.title} onClick={() => abre("forma")}><span className="bbx-g">{forma.glyph}</span></button>
+              {pop === "forma" && <div className="bbx-pop bbx-formas">
+                {SHAPES.map(f => <button key={f.key} className={`bbx-b ${f.key === forma.key ? "on" : ""}`} title={f.title} onClick={() => { setBlockShape(f.key); setBarraPop(null); }}><span className="bbx-g">{f.glyph}</span></button>)}
+              </div>}
+            </span>
+            <span className="bbx-w">
+              <button className={`bbx-b bbx-aa ${pop === "tam" ? "on" : ""}`} data-tip="Tamanho do texto" onClick={() => abre("tam")}>Aa</button>
+              {pop === "tam" && <div className="bbx-pop bbx-tams">
+                {[[13, "Pequeno"], [15, "Normal"], [18, "Grande"], [22, "Enorme"]].map(([z, n]) => <button key={z} className={`bbx-t ${tam === z ? "on" : ""}`} onClick={() => { setBlockFontSize(z); setBarraPop(null); }}><b style={{ fontSize: Math.min(z, 20) }}>A</b><span>{n}</span></button>)}
+              </div>}
+            </span>
+            <i className="bbx-sep"/>
+            <button className="bbx-b" data-tip={b0.image ? "Trocar a imagem" : "Imagem no bloco"} onClick={() => blockImgRef.current.click()}><svg {...SV}><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15l-5-5-8 8"/></svg></button>
+            {b0.image && <button className="bbx-b" data-tip="Tirar a imagem" onClick={removeBlockImage}><svg {...SV}><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>}
+            <button className={`bbx-b ${b0.doc ? "on" : ""}`} data-tip={b0.doc ? "Abrir o documento" : "Documento dentro do bloco"} onClick={() => openDoc(b0.id)}><svg {...SV}><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></button>
+            <button className="bbx-b" data-tip="Ramo Sim e Não" onClick={addYesNoBranch}><svg {...SV}><path d="M12 3v6M12 9l-6 6M12 9l6 6"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="18" r="2.2"/></svg></button>
+            <button className={`bbx-b ${b0.emphasis ? "on" : ""}`} data-tip="Ênfase (brilho pulsando)" onClick={toggleBlockEmphasis}><svg {...SV}><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg></button>
+          </div>
+        );
+      })()}
       {(() => {
         if (editingBodyId || editingTitleId || editingNoteId) return null;
         const hasStrokeSel = strokes.some(s => selection.has(s.id));
@@ -6452,6 +6548,7 @@ function App() {
         const hasBlockSel  = blocks.some(b => selection.has(b.id));
         const hasAny = hasStrokeSel || hasNoteSel || hasBlockSel;
         if (!hasAny) return null;
+        if (PC && hasBlockSel && !hasStrokeSel && !hasNoteSel) return null; // no app quem cuida é a barra do bloco (abaixo)
         // Build a representative color for swatch "active" ring
         let activeColor = null;
         if (hasBlockSel) activeColor = blocks.find(b => selection.has(b.id))?.color;
@@ -7055,7 +7152,7 @@ function App() {
       <div className="hint">
         {mapOn
           ? (<><b>Tab</b> filho • <b>Enter</b> irmão • <b>Ctrl+Enter</b> corpo • <b>setas</b> navegar • <b>F2</b> editar • <b>arrasta</b> reordena • <b>Del</b> apaga o ramo • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer</>)
-          : PC ? (<><b>B</b> bloco • <b>Tab</b> filho • <b>Ctrl</b> mão/seta • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>duplo-clique</b> editar • <b>Del</b> apagar</>)
+          : PC ? (<><b>B</b> bloco • <b>Tab</b> filho • <b>Ctrl</b> mão/seta • <b>Ctrl+F</b> buscar • <b>?</b> atalhos • <b>Ctrl+Z</b> desfazer • <b>duplo-clique</b> editar • <b>Del</b> apagar</>)
           : (<><b>B</b> bloco • <b>Tab</b> filho • <b>N</b> texto • <b>D</b> desenho • <b>Ctrl</b> mão/seta • <b>P</b> apresentar • <b>Ctrl+Z</b> desfazer • <b>clica na linha</b> editar/estilo • <b>duplo-clique</b> editar • <b>Del</b> apagar</>)}
       </div>
 
