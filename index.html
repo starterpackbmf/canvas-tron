@@ -2027,38 +2027,40 @@ window.CanvasAnim = (function () {
 window.CanvasCores = (function () {
   const PRESETS = [
     { k: 'tema', nome: 'Do tema', c: {} },
-    { k: 'ouro', nome: 'Ouro', c: { linha: '#c9a45c', acento: '#f3cf62' } },
-    { k: 'oceano', nome: 'Oceano', c: { linha: '#4fb3d9', acento: '#6ea8ff', fundo: '#07121c' } },
-    { k: 'neon', nome: 'Rosa neon', c: { linha: '#ff6fb1', acento: '#ff8db3', fundo: '#12070e' } },
-    { k: 'floresta', nome: 'Floresta', c: { linha: '#6fbf8e', acento: '#6fe3a6', fundo: '#08120d' } },
-    { k: 'lava', nome: 'Lava', c: { linha: '#ff7a45', acento: '#ffb020', fundo: '#140906' } },
-    { k: 'gelo', nome: 'Gelo', c: { linha: '#a9c7e8', acento: '#e6f1ff' } },
-    { k: 'mono', nome: 'Mono', c: { linha: '#8a8a96', acento: '#ececf1' } },
+    { k: 'ouro', nome: 'Ouro', c: { linha: '#c9a45c', acento: '#f3cf62', blocos: ['#f3cf62', '#c9a45c', '#e8d5a3', '#d99a2b', '#fff1c1'] } },
+    { k: 'oceano', nome: 'Oceano', c: { linha: '#4fb3d9', acento: '#6ea8ff', fundo: '#07121c', blocos: ['#4fb3d9', '#6ea8ff', '#7fd3e6', '#3d7bd9', '#a6e1ff'] } },
+    { k: 'neon', nome: 'Rosa neon', c: { linha: '#ff6fb1', acento: '#ff8db3', fundo: '#12070e', blocos: ['#ff6fb1', '#c86bff', '#ff8db3', '#ff4f8b', '#ffb3d6'] } },
+    { k: 'floresta', nome: 'Floresta', c: { linha: '#6fbf8e', acento: '#6fe3a6', fundo: '#08120d', blocos: ['#6fe3a6', '#a3d977', '#6fbf8e', '#3fa36b', '#c6e8a0'] } },
+    { k: 'lava', nome: 'Lava', c: { linha: '#ff7a45', acento: '#ffb020', fundo: '#140906', blocos: ['#ff7a45', '#ffb020', '#ff4f3a', '#ffd166', '#e85d04'] } },
+    { k: 'gelo', nome: 'Gelo', c: { linha: '#a9c7e8', acento: '#e6f1ff', blocos: ['#a9c7e8', '#e6f1ff', '#7fb2e6', '#cfe3f7', '#9fd3f0'] } },
+    { k: 'mono', nome: 'Mono', c: { linha: '#8a8a96', acento: '#ececf1', blocos: ['#ececf1', '#a4a4b0', '#6c6c78', '#d0d0d8', '#8a8a96'] } },
   ];
   const LINHA = ['#d6d6e0', '#8a8a96', '#6ea8ff', '#4fb3d9', '#6fe3a6', '#f3cf62', '#ff9d6b', '#ff6fb1', '#b49cff'];
   const ACENTO = ['#ececf1', '#3b82f6', '#00f0ff', '#6fe3a6', '#f3cf62', '#ffb020', '#ff8db3', '#b49cff'];
   const FUNDO = ['#050506', '#0c0c0e', '#07121c', '#0d1410', '#12070e', '#140906', '#1b1b20', '#ebebed', '#f4f1ea'];
   const CAMPOS = [['linha', 'Linhas', LINHA], ['acento', 'Destaque (seleção e energia)', ACENTO], ['fundo', 'Fundo', FUNDO]];
   const VARS = { linha: '--cc-linha', acento: '--cc-acento', fundo: '--cc-fundo' };
-  const limpo = c => { const o = {}; for (const k of Object.keys(VARS)) if (c && c[k]) o[k] = c[k]; return o; };
+  const limpo = c => { const o = {}; for (const k of Object.keys(VARS)) if (c && c[k]) o[k] = c[k]; if (c && Array.isArray(c.blocos) && c.blocos.length) o.blocos = c.blocos.slice(0, 5); return o; };
   const igual = (a, b) => JSON.stringify(limpo(a)) === JSON.stringify(limpo(b));
   function ler() { try { return JSON.parse(document.documentElement.dataset.cores || '{}'); } catch (e) { return {}; } }
   function aplicar(c) {
     c = limpo(c); const r = document.documentElement; r.dataset.cores = JSON.stringify(c);
     for (const [k, v] of Object.entries(VARS)) { if (c[k]) { r.style.setProperty(v, c[k]); r.setAttribute('data-cor-' + k, ''); } else { r.style.removeProperty(v); r.removeAttribute('data-cor-' + k); } }
+    for (let i = 0; i < 5; i++) { if (c.blocos) r.style.setProperty('--cc-b' + (i + 1), c.blocos[i % c.blocos.length]); else r.style.removeProperty('--cc-b' + (i + 1)); }
+    if (c.blocos) r.setAttribute('data-cor-blocos', ''); else r.removeAttribute('data-cor-blocos');
   }
   function secao(c) {
     c = limpo(c);
-    const ps = PRESETS.map(p => `<button data-cc-preset="${p.k}" class="${igual(c, p.c) ? 'on' : ''}"><span class="ccc-dots">${['linha', 'acento', 'fundo'].map(k => `<i class="${p.c[k] ? '' : 'vazio'}" style="background:${p.c[k] || 'transparent'}"></i>`).join('')}</span>${p.nome}</button>`).join('');
+    const ps = PRESETS.map(p => `<button data-cc-preset="${p.k}" class="${igual(c, p.c) ? 'on' : ''}"><span class="ccc-dots">${(p.c.blocos ? p.c.blocos.slice(0, 4) : [null, null, null]).map(x => `<i class="${x ? '' : 'vazio'}" style="background:${x || 'transparent'}"></i>`).join('')}</span>${p.nome}</button>`).join('');
     const rows = CAMPOS.map(([k, nome, lista]) => `<div class="ccc-row"><span>${nome}</span><div class="ccc-sws"><button class="ccc-auto ${c[k] ? '' : 'on'}" data-cc-campo="${k}" data-cc-v="">auto</button>${lista.map(x => `<button class="ccc-sw ${c[k] && c[k].toLowerCase() === x ? 'on' : ''}" data-cc-campo="${k}" data-cc-v="${x}" style="background:${x}" title="${x}"></button>`).join('')}<label class="ccc-sw ccc-livre" title="Cor livre"><input type="color" data-cc-livre="${k}" value="${/^#[0-9a-f]{6}$/i.test(c[k] || '') ? c[k] : '#888888'}"></label></div></div>`).join('');
     return `<div class="ccc"><div class="ccc-presets">${ps}</div>${rows}</div>`;
   }
   function mudar(c, el) {
     c = limpo(c);
     const pr = el.closest && el.closest('[data-cc-preset]');
-    if (pr) { const p = PRESETS.find(x => x.k === pr.dataset.ccPreset); return p ? limpo(p.c) : c; }
+    if (pr) { const p = PRESETS.find(x => x.k === pr.dataset.ccPreset); return p ? limpo(p.c) : c; }  // paleta: troca tudo (inclusive as cores de bloco)
     const b = el.closest && el.closest('[data-cc-campo]');
-    if (b) { const n = { ...c }; if (b.dataset.ccV) n[b.dataset.ccCampo] = b.dataset.ccV; else delete n[b.dataset.ccCampo]; return n; }
+    if (b) { const n = { ...c }; delete n.blocos; if (b.dataset.ccV) n[b.dataset.ccCampo] = b.dataset.ccV; else delete n[b.dataset.ccCampo]; return n; }
     return null;
   }
   function livre(c, el) { if (!el || !el.dataset || !el.dataset.ccLivre) return null; return { ...limpo(c), [el.dataset.ccLivre]: el.value }; }
@@ -5330,6 +5332,14 @@ function App() {
   const [painel, setPainel] = useState(null); // null | "bloco" | "canvas"
   const [fundoAtual, setFundoAtual] = useState(() => document.documentElement.dataset.fundo || "pontos");
   const [coresVer, setCoresVer] = useState(0);
+  useEffect(() => {
+    if (!PC) return;
+    window.canvasRecolorir = (lista) => {
+      if (!lista || !lista.length) return;
+      const mapa = new Map(); let i = 0;
+      setBlocks(p => p.map(b => { const k = String(b.color || DEFAULT_COLOR).toLowerCase(); if (!mapa.has(k)) mapa.set(k, lista[i++ % lista.length]); return { ...b, color: mapa.get(k) }; }));
+    };
+  }, []);
   useEffect(() => { const ob = new MutationObserver(() => { setFundoAtual(document.documentElement.dataset.fundo || "pontos"); setCoresVer(v => v + 1); }); ob.observe(document.documentElement, { attributes: true, attributeFilter: ["data-fundo", "data-cores"] }); return () => ob.disconnect(); }, []);
   const [vivoPainel, setVivoPainel] = useState(() => !window.FundoVivo || FundoVivo.modo() !== "leve");
   const [barraPop, setBarraPop] = useState(null);
@@ -6893,7 +6903,7 @@ function App() {
                 </div></section>
                 <section><h4>Cores</h4>
                   <div key={coresVer} dangerouslySetInnerHTML={{ __html: window.CanvasCores ? CanvasCores.secao(CanvasCores.ler()) : "" }}
-                    onClick={(e) => { if (!window.CanvasCores || !api || !api.cores) return; const n = CanvasCores.mudar(CanvasCores.ler(), e.target); if (n) api.cores(n); }}
+                    onClick={(e) => { if (!window.CanvasCores || !api || !api.cores) return; const n = CanvasCores.mudar(CanvasCores.ler(), e.target); if (n) api.cores(n, !!(e.target.closest && e.target.closest("[data-cc-preset]"))); }}
                     onChange={(e) => { if (!window.CanvasCores || !api || !api.cores) return; const n = CanvasCores.livre(CanvasCores.ler(), e.target); if (n) api.cores(n); }}/>
                 </section>
                 <section><h4>Tela</h4>
