@@ -2140,6 +2140,14 @@ window.CanvasZoom = function (ler, gravar, o) {
   };
 };
 
+/* Ctrl K: caixa de comandos do app (mora no app de fora; dentro do livre/mapa só repassa) */
+addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || (e.key || '').toLowerCase() !== 'k') return;
+  e.preventDefault(); e.stopPropagation();
+  try { if (window.parent !== window && window.parent.abrirComandos) return window.parent.abrirComandos(); } catch (er) {}
+  if (window.abrirComandos) window.abrirComandos();
+}, true);
+
 /* window.CanvasAtalhos('Atalhos do Fluxo', [['Criar', [['Nome', 'Tecla'], ...]], ...]): janela do "?" */
 window.CanvasAtalhos = function (titulo, grupos) {
   const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
@@ -5446,10 +5454,12 @@ function App() {
       })),
       ir: x => { const b = blocksRef.current.find(y => y.id === x.id); if (!b) return; comumRef.current.centerOnBlock(b); comumRef.current.selectOne(b.id); },
     });
+    window.canvasItens = () => blocksRef.current.filter(b => !(comumRef.current.hidden || new Set()).has(b.id)).map(b => ({ id: b.id, texto: (b.title || semTag(b.body)).replace(/\s+/g, " ").trim().slice(0, 80) }));
+    window.canvasIr = (id) => { const b = blocksRef.current.find(y => y.id === id); if (!b) return; comumRef.current.centerOnBlock(b); comumRef.current.selectOne(b.id); };
     if (window.CanvasAtalhos) atalhosRef.current = CanvasAtalhos("Atalhos do Canvas livre", [
       ["Criar", [["Bloco novo", "2 cliques no vazio"], ["Ferramenta bloco", "B"], ["Bloco filho", "Tab"], ["Duplicar", "Ctrl D"]]],
       ["Editar", [["Editar o título", "F2"], ["Apagar", "Delete"], ["Seleção", "V"], ["Sair, cancelar", "Esc"]]],
-      ["Ver", [["Seleção em área", "Arrastar no vazio"], ["Mover o canvas", "Botão direito arrastando, ou Espaço"], ["Buscar", "Ctrl F"], ["Esta lista", "?"]]],
+      ["Ver", [["Seleção em área", "Arrastar no vazio"], ["Mover o canvas", "Botão direito arrastando, ou Espaço"], ["Buscar", "Ctrl F"], ["Comandos", "Ctrl K"], ["Esta lista", "?"]]],
       ["Desfazer", [["Desfazer", "Ctrl Z"], ["Refazer", "Ctrl Y"]]],
     ]);
   }, []);
