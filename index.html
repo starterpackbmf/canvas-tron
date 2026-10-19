@@ -230,6 +230,7 @@
   html.pc .minimap{right:16px!important;bottom:62px!important;border-radius:12px!important;background:var(--chrome)!important;border:1px solid var(--line)!important;transition:right .3s var(--cc-ease)}
   html.pc:has(.pnl) .zoomctl,html.pc:has(.pnl) .minimap{right:332px!important}
   html.pc .pnl{width:300px}
+  html.pc.wco .bbx,html.pc.wco .drawbar{top:56px!important}
   html.pc:has(.pnl) .hint{display:none}
 
   /* cores do canvas (painel, aba Canvas): linhas, destaque e fundo por cima do tema */
@@ -1900,6 +1901,10 @@
 @media (prefers-reduced-motion:reduce){.cc-nasce,.cc-sai,.cc-linha,.cc-menu-anim:not([hidden]),.cc-menu-anim:not([hidden])>*{animation:none!important}.cc-linha{stroke-dasharray:none}}
 /* escrevendo dentro de um bloco: sem o contorno de foco do navegador (o retângulo branco por dentro) */
 [contenteditable="true"]:focus,[contenteditable="true"]:focus-visible,[contenteditable="plaintext-only"]:focus,textarea:focus,textarea:focus-visible{outline:none!important}
+/* guias de alinhamento ao arrastar (linhas finas na cor de destaque) */
+.cc-guias{position:fixed;inset:0;pointer-events:none;z-index:15}
+.cc-guia{position:absolute;background:var(--cc-acento,#ff5c8a);opacity:.9;box-shadow:0 0 6px var(--cc-acento,#ff5c8a)}
+.cc-guia.v{width:1px}.cc-guia.h{height:1px}
 /* seção Cores do painel (igual nos três): paletas prontas, linhas, destaque e fundo */
 .ccc{display:flex;flex-direction:column;gap:10px}
 .ccc-presets{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}
@@ -2066,6 +2071,73 @@ window.CanvasCores = (function () {
   function livre(c, el) { if (!el || !el.dataset || !el.dataset.ccLivre) return null; return { ...limpo(c), [el.dataset.ccLivre]: el.value }; }
   return { aplicar, ler, secao, mudar, livre, limpo };
 })();
+
+/* window.CanvasGuias: alinhar o que está sendo arrastado com os vizinhos (bordas e centros), com "ímã" leve.
+   calcular(mov, outros, limiar) -> { dx, dy, linhas }; desenhar(linhas, praTela); limpar(). Alt segurado desliga. */
+window.CanvasGuias = (function () {
+  let camada = null;
+  function calcular(m, outros, lim) {
+    const xs = b => [b.x, b.x + b.w / 2, b.x + b.w], ys = b => [b.y, b.y + b.h / 2, b.y + b.h];
+    let melhorX = null, melhorY = null;
+    for (const o of outros) {
+      xs(m).forEach(a => xs(o).forEach(b => { const d = b - a; if (Math.abs(d) <= lim && (!melhorX || Math.abs(d) < Math.abs(melhorX.d))) melhorX = { d, x: b }; }));
+      ys(m).forEach(a => ys(o).forEach(b => { const d = b - a; if (Math.abs(d) <= lim && (!melhorY || Math.abs(d) < Math.abs(melhorY.d))) melhorY = { d, y: b }; }));
+    }
+    const dx = melhorX ? melhorX.d : 0, dy = melhorY ? melhorY.d : 0, f = { x: m.x + dx, y: m.y + dy, w: m.w, h: m.h }, linhas = [];
+    if (melhorX) { const alvo = outros.filter(o => xs(o).some(v => Math.abs(v - melhorX.x) < .5)); const y1 = Math.min(f.y, ...alvo.map(o => o.y)), y2 = Math.max(f.y + f.h, ...alvo.map(o => o.y + o.h)); linhas.push({ t: 'v', x: melhorX.x, a: y1 - 12, b: y2 + 12 }); }
+    if (melhorY) { const alvo = outros.filter(o => ys(o).some(v => Math.abs(v - melhorY.y) < .5)); const x1 = Math.min(f.x, ...alvo.map(o => o.x)), x2 = Math.max(f.x + f.w, ...alvo.map(o => o.x + o.w)); linhas.push({ t: 'h', y: melhorY.y, a: x1 - 12, b: x2 + 12 }); }
+    return { dx, dy, linhas };
+  }
+  function desenhar(linhas, praTela) {
+    if (!camada) { camada = document.createElement('div'); camada.className = 'cc-guias'; document.body.appendChild(camada); }
+    camada.innerHTML = linhas.map(l => {
+      if (l.t === 'v') { const p1 = praTela(l.x, l.a), p2 = praTela(l.x, l.b); return `<i class="cc-guia v" style="left:${p1.x}px;top:${p1.y}px;height:${p2.y - p1.y}px"></i>`; }
+      const p1 = praTela(l.a, l.y), p2 = praTela(l.b, l.y); return `<i class="cc-guia h" style="left:${p1.x}px;top:${p1.y}px;width:${p2.x - p1.x}px"></i>`;
+    }).join('');
+  }
+  function limpar() { if (camada) camada.innerHTML = ''; }
+  return { calcular, desenhar, limpar };
+})();
+
+/* window.CanvasInercia(mexer): ao soltar a tela arrastando, ela continua deslizando e para suave.
+   i.mover(dx, dy) durante o arrasto; i.soltar() no fim; i.parar() ao começar outro gesto. */
+window.CanvasInercia = function (mexer) {
+  let vx = 0, vy = 0, ult = 0, raf = 0;
+  const parar = () => { cancelAnimationFrame(raf); raf = 0; };
+  return {
+    mover(dx, dy) { const t = performance.now(), dt = Math.max(1, t - (ult || t - 16)); ult = t; vx = vx * .6 + (dx / dt) * .4; vy = vy * .6 + (dy / dt) * .4; },
+    soltar() {
+      parar(); if (performance.now() - ult > 90 || matchMedia('(prefers-reduced-motion: reduce)').matches) { vx = vy = 0; return; }
+      let t0 = performance.now();
+      const passo = t => { const dt = Math.min(40, t - t0); t0 = t; mexer(vx * dt, vy * dt); const k = Math.pow(.92, dt / 16); vx *= k; vy *= k; if (Math.hypot(vx, vy) > .02) raf = requestAnimationFrame(passo); else raf = 0; };
+      raf = requestAnimationFrame(passo);
+    },
+    parar() { parar(); vx = vy = 0; ult = 0; },
+  };
+};
+
+/* window.CanvasZoom(ler, gravar, {min, max}): roda do mouse aproxima em movimento contínuo, preso ao ponto do mouse. */
+window.CanvasZoom = function (ler, gravar, o) {
+  const min = (o && o.min) || .2, max = (o && o.max) || 3;
+  let alvo = null, ax = 0, ay = 0, raf = 0, cur = null;
+  function passo() {
+    const v = cur || ler(); const s = v.s + (alvo - v.s) * .28;
+    const fim = Math.abs(alvo - s) < .0008; const ns = fim ? alvo : s;
+    const wx = (ax - v.x) / v.s, wy = (ay - v.y) / v.s;
+    cur = { x: ax - wx * ns, y: ay - wy * ns, s: ns }; gravar(cur);
+    raf = fim ? 0 : requestAnimationFrame(passo); if (fim) { alvo = null; cur = null; }
+  }
+  return {
+    roda(e, pinca) {
+      const v = cur || ler(); const base = alvo == null ? v.s : alvo;
+      const f = Math.exp(-e.deltaY * (pinca ? .01 : .0018));
+      alvo = Math.min(max, Math.max(min, base * f)); ax = e.clientX; ay = e.clientY;
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { const wx = (ax - v.x) / v.s, wy = (ay - v.y) / v.s; gravar({ x: ax - wx * alvo, y: ay - wy * alvo, s: alvo }); alvo = null; return; }
+      if (!raf) raf = requestAnimationFrame(passo);
+    },
+    parar() { cancelAnimationFrame(raf); raf = 0; alvo = null; cur = null; },
+  };
+};
 
 /* window.CanvasAtalhos('Atalhos do Fluxo', [['Criar', [['Nome', 'Tecla'], ...]], ...]): janela do "?" */
 window.CanvasAtalhos = function (titulo, grupos) {
@@ -5302,6 +5374,16 @@ function App() {
 
   /* ----- fundo vivo, busca (Ctrl F) e atalhos (?): os mesmos do Fluxo e do Mapa mental ----- */
   const buscaRef = useRef(null), atalhosRef = useRef(null), comumRef = useRef({});
+  /* física do app: inércia ao soltar a tela e zoom suave na roda (os mesmos do Fluxo) */
+  const inerciaRef = useRef(null), zoomRef = useRef(null);
+  if (PC && !inerciaRef.current && window.CanvasInercia) inerciaRef.current = CanvasInercia((dx, dy) => setView(v => ({ ...v, x: v.x + dx, y: v.y + dy })));
+  if (PC && !zoomRef.current && window.CanvasZoom) zoomRef.current = CanvasZoom(() => ({ x: viewRef.current.x, y: viewRef.current.y, s: viewRef.current.scale }), (v) => setView({ x: v.x, y: v.y, scale: v.s }), { min: .2, max: 3 });
+  useEffect(() => {
+    if (!PC) return;
+    const para = () => { if (inerciaRef.current) inerciaRef.current.parar(); };
+    window.addEventListener("mousedown", para, true);
+    return () => window.removeEventListener("mousedown", para, true);
+  }, []);
   useEffect(() => { if (PC && mapOn) setMapOn(false); }, [mapOn]);
   useEffect(() => { if (PC && spotlight) setSpotlight(false); }, [spotlight]);
   useEffect(() => {
@@ -5515,8 +5597,21 @@ function App() {
       if (dragRef.current) {
         const d = dragRef.current;
         if (!d.moved && Math.hypot(e.clientX - d.startMouse.x, e.clientY - d.startMouse.y) > 3) d.moved = true;
-        const dx = (e.clientX - d.startMouse.x) / view.scale;
-        const dy = (e.clientY - d.startMouse.y) / view.scale;
+        let dx = (e.clientX - d.startMouse.x) / view.scale;
+        let dy = (e.clientY - d.startMouse.y) / view.scale;
+        // guias de alinhamento + ímã (Alt desliga), como no Fluxo
+        if (PC && d.moved && !e.altKey && window.CanvasGuias) {
+          const it0 = d.items.find(i => i.kind === "block" && i.id === d.clickedId) || d.items.find(i => i.kind === "block");
+          if (it0) {
+            const tam = (o) => ({ w: (sizesRef.current[o.id] && sizesRef.current[o.id].w) || o.w || 240, h: (sizesRef.current[o.id] && sizesRef.current[o.id].h) || o.h || 80 });
+            const b0 = blocksRef.current.find(x => x.id === it0.id) || {};
+            const ids = new Set(d.items.map(i => i.id)), oc = comumRef.current.hidden || new Set();
+            const outros = blocksRef.current.filter(o => !ids.has(o.id) && !oc.has(o.id)).map(o => ({ x: o.x, y: o.y, ...tam(o) }));
+            const g = CanvasGuias.calcular({ x: it0.startX + dx, y: it0.startY + dy, ...tam({ ...b0, id: it0.id }) }, outros, 7 / view.scale);
+            dx += g.dx; dy += g.dy;
+            const v = viewRef.current; CanvasGuias.desenhar(g.linhas, (x, y) => ({ x: x * v.scale + v.x, y: y * v.scale + v.y }));
+          }
+        }
         // Apply movement
         setBlocks(prev => prev.map(b => {
           const it = d.items.find(i => i.kind === "block" && i.id === b.id);
@@ -5546,6 +5641,7 @@ function App() {
       }
       if (panRef.current) {
         setView(v => ({ ...v, x: v.x + e.movementX, y: v.y + e.movementY }));
+        if (inerciaRef.current) inerciaRef.current.mover(e.movementX, e.movementY);
         return;
       }
       if (drawing) {
@@ -5712,7 +5808,9 @@ function App() {
         }
       }
       dragRef.current = null;
+      if (window.CanvasGuias) CanvasGuias.limpar();
       resizeRef.current = null;
+      if (panRef.current && inerciaRef.current) inerciaRef.current.soltar();
       panRef.current = false;
       if (wsRef.current) wsRef.current.classList.remove("panning");
       if (drawing && drawing.type !== "polyline") {
@@ -5818,6 +5916,7 @@ function App() {
   /* ----- wheel zoom ----- */
   const onWheel = useCallback((e) => {
     e.preventDefault();
+    if (PC && zoomRef.current) { if (inerciaRef.current) inerciaRef.current.parar(); zoomRef.current.roda(e, e.ctrlKey); return; }
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     const newScale = Math.max(0.2, Math.min(3, view.scale * delta));
     const wp = screenToWorld(e.clientX, e.clientY);
