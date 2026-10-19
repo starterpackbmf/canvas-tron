@@ -204,6 +204,64 @@
   body.claro .edges path.flow{stroke:#3b82f6}
   body.claro .edges path.pulse{stroke:#3b82f6!important}
   body.claro .port,body.claro .handle{background:#fff;border-color:rgba(20,20,30,.25)}
+
+  /* animações no app: bloco nasce, linha se desenha (o resto vem da peça comum) */
+  html.pc .block{animation:ccNasce .5s var(--cc-ease) both}
+  /* barras antigas (formatar texto, seleção de anotação) no app: mesma pílula de vidro da barra do bloco */
+  html.pc .drawbar{top:14px;gap:2px;padding:4px 6px;border-radius:12px;background:var(--chrome)!important;border:1px solid var(--line)!important;
+    box-shadow:0 12px 30px -12px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05)!important;animation:ccMenu .2s var(--cc-ease)}
+  html.pc .drawbar .lbl{display:none}
+  html.pc .drawbar .vsep{height:18px;margin:0 4px;background:var(--line)!important}
+  html.pc .drawbar .fmt-btn,html.pc .drawbar .shape-btn,html.pc .drawbar .width-btn{width:30px;height:30px;border:0!important;background:transparent!important;color:var(--ink-2)!important;box-shadow:none!important;border-radius:8px}
+  html.pc .drawbar .fmt-btn:hover,html.pc .drawbar .shape-btn:hover{background:rgba(127,127,140,.14)!important;color:var(--ink)!important}
+  html.pc .drawbar .fmt-btn.active,html.pc .drawbar .shape-btn.active{background:rgba(127,127,140,.22)!important;color:var(--ink)!important}
+  html.pc .drawbar .swatch{width:18px!important;height:18px!important;box-shadow:none!important;border:1px solid rgba(127,127,140,.3)!important}
+  @media (max-width:1100px){html.pc .drawbar{top:62px}}
+  /* painel do app (Bloco | Canvas) */
+  .pnl{position:fixed;right:16px;top:62px;bottom:16px;width:290px;z-index:28;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;
+    background:var(--chrome,rgba(24,24,28,.86));border:1px solid var(--line,rgba(255,255,255,.08));backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
+    box-shadow:0 18px 44px -18px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);color:var(--ink,#ececf1);font-family:"Geist",ui-sans-serif,system-ui,"Segoe UI",sans-serif;animation:ccPainel .3s var(--cc-ease)}
+  .pnl-tabs{display:flex;gap:2px;padding:6px;border-bottom:1px solid var(--line,rgba(255,255,255,.08))}
+  .pnl-tabs button{flex:1;border:0;background:transparent;color:var(--ink-2,#a4a4b0);height:30px;border-radius:8px;font:500 12px "Geist",sans-serif;cursor:pointer}
+  .pnl-tabs button.on{background:rgba(127,127,140,.18);color:var(--ink,#ececf1)}
+  .pnl-tabs .pnl-x{flex:none;width:30px;display:grid;place-items:center}
+  .pnl-tabs .pnl-x svg{width:14px;height:14px}
+  .pnl-c{flex:1;overflow-y:auto;padding:4px 12px 16px;scrollbar-width:thin}
+  .pnl section{padding:12px 0 6px;border-bottom:1px solid var(--line,rgba(255,255,255,.06));animation:ccSecao .34s var(--cc-ease) both}
+  .pnl section:nth-child(2){animation-delay:.03s}.pnl section:nth-child(3){animation-delay:.06s}.pnl section:nth-child(4){animation-delay:.09s}.pnl section:nth-child(n+5){animation-delay:.12s}
+  .pnl section:last-child{border-bottom:0}
+  .pnl h4{display:flex;align-items:baseline;margin:0 0 9px;font:500 10px/1 "Geist Mono",ui-monospace,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3,#6c6c78)}
+  .pnl h4 em{margin-left:auto;font:400 11px "Geist",sans-serif;letter-spacing:0;text-transform:none;font-style:normal;color:var(--ink-2,#a4a4b0)}
+  .pnl-d{margin:0;font-size:12px;color:var(--ink-2,#a4a4b0);line-height:1.5}
+  .pnl-cores{display:flex;flex-wrap:wrap;gap:8px}
+  .pnl-sw{width:24px;height:24px;border-radius:50%;border:1px solid rgba(127,127,140,.3);padding:0;cursor:pointer;position:relative;overflow:hidden}
+  .pnl-sw.on{box-shadow:0 0 0 2px var(--bg,#0c0c0e),0 0 0 3.5px var(--ink,#ececf1)}
+  .pnl-livre{background:conic-gradient(#ff8db3,#f3cf62,#6fe3a6,#6ea8ff,#b49cff,#ff8db3)}
+  .pnl-livre input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .pnl-ops{display:flex;flex-wrap:wrap;gap:4px}
+  .pnl-ops button,.pnl-acoes button,.pnl-formas button{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:1px solid var(--line,rgba(255,255,255,.08));background:rgba(127,127,140,.06);border-radius:8px;font:400 12px "Geist",sans-serif;color:var(--ink-2,#a4a4b0);cursor:pointer}
+  .pnl-ops button svg,.pnl-acoes button svg{width:15px;height:15px}
+  .pnl-ops button:hover,.pnl-acoes button:hover,.pnl-formas button:hover{color:var(--ink,#ececf1);background:rgba(127,127,140,.14)}
+  .pnl-ops button.on,.pnl-acoes button.on,.pnl-formas button.on{background:var(--ink,#ececf1);color:var(--bg,#0c0c0e);border-color:transparent}
+  .pnl-formas{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+  .pnl-formas button{justify-content:center;padding:0;font-size:16px}
+  .pnl-acoes{display:flex;flex-direction:column;gap:4px}
+  .pnl-acoes button{justify-content:flex-start}
+  .pnl-temas{display:flex;flex-direction:column;gap:2px}
+  .pnl-temas button{display:flex;align-items:center;gap:10px;border:0;background:transparent;border-radius:9px;padding:6px 8px;text-align:left;color:var(--ink,#ececf1);cursor:pointer}
+  .pnl-temas button:hover{background:rgba(127,127,140,.1)}
+  .pnl-temas button.on{background:rgba(127,127,140,.18)}
+  .pnl-temas i,.pnl-fundos i{width:30px;height:20px;border-radius:6px;flex:none;border:1px solid rgba(127,127,140,.3)}
+  .pnl-temas b{display:block;font-size:12.5px;font-weight:500}.pnl-temas small{display:block;font-size:11px;color:var(--ink-3,#6c6c78)}
+  .pnl-fundos{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+  .pnl-fundos button{display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:transparent;border-radius:9px;padding:6px 2px;font:400 10.5px "Geist",sans-serif;color:var(--ink-2,#a4a4b0);cursor:pointer}
+  .pnl-fundos button.on{background:rgba(127,127,140,.18);color:var(--ink,#ececf1)}
+  .pnl-chave{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--ink-2,#a4a4b0);padding:4px 0}
+  .pnl .chave{width:32px;height:18px;border-radius:999px;border:0;background:rgba(127,127,140,.3);position:relative;padding:0;cursor:pointer;flex:none}
+  .pnl .chave i{position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#d0d0d8;transition:transform .2s var(--cc-ease)}
+  .pnl .chave.on{background:#6fe3a6}
+  .pnl .chave.on i{transform:translateX(14px);background:#0c0c0e}
+  body.pnl-aberto .bbx{left:calc(50% - 150px)}
   /* barra do bloco no app: mesma pílula de vidro da barra do topo do Canvas */
   .bbx{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:2px;height:40px;padding:0 5px;border-radius:12px;box-sizing:border-box;
     background:rgba(24,24,28,.78);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
@@ -1796,6 +1854,27 @@
 .cc-atalhos h5{margin:14px 0 6px;font:500 10px/1 "Geist Mono",ui-monospace,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;color:#6c6c78}
 .cc-atalhos .cc-l{display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-size:12.5px;color:#a4a4b0}
 .cc-atalhos kbd{font:500 11px "Geist Mono",ui-monospace,Consolas,monospace;color:#ececf1;background:rgba(255,255,255,.07);border-radius:5px;padding:2px 6px;white-space:nowrap}
+/* animações do Canvas (iguais nos três): nascer, sair, linha se desenhando, menus, troca de tela, painel.
+   Curva única (a do mapa mental). Somem com "reduzir movimento" do Windows. */
+:root{--cc-ease:cubic-bezier(.22,1,.36,1);--cc-anel:150,190,255}
+.cc-nasce{animation:ccNasce .5s var(--cc-ease) both}
+@keyframes ccNasce{0%{opacity:0;scale:.9;box-shadow:0 0 0 0 rgba(var(--cc-anel),.5)}45%{opacity:1;scale:1.015}70%{box-shadow:0 0 0 12px rgba(var(--cc-anel),0)}100%{opacity:1;scale:1}}
+.cc-sai{animation:ccSai .18s ease-in forwards!important;pointer-events:none}
+@keyframes ccSai{to{opacity:0;scale:.86}}
+.cc-linha{stroke-dasharray:1;stroke-dashoffset:1;animation:ccLinha .5s var(--cc-ease) forwards}
+@keyframes ccLinha{to{stroke-dashoffset:0}}
+@keyframes ccMenu{from{opacity:0;translate:0 -6px;scale:.98}}
+@keyframes ccItem{from{opacity:0;translate:-4px 0}}
+@keyframes ccTela{from{opacity:0;scale:1.012;filter:blur(3px)}}
+@keyframes ccPainel{from{opacity:0;translate:18px 0}}
+@keyframes ccSecao{from{opacity:0;translate:0 6px}}
+.cc-menu-anim:not([hidden]){animation:ccMenu .2s var(--cc-ease)}
+.cc-menu-anim:not([hidden])>*{animation:ccItem .24s var(--cc-ease) both}
+.cc-menu-anim:not([hidden])>*:nth-child(2){animation-delay:.02s}.cc-menu-anim:not([hidden])>*:nth-child(3){animation-delay:.04s}
+.cc-menu-anim:not([hidden])>*:nth-child(4){animation-delay:.06s}.cc-menu-anim:not([hidden])>*:nth-child(5){animation-delay:.08s}
+.cc-menu-anim:not([hidden])>*:nth-child(6){animation-delay:.1s}.cc-menu-anim:not([hidden])>*:nth-child(7){animation-delay:.12s}
+.cc-menu-anim:not([hidden])>*:nth-child(n+8){animation-delay:.14s}
+@media (prefers-reduced-motion:reduce){.cc-nasce,.cc-sai,.cc-linha,.cc-menu-anim:not([hidden]),.cc-menu-anim:not([hidden])>*{animation:none!important}.cc-linha{stroke-dasharray:none}}
 </style>
 <script>
 /* window.FundoVivo.montar(elemento, () => ({x, y})): põe o fundo vivo atrás do conteúdo.
@@ -1882,6 +1961,22 @@ window.CanvasBusca = function (cfg) {
   return { abrir, fechar, alternar: () => (box.hidden ? abrir() : fechar()), aberta: () => !box.hidden, refazer: () => { if (!box.hidden) rodar(false); } };
 };
 
+/* window.CanvasAnim: nasce(el), sai(el, depois), linha(path), desliza(el, dx, dy), tela(el). Sem animação se o Windows pedir menos movimento. */
+window.CanvasAnim = (function () {
+  const calmo = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const EASE = 'cubic-bezier(.22,1,.36,1)';
+  function nasce(el) { if (!el || calmo()) return; el.classList.remove('cc-nasce'); void el.offsetWidth; el.classList.add('cc-nasce'); el.addEventListener('animationend', function f(e) { if (e.animationName === 'ccNasce') { el.classList.remove('cc-nasce'); el.removeEventListener('animationend', f); } }); }
+  function sai(el, depois) { if (!el || calmo()) { if (depois) depois(); return; } el.classList.add('cc-sai'); setTimeout(() => { if (depois) depois(); }, 170); }
+  function linha(path) {
+    if (!path || calmo()) return;
+    path.setAttribute('pathLength', '1'); path.classList.add('cc-linha');
+    path.addEventListener('animationend', function f() { path.classList.remove('cc-linha'); path.removeAttribute('pathLength'); path.removeEventListener('animationend', f); });
+  }
+  function desliza(el, dx, dy) { if (!el || calmo() || (!dx && !dy)) return; el.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0 0' }], { duration: 320, easing: EASE }); }
+  function tela(el) { if (!el || calmo()) return; el.animate([{ opacity: 0, scale: '1.012', filter: 'blur(3px)' }, { opacity: 1, scale: '1', filter: 'blur(0)' }], { duration: 340, easing: EASE }); }
+  return { nasce, sai, linha, desliza, tela, calmo };
+})();
+
 /* window.CanvasAtalhos('Atalhos do Fluxo', [['Criar', [['Nome', 'Tecla'], ...]], ...]): janela do "?" */
 window.CanvasAtalhos = function (titulo, grupos) {
   const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
@@ -1966,6 +2061,16 @@ const lembrarEstilo = (v) => { try { localStorage.setItem("canvas-tron:estilo", 
 // no app (modo PC) o bloco novo nasce com o fundo vazado (só vidro); a última escolha vira o padrão
 const fundoPadrao = () => { try { return localStorage.getItem("canvas-tron:fundo") || "none"; } catch (e) { return "none"; } };
 const lembrarFundo = (v) => { try { localStorage.setItem("canvas-tron:fundo", v); } catch (e) {} };
+// posições dos blocos na tela (pra animar o desfazer: cada bloco desliza do lugar antigo pro novo)
+const posBlocos = () => { const m = new Map(); document.querySelectorAll(".world [data-bid]").forEach(el => m.set(el.dataset.bid, { x: parseFloat(el.style.left) || 0, y: parseFloat(el.style.top) || 0 })); return m; };
+const deslizarDepois = (antes) => requestAnimationFrame(() => requestAnimationFrame(() => {
+  if (!window.CanvasAnim || CanvasAnim.calmo()) return;
+  document.querySelectorAll(".world [data-bid]").forEach(el => {
+    const a = antes.get(el.dataset.bid); if (!a) { CanvasAnim.nasce(el); return; }
+    const dx = a.x - (parseFloat(el.style.left) || 0), dy = a.y - (parseFloat(el.style.top) || 0);
+    if (Math.abs(dx) + Math.abs(dy) > 1) el.animate([{ translate: dx + "px " + dy + "px" }, { translate: "0 0" }], { duration: 320, easing: "cubic-bezier(.22,1,.36,1)" });
+  });
+}));
 const herdaTipo = (b) => ({ estilo: b.estilo || "card", ...(b.fill ? { fill: b.fill } : {}), ...(b.shape ? { shape: b.shape } : {}), ...(b.fontSize ? { fontSize: b.fontSize } : {}) });
 const CORES_PC = ["#ececf1", "#6ea8ff", "#7fd3e6", "#6fe3a6", "#f3cf62", "#ff9d6b", "#ff8db3", "#b49cff"];
 const PRESET_COLORS = [
@@ -4642,6 +4747,14 @@ function App() {
 
   /* ----- delete ----- */
   const deleteSelection = useCallback(() => {
+    if (PC && !selectedEdge && !selectedAnchor && window.CanvasAnim) {
+      selection.forEach(id => {
+        const el = document.querySelector('[data-bid="' + id + '"]');
+        if (!el || !el.parentNode) return;
+        const c = el.cloneNode(true); c.removeAttribute("data-bid"); c.classList.remove("selected");
+        el.parentNode.appendChild(c); CanvasAnim.sai(c, () => c.remove());
+      });
+    }
     if (selectedEdge) {
       setEdges(p => p.filter(e => e.id !== selectedEdge));
       setSelectedEdge(null);
@@ -4853,7 +4966,9 @@ function App() {
     h.future.push(lastSnapRef.current);
     restoringRef.current = true;
     lastSnapRef.current = prev;
+    const antes = PC ? posBlocos() : null;
     applySnapshot(prev);
+    if (antes) deslizarDepois(antes);
   }, [applySnapshot]);
 
   const redo = useCallback(() => {
@@ -4864,7 +4979,9 @@ function App() {
     h.past.push(lastSnapRef.current);
     restoringRef.current = true;
     lastSnapRef.current = next;
+    const antes = PC ? posBlocos() : null;
     applySnapshot(next);
+    if (antes) deslizarDepois(antes);
   }, [applySnapshot]);
 
   /* ----- duplicate selection (Ctrl+D) ----- */
@@ -5109,6 +5226,21 @@ function App() {
     ws.addEventListener("contextmenu", ctx);
     return () => { ws.removeEventListener("mousedown", down, true); ws.removeEventListener("contextmenu", ctx); };
   }, []);
+  useEffect(() => {
+    if (!PC) return;
+    const svg = document.querySelector("svg.edges"); if (!svg || !window.CanvasAnim) return;
+    const t0 = performance.now();
+    const mo = new MutationObserver(ms => {
+      if (performance.now() - t0 < 1500) return; // ao abrir o canvas, as linhas que já existem não animam
+      ms.forEach(m => m.addedNodes.forEach(n => { const pth = n.querySelector && n.querySelector("path.edge-line"); if (pth) CanvasAnim.linha(pth); }));
+    });
+    mo.observe(svg, { childList: true });
+    return () => mo.disconnect();
+  }, []);
+  const [painel, setPainel] = useState(null); // null | "bloco" | "canvas"
+  const [fundoAtual, setFundoAtual] = useState(() => document.documentElement.dataset.fundo || "pontos");
+  useEffect(() => { const ob = new MutationObserver(() => setFundoAtual(document.documentElement.dataset.fundo || "pontos")); ob.observe(document.documentElement, { attributes: true, attributeFilter: ["data-fundo"] }); return () => ob.disconnect(); }, []);
+  const [vivoPainel, setVivoPainel] = useState(() => !window.FundoVivo || FundoVivo.modo() !== "leve");
   const [barraPop, setBarraPop] = useState(null);
   const selChave = [...selection].join(",");
   useEffect(() => { setBarraPop(null); }, [selChave]);
@@ -6383,6 +6515,7 @@ function App() {
         {/* EXTRAS do Canvas: busca, fundo vivo e atalhos (iguais ao Fluxo e ao Mapa mental) */}
         <div className="tb-group">
           <div className="tb-row">
+            <button className={"ic " + (painel ? "active" : "")} onClick={() => setPainel(v => v ? null : (selection.size ? "bloco" : "canvas"))} title="Painel: bloco e canvas"><svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
             <button className="ic" onClick={() => buscaRef.current && buscaRef.current.alternar()} title="Buscar (Ctrl F)"><svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
             <button className="ic" style={{ color: fundoVivo ? "#f3cf62" : undefined }} onClick={() => { if (!window.FundoVivo) return; const v = FundoVivo.modo() === "leve"; FundoVivo.definir(v ? "vivo" : "leve"); setFundoVivo(v); }} title="Fundo vivo (desligue se o PC pesar)"><svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></button>
             <button className="ic" onClick={() => atalhosRef.current && atalhosRef.current.abrir()} title="Atalhos (?)"><svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></button>
@@ -6612,6 +6745,69 @@ function App() {
       )}
 
 
+
+      {/* PAINEL do app: abas Bloco e Canvas (o mesmo do Fluxo e do Mapa mental) */}
+      {PC && painel && (() => {
+        const sel = blocks.filter(b => selection.has(b.id)); const b0 = sel[0];
+        const SV = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
+        const temaK = theme === "dark" ? "tron" : theme;
+        const TEMAS_P = [["fume", "Fumê", "Vidro escuro, cor só no brilho", "linear-gradient(135deg,#2a2a32,#121215)"], ["onix", "Ônix", "Vidro preto polido, aro prata", "linear-gradient(180deg,#26262b,#09090a)"], ["claro", "Claro", "Cinza claro, cards brancos macios", "linear-gradient(180deg,#ffffff,#e4e4e8)"], ["tron", "Tron", "Neon ciano no preto", "linear-gradient(135deg,#00303a,#05080c)"]];
+        const FUNDOS_P = [["pontos", "Pontos", "radial-gradient(circle,#777 1px,transparent 1.4px) 0 0/7px 7px,#1a1a1d"], ["grade", "Grade", "linear-gradient(#444 1px,transparent 1px) 0 0/8px 8px,linear-gradient(90deg,#444 1px,transparent 1px) 0 0/8px 8px,#141416"], ["grafite", "Grafite", "radial-gradient(120% 90% at 25% 0%,#3a3a42,transparent 60%),linear-gradient(165deg,#18181b,#050506)"], ["tron", "Tron", "radial-gradient(90% 60% at 50% 120%,rgba(120,180,255,.45),transparent 70%),radial-gradient(circle,#9cf .8px,transparent 1.2px) 0 0/9px 11px,#050507"], ["liso", "Liso", "#1a1a1d"]];
+        const api = (() => { try { return window.parent && window.parent.temaAPI; } catch { return null; } })();
+        const cor = b0 ? (b0.color || DEFAULT_COLOR) : null, est = b0 ? (b0.estilo || "card") : null;
+        const fundoB = b0 ? (est === "solido" ? (b0.fill || "soft") : (b0.fill || "none")) : null;
+        return (
+          <aside className="pnl" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="pnl-tabs">
+              <button className={painel === "bloco" ? "on" : ""} onClick={() => setPainel("bloco")}>Bloco</button>
+              <button className={painel === "canvas" ? "on" : ""} onClick={() => setPainel("canvas")}>Canvas</button>
+              <button className="pnl-x" onClick={() => setPainel(null)} title="Fechar"><svg {...SV}><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+            </div>
+            <div className="pnl-c" key={painel + (b0 ? b0.id : "")}>
+              {painel === "bloco" && !b0 && <section><p className="pnl-d">Selecione um bloco pra mudar cor, estilo, fundo, forma e tamanho.</p></section>}
+              {painel === "bloco" && b0 && <>
+                <section><h4>Cor{sel.length > 1 ? <em>{sel.length} blocos</em> : null}</h4><div className="pnl-cores">
+                  {CORES_PC.map(c => <button key={c} className={"pnl-sw " + (cor.toLowerCase() === c ? "on" : "")} style={{ background: c }} title={c} onClick={() => setBlockColor(c)}/>)}
+                  <label className="pnl-sw pnl-livre" title="Cor livre"><input type="color" value={/^#[0-9a-f]{6}$/i.test(cor) ? cor : "#888888"} onChange={(e) => setBlockColor(e.target.value)}/></label>
+                </div></section>
+                <section><h4>Estilo</h4><div className="pnl-ops">
+                  <button className={est === "solido" ? "on" : ""} onClick={() => setBlockEstilo("solido")}><svg {...SV}><rect x="3.5" y="7" width="17" height="10" rx="3"/><path d="M8 12h8"/></svg>Só o título</button>
+                  <button className={est === "card" ? "on" : ""} onClick={() => setBlockEstilo("card")}><svg {...SV}><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M7 8.5h10M7 12.5h10M7 16h6"/></svg>Com descrição</button>
+                </div></section>
+                <section><h4>Fundo</h4><div className="pnl-ops">
+                  {[["none", "Vazado"], ["soft", "Suave"], ["solid", "Forte"]].map(([k, n]) => <button key={k} className={fundoB === k ? "on" : ""} onClick={() => setBlockFill(k)}>{n}</button>)}
+                </div></section>
+                <section><h4>Forma</h4><div className="pnl-formas">
+                  {SHAPES.map(f => <button key={f.key} className={(b0.shape || "rect") === f.key ? "on" : ""} title={f.title} onClick={() => setBlockShape(f.key)}>{f.glyph}</button>)}
+                </div></section>
+                <section><h4>Tamanho do texto</h4><div className="pnl-ops">
+                  {[[13, "P"], [15, "M"], [18, "G"], [22, "GG"]].map(([z, n]) => <button key={z} className={(b0.fontSize || 15) === z ? "on" : ""} onClick={() => setBlockFontSize(z)}>{n}</button>)}
+                </div></section>
+                <section><h4>No bloco</h4><div className="pnl-acoes">
+                  <button onClick={() => blockImgRef.current.click()}><svg {...SV}><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15l-5-5-8 8"/></svg>{b0.image ? "Trocar imagem" : "Imagem"}</button>
+                  {b0.image && <button onClick={removeBlockImage}><svg {...SV}><path d="M6 6l12 12M18 6L6 18"/></svg>Tirar imagem</button>}
+                  <button className={b0.doc ? "on" : ""} onClick={() => openDoc(b0.id)}><svg {...SV}><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Documento</button>
+                  <button onClick={addYesNoBranch}><svg {...SV}><path d="M12 3v6M12 9l-6 6M12 9l6 6"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="18" r="2.2"/></svg>Ramo Sim e Não</button>
+                  <button className={b0.emphasis ? "on" : ""} onClick={toggleBlockEmphasis}><svg {...SV}><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>Ênfase</button>
+                </div></section>
+              </>}
+              {painel === "canvas" && <>
+                <section><h4>Estilo visual</h4><div className="pnl-temas">
+                  {TEMAS_P.map(([k, n, d, bg]) => <button key={k} className={temaK === k ? "on" : ""} onClick={() => api && api.tema(k)}><i style={{ background: bg }}/><span><b>{n}</b><small>{d}</small></span></button>)}
+                </div></section>
+                <section><h4>Fundo</h4><div className="pnl-fundos">
+                  {FUNDOS_P.map(([k, n, bg]) => <button key={k} className={fundoAtual === k ? "on" : ""} onClick={() => api && api.fundo(k)}><i style={{ background: bg }}/>{n}</button>)}
+                </div></section>
+                <section><h4>Tela</h4>
+                  <label className="pnl-chave"><span>Fundo vivo (luzes e partículas)</span><button className={"chave " + (vivoPainel ? "on" : "")} onClick={() => { if (!window.FundoVivo) return; const v = FundoVivo.modo() === "leve"; FundoVivo.definir(v ? "vivo" : "leve"); setVivoPainel(v); setFundoVivo(v); }}><i/></button></label>
+                  <label className="pnl-chave"><span>Energia correndo nas linhas</span><button className={"chave " + (flow ? "on" : "")} onClick={() => setFlow(f => !f)}><i/></button></label>
+                  <label className="pnl-chave"><span>Minimapa</span><button className={"chave " + (showMinimap ? "on" : "")} onClick={() => setShowMinimap(v => !v)}><i/></button></label>
+                </section>
+              </>}
+            </div>
+          </aside>
+        );
+      })()}
       {/* BARRA DO BLOCO no app: pílula de vidro no topo, só ícone; cor, forma e tamanho abrem em popover */}
       {PC && !editingBodyId && !editingTitleId && !editingNoteId && !strokes.some(x => selection.has(x.id)) && !notes.some(x => selection.has(x.id)) && (() => {
         const sel = blocks.filter(b => selection.has(b.id));
