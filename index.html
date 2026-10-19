@@ -230,6 +230,7 @@
   html.pc .minimap{right:16px!important;bottom:62px!important;border-radius:12px!important;background:var(--chrome)!important;border:1px solid var(--line)!important;transition:right .3s var(--cc-ease)}
   html.pc:has(.pnl) .zoomctl,html.pc:has(.pnl) .minimap{right:332px!important}
   html.pc .pnl{width:300px}
+  html.previa .toolbar,html.previa .hint,html.previa .zoomctl,html.previa .minimap,html.previa .bbx,html.previa .pnl,html.previa .drawbar{display:none!important}
   html.pc.wco .bbx,html.pc.wco .drawbar{top:56px!important}
   html.pc:has(.pnl) .hint{display:none}
 
@@ -2140,6 +2141,13 @@ window.CanvasZoom = function (ler, gravar, o) {
   };
 };
 
+/* Ctrl H: histórico de versões do canvas aberto (mora no app de fora; dentro do livre/mapa só repassa) */
+addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || (e.key || '').toLowerCase() !== 'h') return;
+  e.preventDefault(); e.stopPropagation();
+  try { if (window.parent !== window && window.parent.abrirHistorico) return window.parent.abrirHistorico(); } catch (er) {}
+  if (window.abrirHistorico) window.abrirHistorico();
+}, true);
 /* Ctrl K: caixa de comandos do app (mora no app de fora; dentro do livre/mapa só repassa) */
 addEventListener('keydown', e => {
   if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || (e.key || '').toLowerCase() !== 'k') return;
