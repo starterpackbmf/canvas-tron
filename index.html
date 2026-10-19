@@ -231,6 +231,15 @@
   html.pc:has(.pnl) .zoomctl,html.pc:has(.pnl) .minimap{right:332px!important}
   html.pc .pnl{width:300px}
   html.pc:has(.pnl) .hint{display:none}
+
+  /* cores do canvas (painel, aba Canvas): linhas, destaque e fundo por cima do tema */
+  html[data-cor-linha] .edges path.edge-line,html[data-cor-linha] .edges path.stub{stroke:var(--cc-linha)!important}
+  html[data-cor-acento] .block.selected,html[data-cor-acento] .block.estilo-solido.selected{border-color:var(--cc-acento)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--cc-acento) 22%,transparent),0 0 30px -8px var(--cc-acento),0 22px 44px -26px rgba(0,0,0,.6)!important}
+  html[data-cor-acento] .edges path.flow,html[data-cor-acento] .edges path.pulse,html[data-cor-acento] .edges path.edge-line.sel{stroke:var(--cc-acento)!important}
+  html[data-cor-acento] .toolbar .ic.active{background:var(--cc-acento)!important;color:#0c0c0e!important}
+  html[data-cor-fundo]{--gf2:var(--cc-fundo);--gf3:color-mix(in srgb,var(--cc-fundo) 50%,#000)}
+  html[data-cor-fundo] body.fume .bg,html[data-cor-fundo] body .bg{background-color:var(--cc-fundo)!important}
+  .pnl .ccc{color:var(--ink,#ececf1)}
   /* painel do app (Bloco | Canvas) */
   .pnl{position:fixed;right:16px;top:62px;bottom:16px;width:290px;z-index:28;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;
     background:var(--chrome,rgba(24,24,28,.86));border:1px solid var(--line,rgba(255,255,255,.08));backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
@@ -1831,7 +1840,7 @@
 </style>
 <style id="fv-css">
 /* cursores do Canvas (a seta do Fluxo), iguais nos três */
-:root{--cc-seta:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24'%3E%3Cdefs%3E%3Cfilter id='s' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-color='%23000' flood-opacity='.45'/%3E%3C/filter%3E%3C/defs%3E%3Cpath filter='url%28%23s%29' d='M6.2 3.3C5.4 2.7 4.3 3.3 4.4 4.3L5.6 20.2C5.7 21.3 7.1 21.7 7.8 20.8L11.2 16.4C11.6 15.9 12.2 15.6 12.8 15.6L19.6 15.4C20.7 15.4 21.2 14 20.3 13.3Z' fill='%23f7f7fa' stroke='%230b0b0d' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E") 5 4,default;--cc-mao:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24'%3E%3Cpath d='M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15' fill='none' stroke='%230b0b0d' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15' fill='none' stroke='%23f4f4f7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 13 13,grab;--cc-pega:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24'%3E%3Cpath d='M18 11.5V9a2 2 0 0 0-4 0v1.4M14 10V8a2 2 0 0 0-4 0v2M10 9.9V9a2 2 0 0 0-4 0v5M6 14a2 2 0 0 0-4 0M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8' fill='none' stroke='%230b0b0d' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M18 11.5V9a2 2 0 0 0-4 0v1.4M14 10V8a2 2 0 0 0-4 0v2M10 9.9V9a2 2 0 0 0-4 0v5M6 14a2 2 0 0 0-4 0M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8' fill='none' stroke='%23f4f4f7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 13 13,grabbing}
+:root{--cc-seta:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24'%3E%3Cdefs%3E%3Cfilter id='s' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='.8' flood-color='%23000' flood-opacity='.45'/%3E%3C/filter%3E%3C/defs%3E%3Cpath filter='url%28%23s%29' d='M4.2 2.6L5.1 19.6C5.15 20.4 6.1 20.7 6.6 20.1L9.6 16.2C9.9 15.8 10.35 15.6 10.85 15.6L15.6 15.4C16.4 15.35 16.75 14.4 16.15 13.9L5.4 1.9C4.9 1.4 4.15 1.8 4.2 2.6Z' fill='%23f7f7fa' stroke='%230b0b0d' stroke-width='1.05' stroke-linejoin='round'/%3E%3C/svg%3E") 4 2,default;--cc-mao:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24'%3E%3Cpath d='M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15' fill='none' stroke='%230b0b0d' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15' fill='none' stroke='%23f4f4f7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 13 13,grab;--cc-pega:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24'%3E%3Cdefs%3E%3Cfilter id='t' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='.8' flood-color='%23000' flood-opacity='.45'/%3E%3C/filter%3E%3C/defs%3E%3Cg filter='url%28%23t%29'%3E%3Cpath d='M7.2 10.2c.1-.9.9-1.5 1.8-1.3.2-.9 1-1.5 1.9-1.3.3-.8 1.1-1.3 2-1.1.4-.7 1.3-1 2.1-.7.8.3 1.2 1.1 1.1 1.9.9-.1 1.7.6 1.7 1.5v4.6c0 3.6-2.6 6.4-6 6.4h-.8c-2.1 0-3.7-1-4.7-2.7l-1.7-2.9c-.4-.8-.1-1.7.7-2 .6-.3 1.3-.1 1.7.4z' fill='%23f7f7fa' stroke='%230b0b0d' stroke-width='1.1' stroke-linejoin='round'/%3E%3Cpath d='M9.6 9.3v2.6M12.2 8.2v3.4M14.8 7.8v3.6' stroke='%230b0b0d' stroke-width='.95' stroke-linecap='round' fill='none'/%3E%3C/g%3E%3C/svg%3E") 14 14,grabbing}
 /* fundo vivo (o mesmo do Mapa mental): feixes de luz, poeira e vinheta */
 .fv-feixes,.fv-poeira,.fv-vinheta{position:absolute;inset:0;pointer-events:none}
 .fv-feixes{overflow:hidden;opacity:.6}
@@ -1889,6 +1898,27 @@
 .cc-menu-anim:not([hidden])>*:nth-child(6){animation-delay:.1s}.cc-menu-anim:not([hidden])>*:nth-child(7){animation-delay:.12s}
 .cc-menu-anim:not([hidden])>*:nth-child(n+8){animation-delay:.14s}
 @media (prefers-reduced-motion:reduce){.cc-nasce,.cc-sai,.cc-linha,.cc-menu-anim:not([hidden]),.cc-menu-anim:not([hidden])>*{animation:none!important}.cc-linha{stroke-dasharray:none}}
+/* escrevendo dentro de um bloco: sem o contorno de foco do navegador (o retângulo branco por dentro) */
+[contenteditable="true"]:focus,[contenteditable="true"]:focus-visible,[contenteditable="plaintext-only"]:focus,textarea:focus,textarea:focus-visible{outline:none!important}
+/* seção Cores do painel (igual nos três): paletas prontas, linhas, destaque e fundo */
+.ccc{display:flex;flex-direction:column;gap:10px}
+.ccc-presets{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}
+.ccc-presets button{display:flex;align-items:center;gap:8px;border:1px solid rgba(127,127,140,.18);background:rgba(127,127,140,.05);border-radius:9px;padding:6px 8px;font:400 11.5px "Geist",ui-sans-serif,system-ui,sans-serif;color:inherit;opacity:.85;cursor:pointer;text-align:left}
+.ccc-presets button:hover{opacity:1;background:rgba(127,127,140,.12)}
+.ccc-presets button.on{opacity:1;border-color:rgba(127,127,140,.55);background:rgba(127,127,140,.16)}
+.ccc-dots{display:flex;flex:none}
+.ccc-dots i{width:12px;height:12px;border-radius:50%;border:1.5px solid rgba(20,20,26,.9);margin-right:-4px}
+.ccc-dots i.vazio{background:repeating-linear-gradient(45deg,rgba(127,127,140,.5) 0 2px,transparent 2px 4px)!important}
+.ccc-row{display:flex;flex-direction:column;gap:6px}
+.ccc-row>span{font-size:11.5px;opacity:.7}
+.ccc-sws{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ccc-sw{width:20px;height:20px;border-radius:50%;border:1px solid rgba(127,127,140,.35);padding:0;cursor:pointer;position:relative;overflow:hidden;flex:none}
+.ccc-sw:hover{transform:scale(1.12)}
+.ccc-sw.on{box-shadow:0 0 0 2px rgba(20,20,26,.9),0 0 0 3.5px currentColor}
+.ccc-auto{height:20px;border-radius:7px;border:1px solid rgba(127,127,140,.3);background:transparent;color:inherit;font:400 10.5px "Geist",sans-serif;padding:0 7px;cursor:pointer;opacity:.75}
+.ccc-auto.on{opacity:1;background:rgba(127,127,140,.2)}
+.ccc-livre{background:conic-gradient(#ff8db3,#f3cf62,#6fe3a6,#6ea8ff,#b49cff,#ff8db3)}
+.ccc-livre input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 </style>
 <script>
 /* window.FundoVivo.montar(elemento, () => ({x, y})): põe o fundo vivo atrás do conteúdo.
@@ -1989,6 +2019,50 @@ window.CanvasAnim = (function () {
   function desliza(el, dx, dy) { if (!el || calmo() || (!dx && !dy)) return; el.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0 0' }], { duration: 320, easing: EASE }); }
   function tela(el) { if (!el || calmo()) return; el.animate([{ opacity: 0, scale: '1.012', filter: 'blur(3px)' }, { opacity: 1, scale: '1', filter: 'blur(0)' }], { duration: 340, easing: EASE }); }
   return { nasce, sai, linha, desliza, tela, calmo };
+})();
+
+/* window.CanvasCores: cores do canvas (linhas, destaque, fundo), salvas por canvas pelo app.
+   aplicar(c) põe as variáveis --cc-linha, --cc-acento, --cc-fundo no html; secao(c) monta a seção do painel;
+   mudar(c, el) devolve as cores novas a partir do botão clicado. */
+window.CanvasCores = (function () {
+  const PRESETS = [
+    { k: 'tema', nome: 'Do tema', c: {} },
+    { k: 'ouro', nome: 'Ouro', c: { linha: '#c9a45c', acento: '#f3cf62' } },
+    { k: 'oceano', nome: 'Oceano', c: { linha: '#4fb3d9', acento: '#6ea8ff', fundo: '#07121c' } },
+    { k: 'neon', nome: 'Rosa neon', c: { linha: '#ff6fb1', acento: '#ff8db3', fundo: '#12070e' } },
+    { k: 'floresta', nome: 'Floresta', c: { linha: '#6fbf8e', acento: '#6fe3a6', fundo: '#08120d' } },
+    { k: 'lava', nome: 'Lava', c: { linha: '#ff7a45', acento: '#ffb020', fundo: '#140906' } },
+    { k: 'gelo', nome: 'Gelo', c: { linha: '#a9c7e8', acento: '#e6f1ff' } },
+    { k: 'mono', nome: 'Mono', c: { linha: '#8a8a96', acento: '#ececf1' } },
+  ];
+  const LINHA = ['#d6d6e0', '#8a8a96', '#6ea8ff', '#4fb3d9', '#6fe3a6', '#f3cf62', '#ff9d6b', '#ff6fb1', '#b49cff'];
+  const ACENTO = ['#ececf1', '#3b82f6', '#00f0ff', '#6fe3a6', '#f3cf62', '#ffb020', '#ff8db3', '#b49cff'];
+  const FUNDO = ['#050506', '#0c0c0e', '#07121c', '#0d1410', '#12070e', '#140906', '#1b1b20', '#ebebed', '#f4f1ea'];
+  const CAMPOS = [['linha', 'Linhas', LINHA], ['acento', 'Destaque (seleção e energia)', ACENTO], ['fundo', 'Fundo', FUNDO]];
+  const VARS = { linha: '--cc-linha', acento: '--cc-acento', fundo: '--cc-fundo' };
+  const limpo = c => { const o = {}; for (const k of Object.keys(VARS)) if (c && c[k]) o[k] = c[k]; return o; };
+  const igual = (a, b) => JSON.stringify(limpo(a)) === JSON.stringify(limpo(b));
+  function ler() { try { return JSON.parse(document.documentElement.dataset.cores || '{}'); } catch (e) { return {}; } }
+  function aplicar(c) {
+    c = limpo(c); const r = document.documentElement; r.dataset.cores = JSON.stringify(c);
+    for (const [k, v] of Object.entries(VARS)) { if (c[k]) { r.style.setProperty(v, c[k]); r.setAttribute('data-cor-' + k, ''); } else { r.style.removeProperty(v); r.removeAttribute('data-cor-' + k); } }
+  }
+  function secao(c) {
+    c = limpo(c);
+    const ps = PRESETS.map(p => `<button data-cc-preset="${p.k}" class="${igual(c, p.c) ? 'on' : ''}"><span class="ccc-dots">${['linha', 'acento', 'fundo'].map(k => `<i class="${p.c[k] ? '' : 'vazio'}" style="background:${p.c[k] || 'transparent'}"></i>`).join('')}</span>${p.nome}</button>`).join('');
+    const rows = CAMPOS.map(([k, nome, lista]) => `<div class="ccc-row"><span>${nome}</span><div class="ccc-sws"><button class="ccc-auto ${c[k] ? '' : 'on'}" data-cc-campo="${k}" data-cc-v="">auto</button>${lista.map(x => `<button class="ccc-sw ${c[k] && c[k].toLowerCase() === x ? 'on' : ''}" data-cc-campo="${k}" data-cc-v="${x}" style="background:${x}" title="${x}"></button>`).join('')}<label class="ccc-sw ccc-livre" title="Cor livre"><input type="color" data-cc-livre="${k}" value="${/^#[0-9a-f]{6}$/i.test(c[k] || '') ? c[k] : '#888888'}"></label></div></div>`).join('');
+    return `<div class="ccc"><div class="ccc-presets">${ps}</div>${rows}</div>`;
+  }
+  function mudar(c, el) {
+    c = limpo(c);
+    const pr = el.closest && el.closest('[data-cc-preset]');
+    if (pr) { const p = PRESETS.find(x => x.k === pr.dataset.ccPreset); return p ? limpo(p.c) : c; }
+    const b = el.closest && el.closest('[data-cc-campo]');
+    if (b) { const n = { ...c }; if (b.dataset.ccV) n[b.dataset.ccCampo] = b.dataset.ccV; else delete n[b.dataset.ccCampo]; return n; }
+    return null;
+  }
+  function livre(c, el) { if (!el || !el.dataset || !el.dataset.ccLivre) return null; return { ...limpo(c), [el.dataset.ccLivre]: el.value }; }
+  return { aplicar, ler, secao, mudar, livre, limpo };
 })();
 
 /* window.CanvasAtalhos('Atalhos do Fluxo', [['Criar', [['Nome', 'Tecla'], ...]], ...]): janela do "?" */
@@ -4056,7 +4130,8 @@ function App() {
     const FUNDO_DO_TEMA = { fume: "pontos", onix: "grade", claro: "liso", tron: "tron" };
     const q = new URLSearchParams(location.search);
     document.documentElement.dataset.fundo = q.get("fundo") || FUNDO_DO_TEMA[q.get("tema")] || "pontos";
-    window.canvasTema = (t, f) => { setTheme(DO_APP[t] || "fume"); document.documentElement.dataset.fundo = f || FUNDO_DO_TEMA[t] || "pontos"; };
+    if (window.CanvasCores) { try { CanvasCores.aplicar(JSON.parse(q.get("cores") || "{}")); } catch { CanvasCores.aplicar({}); } }
+    window.canvasTema = (t, f, c) => { setTheme(DO_APP[t] || "fume"); document.documentElement.dataset.fundo = f || FUNDO_DO_TEMA[t] || "pontos"; if (c !== undefined && window.CanvasCores) CanvasCores.aplicar(c); };
   }, []);
   // ----- nuvem (Supabase, login email+senha) -----
   const [cloudOpen, setCloudOpen] = useState(false);
@@ -5254,7 +5329,8 @@ function App() {
   }, []);
   const [painel, setPainel] = useState(null); // null | "bloco" | "canvas"
   const [fundoAtual, setFundoAtual] = useState(() => document.documentElement.dataset.fundo || "pontos");
-  useEffect(() => { const ob = new MutationObserver(() => setFundoAtual(document.documentElement.dataset.fundo || "pontos")); ob.observe(document.documentElement, { attributes: true, attributeFilter: ["data-fundo"] }); return () => ob.disconnect(); }, []);
+  const [coresVer, setCoresVer] = useState(0);
+  useEffect(() => { const ob = new MutationObserver(() => { setFundoAtual(document.documentElement.dataset.fundo || "pontos"); setCoresVer(v => v + 1); }); ob.observe(document.documentElement, { attributes: true, attributeFilter: ["data-fundo", "data-cores"] }); return () => ob.disconnect(); }, []);
   const [vivoPainel, setVivoPainel] = useState(() => !window.FundoVivo || FundoVivo.modo() !== "leve");
   const [barraPop, setBarraPop] = useState(null);
   const selChave = [...selection].join(",");
@@ -6815,6 +6891,11 @@ function App() {
                 <section><h4>Fundo</h4><div className="pnl-fundos">
                   {FUNDOS_P.map(([k, n, bg]) => <button key={k} className={fundoAtual === k ? "on" : ""} onClick={() => api && api.fundo(k)}><i style={{ background: bg }}/>{n}</button>)}
                 </div></section>
+                <section><h4>Cores</h4>
+                  <div key={coresVer} dangerouslySetInnerHTML={{ __html: window.CanvasCores ? CanvasCores.secao(CanvasCores.ler()) : "" }}
+                    onClick={(e) => { if (!window.CanvasCores || !api || !api.cores) return; const n = CanvasCores.mudar(CanvasCores.ler(), e.target); if (n) api.cores(n); }}
+                    onChange={(e) => { if (!window.CanvasCores || !api || !api.cores) return; const n = CanvasCores.livre(CanvasCores.ler(), e.target); if (n) api.cores(n); }}/>
+                </section>
                 <section><h4>Tela</h4>
                   <label className="pnl-chave"><span>Fundo vivo (luzes e partículas)</span><button className={"chave " + (vivoPainel ? "on" : "")} onClick={() => { if (!window.FundoVivo) return; const v = FundoVivo.modo() === "leve"; FundoVivo.definir(v ? "vivo" : "leve"); setVivoPainel(v); setFundoVivo(v); }}><i/></button></label>
                   <label className="pnl-chave"><span>Energia correndo nas linhas</span><button className={"chave " + (flow ? "on" : "")} onClick={() => setFlow(f => !f)}><i/></button></label>
