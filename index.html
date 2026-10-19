@@ -141,7 +141,7 @@
   html.pc .toolbar .ic{width:34px;height:34px}
 
   /* ---------- tema Ônix: vidro preto polido, aro prata, sem cor (a cor do bloco só no pontinho) ---------- */
-  body.onix{--bg:#070708;--grid:rgba(255,255,255,.04);--panel:#111113;--panel-2:#161618;--chrome:rgba(14,14,16,.84);
+  body.fume.onix{--bg:#070708;--grid:rgba(255,255,255,.04);--panel:#111113;--panel-2:#161618;--chrome:rgba(14,14,16,.84);
     --line:rgba(255,255,255,.10);--line-2:rgba(255,255,255,.26);--edge:rgba(214,214,224,.40);--rel:#c9c9d3;--ink-2:#a8a8b2;--ink-3:#6a6a74}
   body.onix .bg{background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px)!important;background-color:var(--bg)!important}
   body.onix .bg::after{background:radial-gradient(110% 85% at 50% 42%,transparent 50%,rgba(0,0,0,.72))}
@@ -164,6 +164,46 @@
   @keyframes onix-luz{to{stroke-dashoffset:-91.5}}
   body.onix .edges path.pulse{stroke:#fff!important}
   body.onix .toolbar,body.onix .hint,body.onix .bbx,body.onix .zoombar{background:var(--chrome)!important;border-color:rgba(255,255,255,.09)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 14px 34px -14px #000!important}
+
+  /* ---------- fundos (escolha do app, à parte do tema; só nos temas de vidro) ---------- */
+  :root{--gf1:rgba(70,70,82,.30);--gf2:#151518;--gf3:#050506;--tr1:rgba(120,180,255,.13);--grade:rgba(255,255,255,.045);--ponto:rgba(255,255,255,.075);--fv-cor:236,236,241}
+  html[data-fundo="pontos"] body.fume .bg{background-image:radial-gradient(circle,var(--ponto) 1px,transparent 1.3px)!important}
+  html[data-fundo="grade"] body.fume .bg{background-image:linear-gradient(var(--grade) 1px,transparent 1px),linear-gradient(90deg,var(--grade) 1px,transparent 1px)!important}
+  html[data-fundo="liso"] body.fume .bg{background-image:none!important}
+  html[data-fundo="grafite"] body.fume .bg{background-image:radial-gradient(120% 90% at 25% 0%,var(--gf1),transparent 60%),linear-gradient(165deg,var(--gf2),var(--gf3))!important;background-size:100% 100%!important;background-position:0 0!important}
+  html[data-fundo="tron"] body.fume .bg{background-image:radial-gradient(90% 55% at 50% 118%,var(--tr1),transparent 70%),linear-gradient(180deg,var(--gf3),var(--gf2))!important;background-size:100% 100%!important;background-position:0 0!important}
+  html[data-fundo="tron"]:not(:has(body.claro)){--fv-cor:170,215,255;--tr1:rgba(110,175,255,.22)}
+  html:has(body.onix){--gf1:rgba(60,60,70,.26);--gf2:#111113;--gf3:#030304;--grade:rgba(255,255,255,.04);--ponto:rgba(255,255,255,.07)}
+  /* ---------- tema Claro: cinza claro, cards brancos macios, cor só no pontinho, acento azul ---------- */
+  html:has(body.claro){--gf1:rgba(255,255,255,.85);--gf2:#f2f2f4;--gf3:#dddde1;--tr1:rgba(59,130,246,.12);--grade:rgba(20,20,30,.06);--ponto:rgba(20,20,30,.13);--fv-cor:70,80,110}
+  body.fume.claro{color-scheme:light;--bg:#ebebed;--grid:rgba(20,20,30,.13);--panel:#ffffff;--panel-2:#f6f6f7;--chrome:rgba(252,252,253,.88);
+    --line:rgba(20,20,30,.08);--line-2:rgba(20,20,30,.16);--ink:#1c1c21;--ink-2:#5d5d68;--ink-3:#9b9ba6;--edge:rgba(30,30,40,.28);--rel:#c99a3a;--field:#f2f2f4}
+  body.claro .bg::after{background:none!important}
+  body.claro .fv-feixes{opacity:0}
+  body.claro .fv-vinheta{background:none}
+  body.claro .toolbar,body.claro .hint,body.claro .bbx,body.claro .zoombar,body.claro .bbx-pop,body.claro .minimap{background:var(--chrome)!important;border-color:rgba(20,20,30,.07)!important;
+    box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(20,20,30,.05),0 12px 30px -14px rgba(20,20,30,.22)!important;color:var(--ink)}
+  body.claro .ic,body.claro .bbx-b,body.claro .bbx-t{color:var(--ink-2)}
+  body.claro .ic:hover,body.claro .bbx-b:hover,body.claro .bbx-t:hover{background:rgba(20,20,30,.06)!important;color:var(--ink)}
+  body.claro .ic.active,body.claro .bbx-b.on,body.claro .bbx-t.on{background:#1c1c21!important;color:#fff!important}
+  body.claro .bbx-b[data-tip]:hover::after{background:#1c1c21;color:#fff}
+  body.claro .bbx-sep,body.claro .toolbar .dvr{background:rgba(20,20,30,.1)!important}
+  body.claro .hint b{background:rgba(20,20,30,.06)!important;color:var(--ink)!important;border-color:rgba(20,20,30,.08)!important}
+  body.claro .block,body.claro .block.estilo-solido{
+    background:linear-gradient(180deg,#ffffff,#f8f8f9)!important;border:1px solid rgba(20,20,30,.06)!important;color:var(--ink)!important;
+    box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(20,20,30,.06),0 16px 36px -16px rgba(20,20,30,.24)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  body.claro .block.fill-soft,body.claro .block.estilo-solido.fill-soft{background:linear-gradient(180deg,#ffffff,#f1f1f3)!important}
+  body.claro .block.fill-solid,body.claro .block.estilo-solido.fill-solid{background:linear-gradient(180deg,#f4f4f6,#e9e9ec)!important;border-color:rgba(20,20,30,.1)!important}
+  body.claro .block::after{content:"";position:absolute;top:8px;right:8px;width:5px;height:5px;border-radius:50%;background:rgb(var(--bc-rgb));pointer-events:none;z-index:3}
+  body.claro .block.selected,body.claro .block.focused,body.claro .block.estilo-solido.selected{border-color:#3b82f6!important;box-shadow:0 0 0 3px rgba(59,130,246,.16),0 16px 36px -16px rgba(20,20,30,.26)!important}
+  body.claro .block .title,body.claro .block.estilo-solido .title,body.claro .block.shp-rect.estilo-solido .title,body.claro .block.shp-rounded.estilo-solido .title{color:#1c1c21!important;text-shadow:none!important}
+  body.claro .block .body,body.claro .block.shp-rect .body,body.claro .block.shp-rounded .body{color:#4a4a54!important;background:#f4f4f6!important;border-color:rgba(20,20,30,.05)!important}
+  html.pc body.claro .block.emphasis{animation:none;box-shadow:0 0 0 2px rgba(var(--bc-rgb),.55),0 0 26px -6px rgba(var(--bc-rgb),.45),0 16px 36px -16px rgba(20,20,30,.24)!important}
+  body.claro .edges path.edge-line{stroke:var(--edge)}
+  body.claro .edges path.edge-line.sel{stroke:#3b82f6}
+  body.claro .edges path.flow{stroke:#3b82f6}
+  body.claro .edges path.pulse{stroke:#3b82f6!important}
+  body.claro .port,body.claro .handle{background:#fff;border-color:rgba(20,20,30,.25)}
   /* barra do bloco no app: mesma pílula de vidro da barra do topo do Canvas */
   .bbx{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:2px;height:40px;padding:0 5px;border-radius:12px;box-sizing:border-box;
     background:rgba(24,24,28,.78);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
@@ -1771,7 +1811,8 @@
     const v = document.createElement('div'); v.className = 'fv-vinheta';
     const c = document.createElement('canvas'); c.className = 'fv-poeira';
     el.prepend(c); el.prepend(v); el.prepend(f);
-    const ps = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), z: .3 + Math.random() * .7, v: .00004 + Math.random() * .00012, ph: Math.random() * 6.28 }));
+    const ps = Array.from({ length: 130 }, () => ({ x: Math.random(), y: Math.random(), z: .3 + Math.random() * .7, v: .00004 + Math.random() * .00012, ph: Math.random() * 6.28 }));
+    let corT = 0, cor = '236,236,241';
     const m = { el, aplicar() { el.classList.toggle('fv-leve', lerModo() === 'leve'); } };
     m.aplicar(); montados.push(m);
     function quadro(t) {
@@ -1782,11 +1823,23 @@
       if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
       const k = (cam && cam()) || { x: 0, y: 0 };
-      for (const p of ps) {
-        p.y -= p.v; if (p.y < -.02) p.y = 1.02;
+      /* fundo "tron": mais partículas, subindo rápido e com brilho; a cor vem do tema (--fv-cor) */
+      const tron = document.documentElement.dataset.fundo === 'tron';
+      if (t - corT > 1000) { corT = t; cor = (getComputedStyle(document.documentElement).getPropertyValue('--fv-cor') || '236,236,241').trim() || '236,236,241'; }
+      const n = tron ? ps.length : 70, vel = tron ? 9 : 1;
+      for (let i = 0; i < n; i++) {
+        const p = ps[i];
+        p.y -= p.v * vel; if (p.y < -.02) { p.y = 1.02; p.x = Math.random(); }
         const px = (((p.x * w + k.x * .06 * p.z) % w) + w) % w, py = (((p.y * h + k.y * .06 * p.z) % h) + h) % h;
-        ctx.fillStyle = `rgba(236,236,241,${((.25 + .35 * Math.sin(t * .0012 + p.ph)) * p.z).toFixed(3)})`;
-        const s = 1 + p.z * 1.2; ctx.fillRect(px, py, s, s);
+        const a = (.25 + .35 * Math.sin(t * .0012 + p.ph)) * p.z * (tron ? 1.5 : 1);
+        if (tron) {
+          const r = .45 + p.z * .8;
+          ctx.fillStyle = `rgba(${cor},${(a * .13).toFixed(3)})`; ctx.beginPath(); ctx.arc(px, py, r * 2.4, 0, 6.283); ctx.fill();
+          ctx.fillStyle = `rgba(${cor},${Math.min(1, a).toFixed(3)})`; ctx.beginPath(); ctx.arc(px, py, r, 0, 6.283); ctx.fill();
+        } else {
+          ctx.fillStyle = `rgba(${cor},${a.toFixed(3)})`;
+          const s = 1 + p.z * 1.2; ctx.fillRect(px, py, s, s);
+        }
       }
     }
     requestAnimationFrame(quadro);
@@ -3866,18 +3919,25 @@ function App() {
   // Preferência da pessoa, não do mapa. Chave "theme3" pra todo mundo abrir no Fumê uma vez.
   const [temaOpen, setTemaOpen] = useState(false);
   useEffect(() => { if (!temaOpen) return; const f = () => setTemaOpen(false); window.addEventListener("mousedown", f); return () => window.removeEventListener("mousedown", f); }, [temaOpen]);
-  const DO_APP = { fume: "fume", onix: "onix", tron: "dark", claro: "light" };
+  const DO_APP = { fume: "fume", onix: "onix", tron: "dark", claro: "claro" };
   const [theme, setTheme] = useState(() => {
     if (PC) { const t = new URLSearchParams(location.search).get("tema"); return DO_APP[t] || "fume"; }
     try { return localStorage.getItem("canvas-tron:theme3") || "fume"; } catch { return "fume"; }
   });
   useEffect(() => {
     document.body.classList.toggle("light", theme === "light");
-    document.body.classList.toggle("fume", theme === "fume" || theme === "onix");
+    document.body.classList.toggle("fume", theme === "fume" || theme === "onix" || theme === "claro");
     document.body.classList.toggle("onix", theme === "onix");
+    document.body.classList.toggle("claro", theme === "claro");
     if (!PC) { try { localStorage.setItem("canvas-tron:theme3", theme); } catch {} }
   }, [theme]);
-  useEffect(() => { if (PC) window.canvasTema = (t) => setTheme(DO_APP[t] || "fume"); }, []);
+  useEffect(() => {
+    if (!PC) return;
+    const FUNDO_DO_TEMA = { fume: "pontos", onix: "grade", claro: "liso", tron: "tron" };
+    const q = new URLSearchParams(location.search);
+    document.documentElement.dataset.fundo = q.get("fundo") || FUNDO_DO_TEMA[q.get("tema")] || "pontos";
+    window.canvasTema = (t, f) => { setTheme(DO_APP[t] || "fume"); document.documentElement.dataset.fundo = f || FUNDO_DO_TEMA[t] || "pontos"; };
+  }, []);
   // ----- nuvem (Supabase, login email+senha) -----
   const [cloudOpen, setCloudOpen] = useState(false);
   const [cloudDoc, setCloudDoc] = useState({ id: null, name: "" });
