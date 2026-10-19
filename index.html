@@ -139,10 +139,36 @@
   html.pc .toolbar .tb-lbl{display:none}
   html.pc .toolbar .dvr{width:22px;height:1px;align-self:center;margin:4px 0;background:var(--line,rgba(255,255,255,.08))}
   html.pc .toolbar .ic{width:34px;height:34px}
+
+  /* ---------- tema Ônix: vidro preto polido, aro prata, sem cor (a cor do bloco só no pontinho) ---------- */
+  body.onix{--bg:#070708;--grid:rgba(255,255,255,.04);--panel:#111113;--panel-2:#161618;--chrome:rgba(14,14,16,.84);
+    --line:rgba(255,255,255,.10);--line-2:rgba(255,255,255,.26);--edge:rgba(214,214,224,.40);--rel:#c9c9d3;--ink-2:#a8a8b2;--ink-3:#6a6a74}
+  body.onix .bg{background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px)!important;background-color:var(--bg)!important}
+  body.onix .bg::after{background:radial-gradient(110% 85% at 50% 42%,transparent 50%,rgba(0,0,0,.72))}
+  body.onix .fv-feixes{opacity:.2}
+  body.onix .block,body.onix .block.estilo-solido{
+    background:linear-gradient(180deg,#1c1c20 0%,#121214 45%,#0b0b0c 100%)!important;border:1px solid rgba(255,255,255,.09)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -12px 22px -12px rgba(0,0,0,.85),0 26px 48px -22px #000!important;
+    backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  body.onix .block.fill-soft,body.onix .block.estilo-solido.fill-soft{background:linear-gradient(180deg,#232327 0%,#151517 45%,#0d0d0e 100%)!important}
+  body.onix .block.fill-solid,body.onix .block.estilo-solido.fill-solid{background:linear-gradient(180deg,#2c2c31 0%,#1a1a1d 45%,#101012 100%)!important;border-color:rgba(255,255,255,.16)!important}
+  body.onix .block::after{content:"";position:absolute;top:8px;right:8px;width:5px;height:5px;border-radius:50%;background:rgb(var(--bc-rgb));box-shadow:0 0 7px 1px rgb(var(--bc-rgb));pointer-events:none;z-index:3}
+  body.onix .block.selected,body.onix .block.focused,body.onix .block.estilo-solido.selected{border-color:rgba(255,255,255,.36)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.42),0 0 0 1px rgba(255,255,255,.14),0 0 36px -10px rgba(255,255,255,.3),0 26px 48px -22px #000!important}
+  body.onix .block .title,body.onix .block.estilo-solido .title,body.onix .block.shp-rect.estilo-solido .title,body.onix .block.shp-rounded.estilo-solido .title{color:#ececf1!important;text-shadow:none!important}
+  body.onix .block .body,body.onix .block.shp-rect .body,body.onix .block.shp-rounded .body{background:rgba(255,255,255,.025)!important;border-color:rgba(255,255,255,.06)!important}
+  html.pc body.onix .block.emphasis{animation:onix-respira 3.6s ease-in-out infinite}
+  @keyframes onix-respira{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 0 0 1px rgba(255,255,255,.12),0 0 26px -8px rgba(255,255,255,.2),0 26px 48px -22px #000}
+    50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 1px rgba(255,255,255,.24),0 0 44px -6px rgba(255,255,255,.34),0 26px 48px -22px #000}}
+  body.onix .edges path.flow{stroke:#fff;stroke-width:2;stroke-dasharray:1.5 90;stroke-linecap:round;filter:drop-shadow(0 0 3px #fff) drop-shadow(0 0 7px rgba(255,255,255,.7));animation:onix-luz 1.6s linear infinite}
+  @keyframes onix-luz{to{stroke-dashoffset:-91.5}}
+  body.onix .edges path.pulse{stroke:#fff!important}
+  body.onix .toolbar,body.onix .hint,body.onix .bbx,body.onix .zoombar{background:var(--chrome)!important;border-color:rgba(255,255,255,.09)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 14px 34px -14px #000!important}
   /* barra do bloco no app: mesma pílula de vidro da barra do topo do Canvas */
   .bbx{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:2px;height:40px;padding:0 5px;border-radius:12px;box-sizing:border-box;
     background:rgba(24,24,28,.78);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
     box-shadow:0 12px 30px -12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);font-family:"Geist",ui-sans-serif,system-ui,"Segoe UI",sans-serif;animation:bbxIn .16s ease}
+  @media (max-width:1100px){.bbx{top:62px}}
   @keyframes bbxIn{from{opacity:0;transform:translate(-50%,-4px)}to{opacity:1;transform:translate(-50%,0)}}
   .bbx-b{position:relative;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:#a4a4b0;display:grid;place-items:center;padding:0;cursor:pointer}
   .bbx-b svg{width:16px;height:16px}
@@ -3840,12 +3866,18 @@ function App() {
   // Preferência da pessoa, não do mapa. Chave "theme3" pra todo mundo abrir no Fumê uma vez.
   const [temaOpen, setTemaOpen] = useState(false);
   useEffect(() => { if (!temaOpen) return; const f = () => setTemaOpen(false); window.addEventListener("mousedown", f); return () => window.removeEventListener("mousedown", f); }, [temaOpen]);
-  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("canvas-tron:theme3") || "fume"; } catch { return "fume"; } });
+  const DO_APP = { fume: "fume", onix: "onix", tron: "dark", claro: "light" };
+  const [theme, setTheme] = useState(() => {
+    if (PC) { const t = new URLSearchParams(location.search).get("tema"); return DO_APP[t] || "fume"; }
+    try { return localStorage.getItem("canvas-tron:theme3") || "fume"; } catch { return "fume"; }
+  });
   useEffect(() => {
     document.body.classList.toggle("light", theme === "light");
-    document.body.classList.toggle("fume", theme === "fume");
-    try { localStorage.setItem("canvas-tron:theme3", theme); } catch {}
+    document.body.classList.toggle("fume", theme === "fume" || theme === "onix");
+    document.body.classList.toggle("onix", theme === "onix");
+    if (!PC) { try { localStorage.setItem("canvas-tron:theme3", theme); } catch {} }
   }, [theme]);
+  useEffect(() => { if (PC) window.canvasTema = (t) => setTheme(DO_APP[t] || "fume"); }, []);
   // ----- nuvem (Supabase, login email+senha) -----
   const [cloudOpen, setCloudOpen] = useState(false);
   const [cloudDoc, setCloudDoc] = useState({ id: null, name: "" });
@@ -6261,7 +6293,7 @@ function App() {
             <button className={`ic ${showMinimap?"active":""}`} onClick={() => setShowMinimap(s => !s)} title="Minimapa">⊞</button>
             <button className={`ic ${flow?"active":""}`} onClick={() => setFlow(f => !f)} title="Fluxo de energia nas conexões">⚡</button>
             {!PC && <button className={`ic ${spotlight?"active":""}`} onClick={() => setSpotlight(s => !s)} title="Holofote: destaca o selecionado, escurece o resto">◎</button>}
-            <span className="tema-wrap">
+            {!PC && <span className="tema-wrap">
             <button className={`ic ${temaOpen ? "active" : ""}`} onClick={(e) => { e.stopPropagation(); setTemaOpen(v => !v); }}
               title={`Tema: ${theme === "fume" ? "Fumê" : theme === "dark" ? "Tron" : "Claro"} (clique pra escolher)`}>
               {theme === "fume"
@@ -6280,7 +6312,7 @@ function App() {
                 ))}
               </div>
             )}
-            </span>
+            </span>}
             {!PC && <button className="ic" onClick={enterPresent} title="Apresentar (P)">▶</button>}
             <button className={`ic ${isFullscreen?"active":""}`} onClick={toggleFullscreen} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>{isFullscreen ? "⤧" : "⛶"}</button>
           </div>
