@@ -217,6 +217,20 @@
   html.pc .drawbar .fmt-btn.active,html.pc .drawbar .shape-btn.active{background:rgba(127,127,140,.22)!important;color:var(--ink)!important}
   html.pc .drawbar .swatch{width:18px!important;height:18px!important;box-shadow:none!important;border:1px solid rgba(127,127,140,.3)!important}
   @media (max-width:1100px){html.pc .drawbar{top:62px}}
+
+  /* padrão dos três: canto de baixo numa pílula só, painel de 300px, e os dois andam pra esquerda quando o painel abre */
+  html.pc .zoomctl{right:16px!important;bottom:16px!important;gap:2px;padding:4px;border-radius:12px;background:var(--chrome);border:1px solid var(--line);
+    backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);box-shadow:0 12px 30px -12px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transition:right .3s var(--cc-ease)}
+  html.pc .zoomctl .zbtn{width:30px;height:30px;border:0!important;border-radius:8px;background:transparent!important;color:var(--ink-2)!important;display:grid;place-items:center;box-shadow:none!important;font-size:15px;padding:0}
+  html.pc .zoomctl .zbtn svg{width:15px;height:15px}
+  html.pc .zoomctl .zbtn:hover{background:rgba(127,127,140,.14)!important;color:var(--ink)!important}
+  html.pc .zoomctl .zbtn.on{background:rgba(127,127,140,.2)!important;color:var(--ink)!important}
+  html.pc .zoomctl .zoom{background:transparent!important;border:0!important;box-shadow:none!important;color:var(--ink-2)!important;font:500 11px/1 "Geist Mono",ui-monospace,Consolas,monospace!important;width:46px;text-align:center;padding:0!important}
+  html.pc .zoomctl .zsep{width:1px;height:16px;background:var(--line);margin:0 3px}
+  html.pc .minimap{right:16px!important;bottom:62px!important;border-radius:12px!important;background:var(--chrome)!important;border:1px solid var(--line)!important;transition:right .3s var(--cc-ease)}
+  html.pc:has(.pnl) .zoomctl,html.pc:has(.pnl) .minimap{right:332px!important}
+  html.pc .pnl{width:300px}
+  html.pc:has(.pnl) .hint{display:none}
   /* painel do app (Bloco | Canvas) */
   .pnl{position:fixed;right:16px;top:62px;bottom:16px;width:290px;z-index:28;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;
     background:var(--chrome,rgba(24,24,28,.86));border:1px solid var(--line,rgba(255,255,255,.08));backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
@@ -4010,7 +4024,8 @@ function App() {
   const [focusIdx, setFocusIdx] = useState(0);
   // Holofote (spotlight no modo edição) + minimapa
   const [spotlight, setSpotlight] = useState(false);
-  const [showMinimap, setShowMinimap] = useState(false);
+  const [showMinimap, setShowMinimap] = useState(() => { if (!PC) return false; try { return localStorage.getItem("cf-livre-mini") === "1"; } catch { return false; } });
+  useEffect(() => { if (PC) { try { localStorage.setItem("cf-livre-mini", showMinimap ? "1" : "0"); } catch {} } }, [showMinimap]);
   // Fundo: "hand" (arrastar move o mapa) ou "arrow" (arrastar desenha um
   // retângulo e seleciona o que estiver dentro). Ctrl segurado inverte na hora.
   const [panMode, setPanMode] = useState(() => { try { return localStorage.getItem("canvas-tron:panmode") || "hand"; } catch { return "hand"; } });
@@ -6477,6 +6492,7 @@ function App() {
           </div>
           <span className="tb-lbl">Editar</span>
         </div>
+        {!PC && <>
         <div className="dvr"/>
         {/* VER: toggles de visualização e apresentação */}
         <div className="tb-group">
@@ -6510,6 +6526,7 @@ function App() {
           </div>
           <span className="tb-lbl">Ver</span>
         </div>
+        </>}
         {PC && <>
         <div className="dvr"/>
         {/* EXTRAS do Canvas: busca, fundo vivo e atalhos (iguais ao Fluxo e ao Mapa mental) */}
@@ -7465,7 +7482,9 @@ function App() {
         <button className="zbtn" onClick={() => zoomBy(1/1.2)} aria-label="Diminuir zoom" title="Diminuir zoom">−</button>
         <div className="zoom" onClick={() => zoomBy(1/view.scale)} title="Voltar pra 100%">{Math.round(view.scale*100)}%</div>
         <button className="zbtn" onClick={() => zoomBy(1.2)} aria-label="Aumentar zoom" title="Aumentar zoom">+</button>
-        <button className="zbtn" onClick={fitAll} aria-label="Enquadrar tudo" title="Enquadrar tudo">⊡</button>
+        {PC && <i className="zsep"/>}
+        <button className="zbtn" onClick={fitAll} aria-label="Enquadrar tudo" title="Enquadrar tudo">{PC ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 9V5a1 1 0 011-1h4M15 4h4a1 1 0 011 1v4M20 15v4a1 1 0 01-1 1h-4M9 20H5a1 1 0 01-1-1v-4"/></svg> : "⊡"}</button>
+        {PC && <button className={"zbtn " + (showMinimap ? "on" : "")} onClick={() => setShowMinimap(v => !v)} aria-label="Minimapa" title="Minimapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="14" rx="3"/><rect x="12" y="11" width="6" height="5" rx="1"/></svg></button>}
       </div>
       <div className="hint">
         {mapOn
