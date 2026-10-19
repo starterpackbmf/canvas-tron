@@ -2089,6 +2089,7 @@ window.CanvasGuias = (function () {
     return { dx, dy, linhas };
   }
   function desenhar(linhas, praTela) {
+    return; // a pedido: só a travadinha do ímã, sem mostrar a linha
     if (!camada) { camada = document.createElement('div'); camada.className = 'cc-guias'; document.body.appendChild(camada); }
     camada.innerHTML = linhas.map(l => {
       if (l.t === 'v') { const p1 = praTela(l.x, l.a), p2 = praTela(l.x, l.b); return `<i class="cc-guia v" style="left:${p1.x}px;top:${p1.y}px;height:${p2.y - p1.y}px"></i>`; }
