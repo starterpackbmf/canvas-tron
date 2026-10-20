@@ -279,38 +279,7 @@
   .pnl .chave.on{background:#6fe3a6}
   .pnl .chave.on i{transform:translateX(14px);background:#0c0c0e}
   body.pnl-aberto .bbx{left:calc(50% - 150px)}
-  /* barra do bloco no app: mesma pílula de vidro da barra do topo do Canvas */
-  .bbx{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:2px;height:40px;padding:0 5px;border-radius:12px;box-sizing:border-box;
-    background:rgba(24,24,28,.78);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
-    box-shadow:0 12px 30px -12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);font-family:"Geist",ui-sans-serif,system-ui,"Segoe UI",sans-serif;animation:bbxIn .16s ease}
-  @media (max-width:1100px){.bbx{top:62px}}
-  @keyframes bbxIn{from{opacity:0;transform:translate(-50%,-4px)}to{opacity:1;transform:translate(-50%,0)}}
-  .bbx-b{position:relative;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:#a4a4b0;display:grid;place-items:center;padding:0;cursor:pointer}
-  .bbx-b svg{width:16px;height:16px}
-  .bbx-b:hover{background:rgba(255,255,255,.07);color:#ececf1}
-  .bbx-b.on{background:rgba(255,255,255,.11);color:#ececf1;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-  .bbx-b[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:38px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#0a0a0c;border:1px solid rgba(255,255,255,.08);color:#ececf1;font:400 11px/1.2 "Geist",sans-serif;padding:5px 8px;border-radius:7px;pointer-events:none;z-index:2}
-  .bbx-sep{width:1px;height:18px;background:rgba(255,255,255,.08);margin:0 4px}
-  .bbx-n{font:500 11px/1 "Geist Mono",ui-monospace,Consolas,monospace;color:#a4a4b0;padding:0 6px 0 4px}
-  .bbx-dot{width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 1.5px rgba(255,255,255,.18),0 0 10px -2px currentColor}
-  .bbx-g{font-size:16px;line-height:1}
-  .bbx-aa{font:600 12.5px/1 "Geist",sans-serif;width:34px}
-  .bbx-w{position:relative;display:flex}
-  .bbx-pop{position:absolute;top:40px;left:50%;transform:translateX(-50%);z-index:3;padding:8px;border-radius:12px;background:rgba(20,20,23,.96);border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 40px -14px rgba(0,0,0,.85);backdrop-filter:blur(16px);animation:bbxIn .14s ease}
-  .bbx-pop.bbx-cores{left:-4px;transform:none;animation:bbxInL .14s ease}
-  @keyframes bbxInL{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
-  .bbx-cores{display:grid;grid-template-columns:repeat(5,22px);gap:8px}
-  .bbx-sw{width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,.16);padding:0;cursor:pointer;position:relative;overflow:hidden}
-  .bbx-sw:hover{transform:scale(1.1)}
-  .bbx-sw.on{box-shadow:0 0 0 2px #121215,0 0 0 3.5px #ececf1}
-  .bbx-livre{background:conic-gradient(#ff8db3,#f3cf62,#6fe3a6,#6ea8ff,#b49cff,#ff8db3)}
-  .bbx-livre input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-  .bbx-formas{display:grid;grid-template-columns:repeat(3,30px);gap:4px}
-  .bbx-tams{display:flex;flex-direction:column;gap:2px;min-width:130px}
-  .bbx-t{display:flex;align-items:center;gap:10px;border:0;background:transparent;color:#a4a4b0;border-radius:8px;padding:5px 8px;cursor:pointer;font:400 12.5px "Geist",sans-serif;text-align:left}
-  .bbx-t b{width:20px;text-align:center;color:#ececf1;font-weight:600}
-  .bbx-t:hover{background:rgba(255,255,255,.07);color:#ececf1}
-  .bbx-t.on{background:rgba(255,255,255,.1);color:#ececf1}
+  /* a pílula do bloco (.bbx) vem da peça comum (canvas-comum), igual ao Fluxo e ao mapa */
   /* cursor da seta do Fluxo no quadro todo */
   html.pc .workspace,html.pc .workspace .block,html.pc .workspace.marquee{cursor:var(--cc-seta)}
   html.pc .workspace.hand{cursor:var(--cc-mao)}
@@ -1908,6 +1877,42 @@
 .cc-guias{position:fixed;inset:0;pointer-events:none;z-index:15}
 .cc-guia{position:absolute;background:var(--cc-acento,#ff5c8a);opacity:.9;box-shadow:0 0 6px var(--cc-acento,#ff5c8a)}
 .cc-guia.v{width:1px}.cc-guia.h{height:1px}
+/* pílula do bloco (aparece ao selecionar, igual nos três): vidro no topo, só ícone, cor/forma/tamanho em popover */
+.bbx{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:2px;height:40px;padding:0 5px;border-radius:12px;box-sizing:border-box;
+  background:var(--chrome);border:1px solid var(--line);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
+  box-shadow:var(--sombra-m),inset 0 1px 0 rgba(var(--w),.05);color:var(--ink);font-family:var(--font);animation:bbxIn .16s ease}
+.bbx[hidden]{display:none}
+@media (max-width:1100px){.bbx{top:62px}}
+html.wco .bbx{top:56px}
+@keyframes bbxIn{from{opacity:0;transform:translate(-50%,-4px)}to{opacity:1;transform:translate(-50%,0)}}
+.bbx-b{position:relative;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--ink-2);display:grid;place-items:center;padding:0;cursor:pointer;font:inherit}
+.bbx-b svg{width:16px;height:16px}
+.bbx-b:hover{background:rgba(var(--w),.07);color:var(--ink)}
+.bbx-b.on{background:rgba(var(--w),.11);color:var(--ink);box-shadow:inset 0 1px 0 rgba(var(--w),.06)}
+.bbx-b[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:38px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--tip);border:1px solid var(--line);color:#f2f2f5;font:400 11px/1.2 var(--font);padding:5px 8px;border-radius:7px;pointer-events:none;z-index:2}
+.bbx-sep{width:1px;height:18px;background:rgba(var(--w),.1);margin:0 4px}
+.bbx-n{font:500 11px/1 var(--mono);color:var(--ink-2);padding:0 6px 0 4px}
+.bbx-dot{width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 1.5px rgba(var(--w),.2),0 0 10px -2px currentColor}
+.bbx-aa{font:600 12.5px/1 var(--font)!important;width:34px}
+.bbx-bold{font:700 13px/1 var(--font)!important}.bbx-ital{font:italic 500 14px/1 Georgia,serif!important}
+.bbx-w{position:relative;display:flex}
+.bbx-pop{position:absolute;top:40px;left:50%;transform:translateX(-50%);z-index:3;padding:8px;border-radius:12px;background:rgba(var(--pn),.96);border:1px solid var(--line);box-shadow:0 18px 40px -14px rgba(0,0,0,.6);backdrop-filter:blur(16px);animation:bbxIn .14s ease}
+.bbx-pop[hidden]{display:none}
+.bbx-pop.bbx-cores{left:-4px;transform:none;animation:bbxInL .14s ease}
+@keyframes bbxInL{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.bbx-cores{display:grid;grid-template-columns:repeat(5,22px);gap:8px}
+.bbx-sw{width:22px;height:22px;border-radius:50%;border:1px solid rgba(var(--w),.18);padding:0;cursor:pointer;position:relative;overflow:hidden}
+.bbx-sw:hover{transform:scale(1.1)}
+.bbx-sw.on{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--ink)}
+.bbx-auto{grid-column:span 2;width:auto;border-radius:7px;font:400 11px var(--font);color:var(--ink-2);background:transparent}
+.bbx-livre{background:conic-gradient(#ff8db3,#f3cf62,#6fe3a6,#6ea8ff,#b49cff,#ff8db3)}
+.bbx-livre input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.bbx-formas{display:grid;grid-template-columns:repeat(3,30px);gap:4px}
+.bbx-tams{display:flex;flex-direction:column;gap:2px;min-width:130px}
+.bbx-t{display:flex;align-items:center;gap:10px;border:0;background:transparent;color:var(--ink-2);border-radius:8px;padding:5px 8px;cursor:pointer;font:400 12.5px var(--font);text-align:left}
+.bbx-t b{width:20px;text-align:center;color:var(--ink);font-weight:600}
+.bbx-t:hover{background:rgba(var(--w),.07);color:var(--ink)}
+.bbx-t.on{background:rgba(var(--w),.1);color:var(--ink)}
 /* seção Cores do painel (igual nos três): paletas prontas, linhas, destaque e fundo */
 .ccc{display:flex;flex-direction:column;gap:10px}
 .ccc-presets{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}
@@ -4651,11 +4656,17 @@ function App() {
     document.execCommand("styleWithCSS", false, true);
     document.execCommand(cmd, false, null);
   }, []);
+  const selecionarTudoSeVazio = () => {
+    const sel = window.getSelection(); const ed = document.activeElement;
+    if (sel && ed && ed.isContentEditable && (!sel.rangeCount || sel.getRangeAt(0).collapsed)) { const r = document.createRange(); r.selectNodeContents(ed); sel.removeAllRanges(); sel.addRange(r); }
+  };
   const applyTextColor = useCallback((color) => {
+    selecionarTudoSeVazio();
     document.execCommand("styleWithCSS", false, true);
     document.execCommand("foreColor", false, color);
   }, []);
   const applyFontSize = useCallback((px) => {
+    selecionarTudoSeVazio();
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
     const range = sel.getRangeAt(0);
@@ -6823,7 +6834,13 @@ function App() {
       )}
 
       {(editingBodyId || editingTitleId || editingNoteId) && (
-        <div className="drawbar" onMouseDown={(e) => e.preventDefault()}>
+        <div className="drawbar" onMouseDown={(e) => e.preventDefault()} style={(() => {
+          if (!PC) return undefined;
+          const id = editingBodyId || editingTitleId; const el = id && document.querySelector('[data-bid="' + id + '"]');
+          if (!el) return undefined; const r = el.getBoundingClientRect();
+          const top = r.top > 120 ? r.top - 52 : r.bottom + 12;
+          return { top: Math.max(56, top) + "px", left: Math.min(window.innerWidth - 220, Math.max(220, r.left + r.width / 2)) + "px" };
+        })()}>
           <div className="group">
             <span className="lbl">Texto</span>
             <button className="fmt-btn b" onMouseDown={(e) => { e.preventDefault(); applyFormat("bold"); }} title="Negrito (Ctrl+B)">B</button>
@@ -6846,7 +6863,7 @@ function App() {
           <div className="vsep"/>
           <div className="group">
             <span className="lbl">Cor</span>
-            {PRESET_COLORS.map(c => (
+            {(PC ? CORES_PC : PRESET_COLORS).map(c => (
               <div
                 key={c}
                 className="swatch"
