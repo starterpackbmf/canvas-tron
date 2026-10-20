@@ -2127,9 +2127,10 @@ window.CanvasInercia = function (mexer) {
   };
 };
 
-/* window.CanvasZoom(ler, gravar, {min, max}): roda do mouse aproxima em movimento contínuo, preso ao ponto do mouse. */
-window.CanvasZoom = function (ler, gravar, o) {
-  const min = (o && o.min) || .2, max = (o && o.max) || 3;
+/* window.CanvasZoom(ler, gravar): o MESMO zoom nos três canvas (roda, pinça, botões e atalhos).
+   Limite único 20% a 300%; z.roda(e, pinca) na roda; z.ir(fator, x, y) nos botões; z.para(escala, x, y) no 100%. */
+window.CanvasZoom = function (ler, gravar) {
+  const min = .2, max = 3;
   let alvo = null, ax = 0, ay = 0, raf = 0, cur = null;
   function passo() {
     const v = cur || ler(); const s = v.s + (alvo - v.s) * .28;
@@ -2138,17 +2139,37 @@ window.CanvasZoom = function (ler, gravar, o) {
     cur = { x: ax - wx * ns, y: ay - wy * ns, s: ns }; gravar(cur);
     raf = fim ? 0 : requestAnimationFrame(passo); if (fim) { alvo = null; cur = null; }
   }
+  function para(s, x, y) {
+    const v = cur || ler(); alvo = Math.min(max, Math.max(min, s)); ax = x; ay = y;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { const wx = (ax - v.x) / v.s, wy = (ay - v.y) / v.s; cancelAnimationFrame(raf); raf = 0; cur = null; gravar({ x: ax - wx * alvo, y: ay - wy * alvo, s: alvo }); alvo = null; return; }
+    if (!raf) raf = requestAnimationFrame(passo);
+  }
+  const base = () => alvo == null ? (cur || ler()).s : alvo;
   return {
-    roda(e, pinca) {
-      const v = cur || ler(); const base = alvo == null ? v.s : alvo;
-      const f = Math.exp(-e.deltaY * (pinca ? .01 : .0018));
-      alvo = Math.min(max, Math.max(min, base * f)); ax = e.clientX; ay = e.clientY;
-      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { const wx = (ax - v.x) / v.s, wy = (ay - v.y) / v.s; gravar({ x: ax - wx * alvo, y: ay - wy * alvo, s: alvo }); alvo = null; return; }
-      if (!raf) raf = requestAnimationFrame(passo);
-    },
+    roda(e, pinca) { para(base() * Math.exp(-e.deltaY * (pinca ? .01 : .0018)), e.clientX, e.clientY); },
+    ir(fator, x, y) { para(base() * fator, x, y); },
+    para,
     parar() { cancelAnimationFrame(raf); raf = 0; alvo = null; cur = null; },
   };
 };
+/* window.CanvasVoo(ler, gravar): o MESMO voo nos três (ver tudo, focar, ir até um bloco). v.ir({x, y, s}) */
+window.CanvasVoo = function (ler, gravar) {
+  let raf = 0; const parar = () => { cancelAnimationFrame(raf); raf = 0; };
+  const curva = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+  return {
+    ir(a, ms) {
+      parar(); const o = ler();
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return gravar(a);
+      const t0 = performance.now(), d = ms || window.CanvasVoo.MS;
+      const passo = t => { const p = Math.min(1, (t - t0) / d), k = curva(p); gravar({ x: o.x + (a.x - o.x) * k, y: o.y + (a.y - o.y) * k, s: o.s + (a.s - o.s) * k }); raf = p < 1 ? requestAnimationFrame(passo) : 0; };
+      raf = requestAnimationFrame(passo);
+    },
+    parar,
+    get voando() { return !!raf; },
+  };
+};
+window.CanvasVoo.MS = 550;
+window.CanvasZoom.MIN = .2; window.CanvasZoom.MAX = 3; window.CanvasZoom.PASSO = 1.2;
 
 /* Ctrl H: histórico de versões do canvas aberto (mora no app de fora; dentro do livre/mapa só repassa) */
 addEventListener('keydown', e => {
@@ -5423,10 +5444,13 @@ function App() {
   /* física do app: inércia ao soltar a tela e zoom suave na roda (os mesmos do Fluxo) */
   const inerciaRef = useRef(null), zoomRef = useRef(null);
   if (PC && !inerciaRef.current && window.CanvasInercia) inerciaRef.current = CanvasInercia((dx, dy) => setView(v => ({ ...v, x: v.x + dx, y: v.y + dy })));
-  if (PC && !zoomRef.current && window.CanvasZoom) zoomRef.current = CanvasZoom(() => ({ x: viewRef.current.x, y: viewRef.current.y, s: viewRef.current.scale }), (v) => setView({ x: v.x, y: v.y, scale: v.s }), { min: .2, max: 3 });
+  if (PC && !zoomRef.current && window.CanvasZoom) zoomRef.current = CanvasZoom(() => ({ x: viewRef.current.x, y: viewRef.current.y, s: viewRef.current.scale }), (v) => setView({ x: v.x, y: v.y, scale: v.s }));
+  const vooRef = useRef(null);
+  if (PC && !vooRef.current && window.CanvasVoo) vooRef.current = CanvasVoo(() => ({ x: viewRef.current.x, y: viewRef.current.y, s: viewRef.current.scale }), (v) => setView({ x: v.x, y: v.y, scale: v.s }));
+  const pararFisica = () => { if (inerciaRef.current) inerciaRef.current.parar(); if (zoomRef.current) zoomRef.current.parar(); if (vooRef.current) vooRef.current.parar(); };
   useEffect(() => {
     if (!PC) return;
-    const para = () => { if (inerciaRef.current) inerciaRef.current.parar(); };
+    const para = () => pararFisica();
     window.addEventListener("mousedown", para, true);
     return () => window.removeEventListener("mousedown", para, true);
   }, []);
@@ -5496,7 +5520,7 @@ function App() {
     if (window.CanvasAtalhos) atalhosRef.current = CanvasAtalhos("Atalhos do Canvas livre", [
       ["Criar", [["Bloco novo", "2 cliques no vazio"], ["Ferramenta bloco", "B"], ["Bloco filho", "Tab"], ["Duplicar", "Ctrl D"]]],
       ["Editar", [["Editar o título", "F2"], ["Apagar", "Delete"], ["Seleção", "V"], ["Sair, cancelar", "Esc"]]],
-      ["Ver", [["Seleção em área", "Arrastar no vazio"], ["Mover o canvas", "Botão direito arrastando, ou Espaço"], ["Buscar", "Ctrl F"], ["Comandos", "Ctrl K"], ["Esta lista", "?"]]],
+      ["Ver", [["Seleção em área", "Arrastar no vazio"], ["Mover o canvas", "Botão direito arrastando, ou Espaço"], ["Ver tudo", "Ctrl 0"], ["100%", "Ctrl 1"], ["Aproximar, afastar", "Ctrl + · Ctrl -"], ["Buscar", "Ctrl F"], ["Comandos", "Ctrl K"], ["Esta lista", "?"]]],
       ["Desfazer", [["Desfazer", "Ctrl Z"], ["Refazer", "Ctrl Y"]]],
     ]);
   }, []);
@@ -5892,6 +5916,14 @@ function App() {
       // digitando num campo de formulário (painéis: atributos, nuvem, etc.) →
       // não dispara atalho nenhum (era o bug do "P" abrir apresentação)
       if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.tagName === "SELECT")) return;
+      // zoom pelo teclado, igual nos três: Ctrl 0 ver tudo, Ctrl 1 100%, Ctrl + e Ctrl -
+      if (PC && (e.ctrlKey || e.metaKey) && !e.altKey && ["0", ")", "1", "+", "=", "-", "_"].includes(e.key)) {
+        e.preventDefault();
+        const cx = window.innerWidth / 2, cy = window.innerHeight / 2, z = zoomRef.current;
+        if (e.key === "0" || e.key === ")") { if (fitAllRef.current) fitAllRef.current(); }
+        else if (z) { if (inerciaRef.current) inerciaRef.current.parar(); if (vooRef.current) vooRef.current.parar(); if (e.key === "1") z.para(1, cx, cy); else z.ir(e.key === "-" || e.key === "_" ? 1 / 1.2 : 1.2, cx, cy); }
+        return;
+      }
       const editingEl = (ae && ae.isContentEditable) ? ae : null;
       // Tab: cria um bloco filho a partir do atual (editando OU só selecionado)
       if (e.key === "Tab") {
@@ -5964,7 +5996,7 @@ function App() {
   /* ----- wheel zoom ----- */
   const onWheel = useCallback((e) => {
     e.preventDefault();
-    if (PC && zoomRef.current) { if (inerciaRef.current) inerciaRef.current.parar(); zoomRef.current.roda(e, e.ctrlKey); return; }
+    if (PC && zoomRef.current) { if (inerciaRef.current) inerciaRef.current.parar(); if (vooRef.current) vooRef.current.parar(); zoomRef.current.roda(e, e.ctrlKey); return; }
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     const newScale = Math.max(0.2, Math.min(3, view.scale * delta));
     const wp = screenToWorld(e.clientX, e.clientY);
@@ -5979,6 +6011,7 @@ function App() {
   const zoomBy = useCallback((factor) => {
     const v = viewRef.current;
     const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    if (PC && zoomRef.current) { if (inerciaRef.current) inerciaRef.current.parar(); if (vooRef.current) vooRef.current.parar(); zoomRef.current.ir(factor, cx, cy); return; }
     const newScale = Math.max(0.2, Math.min(3, v.scale * factor));
     const wx = (cx - v.x) / v.scale, wy = (cy - v.y) / v.scale;
     setView({ scale: newScale, x: cx - wx * newScale, y: cy - wy * newScale });
@@ -6156,7 +6189,7 @@ function App() {
 
   /* ----- fit/reset/clear ----- */
   const fitAllRef = useRef(null);
-  const fitAll = () => {
+  const fitAll = (instantaneo) => {
     const items = [...blocks.filter(b => !hiddenBlockIds.has(b.id)), ...notes, ...images];
     // Include strokes' extents
     const strokeBounds = strokes.flatMap(s =>
@@ -6172,12 +6205,11 @@ function App() {
     });
     const pad = 80;
     const cw = window.innerWidth - 160, ch = window.innerHeight - 160;
-    const scale = Math.min(cw/(maxX-minX+pad*2), ch/(maxY-minY+pad*2), 1.5);
-    setView({
-      scale,
-      x: 80 - minX*scale + (cw-(maxX-minX)*scale)/2,
-      y: 80 - minY*scale + (ch-(maxY-minY)*scale)/2,
-    });
+    const scale = Math.max(0.2, Math.min(cw/(maxX-minX+pad*2), ch/(maxY-minY+pad*2), 1.5));
+    const alvo = { scale, x: 80 - minX*scale + (cw-(maxX-minX)*scale)/2, y: 80 - minY*scale + (ch-(maxY-minY)*scale)/2 };
+    // no app: o mesmo voo do Fluxo e do mapa (export de PNG continua seco, pra capturar no lugar certo)
+    if (PC && vooRef.current && instantaneo !== true) { pararFisica(); vooRef.current.ir({ x: alvo.x, y: alvo.y, s: alvo.scale }); return; }
+    setView(alvo);
   };
 
   /* ----- export PNG (híbrido) -----
@@ -6190,7 +6222,7 @@ function App() {
     if (!h2c) { alert("A biblioteca de imagem ainda está carregando — tente de novo em instantes."); return; }
     const ws = wsRef.current;
     if (!ws) return;
-    fitAll(); // enquadra tudo antes de capturar
+    fitAll(true); // enquadra tudo antes de capturar
     setTimeout(() => {
       const v = viewRef.current;
       const W = window.innerWidth, H = window.innerHeight, S = 2;
@@ -7724,7 +7756,7 @@ function App() {
 
       <div className="zoomctl">
         <button className="zbtn" onClick={() => zoomBy(1/1.2)} aria-label="Diminuir zoom" title="Diminuir zoom">−</button>
-        <div className="zoom" onClick={() => zoomBy(1/view.scale)} title="Voltar pra 100%">{Math.round(view.scale*100)}%</div>
+        <div className="zoom" onClick={() => { if (PC && zoomRef.current) { pararFisica(); zoomRef.current.para(1, window.innerWidth / 2, window.innerHeight / 2); } else zoomBy(1/view.scale); }} title="Voltar pra 100%  Ctrl 1">{Math.round(view.scale*100)}%</div>
         <button className="zbtn" onClick={() => zoomBy(1.2)} aria-label="Aumentar zoom" title="Aumentar zoom">+</button>
         {PC && <i className="zsep"/>}
         <button className="zbtn" onClick={fitAll} aria-label="Enquadrar tudo" title="Enquadrar tudo">{PC ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 9V5a1 1 0 011-1h4M15 4h4a1 1 0 011 1v4M20 15v4a1 1 0 01-1 1h-4M9 20H5a1 1 0 01-1-1v-4"/></svg> : "⊡"}</button>
