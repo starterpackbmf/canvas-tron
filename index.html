@@ -141,8 +141,6 @@
   html.pc .toolbar .ic{width:34px;height:34px}
 
   /* ---------- tema Ônix: vidro preto polido, aro prata, sem cor (a cor do bloco só no pontinho) ---------- */
-  body.fume.onix{--bg:#070708;--grid:rgba(255,255,255,.04);--panel:#111113;--panel-2:#161618;--chrome:rgba(14,14,16,.84);
-    --line:rgba(255,255,255,.10);--line-2:rgba(255,255,255,.26);--edge:rgba(214,214,224,.40);--rel:#c9c9d3;--ink-2:#a8a8b2;--ink-3:#6a6a74}
   body.onix .bg{background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px)!important;background-color:var(--bg)!important}
   body.onix .bg::after{background:radial-gradient(110% 85% at 50% 42%,transparent 50%,rgba(0,0,0,.72))}
   body.onix .fv-feixes{opacity:.2}
@@ -166,18 +164,12 @@
   body.onix .toolbar,body.onix .hint,body.onix .bbx,body.onix .zoombar{background:var(--chrome)!important;border-color:rgba(255,255,255,.09)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 14px 34px -14px #000!important}
 
   /* ---------- fundos (escolha do app, à parte do tema; só nos temas de vidro) ---------- */
-  :root{--gf1:rgba(70,70,82,.30);--gf2:#151518;--gf3:#050506;--tr1:rgba(120,180,255,.13);--grade:rgba(255,255,255,.045);--ponto:rgba(255,255,255,.075);--fv-cor:236,236,241}
   html[data-fundo="pontos"] body.fume .bg{background-image:radial-gradient(circle,var(--ponto) 1px,transparent 1.3px)!important}
   html[data-fundo="grade"] body.fume .bg{background-image:linear-gradient(var(--grade) 1px,transparent 1px),linear-gradient(90deg,var(--grade) 1px,transparent 1px)!important}
   html[data-fundo="liso"] body.fume .bg{background-image:none!important}
   html[data-fundo="grafite"] body.fume .bg{background-image:radial-gradient(120% 90% at 25% 0%,var(--gf1),transparent 60%),linear-gradient(165deg,var(--gf2),var(--gf3))!important;background-size:100% 100%!important;background-position:0 0!important}
   html[data-fundo="tron"] body.fume .bg{background-image:radial-gradient(90% 55% at 50% 118%,var(--tr1),transparent 70%),linear-gradient(180deg,var(--gf3),var(--gf2))!important;background-size:100% 100%!important;background-position:0 0!important}
-  html[data-fundo="tron"]:not(:has(body.claro)){--fv-cor:170,215,255;--tr1:rgba(110,175,255,.22)}
-  html:has(body.onix){--gf1:rgba(60,60,70,.26);--gf2:#111113;--gf3:#030304;--grade:rgba(255,255,255,.04);--ponto:rgba(255,255,255,.07)}
   /* ---------- tema Claro: cinza claro, cards brancos macios, cor só no pontinho, acento azul ---------- */
-  html:has(body.claro){--gf1:rgba(255,255,255,.85);--gf2:#f2f2f4;--gf3:#dddde1;--tr1:rgba(59,130,246,.12);--grade:rgba(20,20,30,.06);--ponto:rgba(20,20,30,.13);--fv-cor:70,80,110}
-  body.fume.claro{color-scheme:light;--bg:#ebebed;--grid:rgba(20,20,30,.13);--panel:#ffffff;--panel-2:#f6f6f7;--chrome:rgba(252,252,253,.88);
-    --line:rgba(20,20,30,.08);--line-2:rgba(20,20,30,.16);--ink:#1c1c21;--ink-2:#5d5d68;--ink-3:#9b9ba6;--edge:rgba(30,30,40,.28);--rel:#c99a3a;--field:#f2f2f4}
   body.claro .bg::after{background:none!important}
   body.claro .fv-feixes{opacity:0}
   body.claro .fv-vinheta{background:none}
@@ -1391,7 +1383,7 @@
      Ferramenta escura e silenciosa: fundo quase preto com grade de pontos, cards de
      vidro fumê, cor só em detalhe (bolinha, porta, brilho no canto, chip).
      Tron (dark) e Claro seguem intactos atrás do botão de tema. */
-  body.fume{
+  html:not(.pc) body.fume{
     color-scheme:dark;
     --bg:#0c0c0e;
     --grid:rgba(255,255,255,.075);
@@ -1418,6 +1410,9 @@
     --bg-2:#0c0c0e; --cyan:#ececf1; --white:#ececf1; --muted:#6c6c78;
     --blk-bg:#17171a; --body-text:#a4a4b0;
   }
+  /* no app (modo PC) os temas de vidro leem o design system (canvas-comum); estes são os nomes antigos do Tron */
+  html.pc body.fume{color-scheme:var(--cs,dark);--field:var(--campo);--muted:var(--ink-3);--white:var(--ink);--body-text:var(--ink-2);--bg-2:var(--bg);--blk-bg:var(--panel);--cyan:var(--ink)}
+  html.pc[data-tema="claro"] body.fume{color-scheme:light}
   body.fume,body.fume #root{
     font-family:"Geist",ui-sans-serif,system-ui,"Segoe UI",sans-serif;
     font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;
@@ -1841,6 +1836,13 @@
   }
 </style>
 <style id="fv-css">
+/* ===== Design system do Canvas (um só pros três: Fluxo, Canvas livre e Mapa mental) =====
+   Tema = data-tema no <html> (fume | onix | claro | tron). Tudo que é cor, fundo, linha, texto,
+   raio, sombra e tempo mora aqui. Guia: canvas-fluxos\DESIGN.md */
+:root[data-tema]{color-scheme:dark;--w:255,255,255;--campo:#121215;--campo2:#141417;--elev:#1e1e22;--elev2:#2a2a30;--inv-bg:#f1f1f4;--inv-ink:#121214;--grid-l:rgba(255,255,255,.045);--gf1:rgba(70,70,82,.30);--gf2:#151518;--gf3:#050506;--tr1:rgba(120,180,255,.13);--fv-cor:236,236,241;--bg:#0c0c0e;--grid:rgba(var(--w),.075);--panel:#17171a;--panel-2:var(--elev);--chrome:rgba(24,24,28,.78);--line:rgba(var(--w),.08);--line-2:rgba(var(--w),.15);--ink:#ececf1;--ink-2:#a4a4b0;--ink-3:#6c6c78;--edge:rgba(225,225,235,.30);--rel:#d8b46a;--t-texto:#6fe3a6;--t-ideia:#f3cf62;--t-imagem:#6ea8ff;--t-roteiro:#ff8db3;--t-entrega:#b49cff;--ok:#6fe3a6;--run:#ff9ec4;--font:"Geist",ui-sans-serif,system-ui,"Segoe UI",sans-serif;--mono:"Geist Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;--pn:20,20,23;--tip:#0a0a0c;--ponto:var(--grid);--grade:var(--grid-l);--luz:rgba(236,236,241,.9);--acento:var(--ink);--raio-s:8px;--raio-m:12px;--raio-l:16px;--sombra-m:0 12px 30px -12px rgba(0,0,0,.7);--dur-r:.16s;--dur-m:.3s}
+:root[data-tema="onix"]{--bg:#070708;--grid:rgba(255,255,255,.07);--grid-l:rgba(255,255,255,.04);--gf1:rgba(60,60,70,.26);--gf2:#111113;--gf3:#030304;--panel:#111113;--panel-2:#161618;--chrome:rgba(14,14,16,.84);--line:rgba(255,255,255,.10);--line-2:rgba(255,255,255,.26);--edge:rgba(214,214,224,.40);--rel:#c9c9d3;--ink-2:#a8a8b2;--ink-3:#6a6a74;--ponto:rgba(255,255,255,.07);--grade:rgba(255,255,255,.04);--pn:14,14,16}
+:root[data-tema="claro"]{color-scheme:light;--w:20,20,30;--campo:#f2f2f4;--campo2:#ffffff;--elev:#ffffff;--elev2:#f0f0f2;--inv-bg:#1c1c21;--inv-ink:#ffffff;--bg:#ebebed;--grid:rgba(20,20,30,.13);--grid-l:rgba(20,20,30,.06);--gf1:rgba(255,255,255,.85);--gf2:#f2f2f4;--gf3:#dddde1;--tr1:rgba(59,130,246,.12);--fv-cor:70,80,110;--panel:#ffffff;--panel-2:#f6f6f7;--chrome:rgba(252,252,253,.88);--line:rgba(20,20,30,.08);--line-2:rgba(20,20,30,.16);--ink:#1c1c21;--ink-2:#5d5d68;--ink-3:#9b9ba6;--edge:rgba(30,30,40,.26);--rel:#c99a3a;--t-texto:#1fae6a;--t-ideia:#e0a100;--t-imagem:#3b82f6;--t-roteiro:#e0457b;--t-entrega:#7c5cff;--ok:#16a34a;--run:#e0457b;--azul:#3b82f6;--pn:252,252,253;--tip:#1c1c21;--ponto:rgba(20,20,30,.13);--grade:rgba(20,20,30,.06);--acento:#3b82f6}
+:root[data-tema="tron"]{--bg:#03060b;--grid:rgba(0,240,255,.10);--grid-l:rgba(0,240,255,.06);--panel:#07101c;--panel-2:#0a1626;--chrome:rgba(6,14,26,.86);--line:rgba(0,240,255,.16);--line-2:rgba(0,240,255,.4);--ink:#dffbff;--ink-2:#8fc3d3;--ink-3:#4f7f8f;--edge:rgba(0,240,255,.45);--rel:#ff9d00;--campo:#061019;--campo2:#07121e;--elev:#0b1a2a;--elev2:#10243a;--inv-bg:#00f0ff;--inv-ink:#00131a;--gf1:rgba(0,120,160,.28);--gf2:#061220;--gf3:#010307;--tr1:rgba(0,240,255,.16);--fv-cor:120,240,255;--luz:#7ff6ff;--azul:#00f0ff;--pn:6,14,26;--tip:#03060b;--ponto:rgba(0,240,255,.12);--grade:rgba(0,240,255,.06);--acento:#00f0ff}
 /* cursores do Canvas (a seta do Fluxo), iguais nos três */
 :root{--cc-seta:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24'%3E%3Cdefs%3E%3Cfilter id='s' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='.8' flood-color='%23000' flood-opacity='.45'/%3E%3C/filter%3E%3C/defs%3E%3Cpath filter='url%28%23s%29' d='M4.2 2.6L5.1 19.6C5.15 20.4 6.1 20.7 6.6 20.1L9.6 16.2C9.9 15.8 10.35 15.6 10.85 15.6L15.6 15.4C16.4 15.35 16.75 14.4 16.15 13.9L5.4 1.9C4.9 1.4 4.15 1.8 4.2 2.6Z' fill='%23f7f7fa' stroke='%230b0b0d' stroke-width='1.05' stroke-linejoin='round'/%3E%3C/svg%3E") 4 2,default;--cc-mao:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24'%3E%3Cpath d='M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15' fill='none' stroke='%230b0b0d' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15' fill='none' stroke='%23f4f4f7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 13 13,grab;--cc-pega:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24'%3E%3Cdefs%3E%3Cfilter id='t' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='.8' flood-color='%23000' flood-opacity='.45'/%3E%3C/filter%3E%3C/defs%3E%3Cg filter='url%28%23t%29'%3E%3Cpath d='M7.2 10.2c.1-.9.9-1.5 1.8-1.3.2-.9 1-1.5 1.9-1.3.3-.8 1.1-1.3 2-1.1.4-.7 1.3-1 2.1-.7.8.3 1.2 1.1 1.1 1.9.9-.1 1.7.6 1.7 1.5v4.6c0 3.6-2.6 6.4-6 6.4h-.8c-2.1 0-3.7-1-4.7-2.7l-1.7-2.9c-.4-.8-.1-1.7.7-2 .6-.3 1.3-.1 1.7.4z' fill='%23f7f7fa' stroke='%230b0b0d' stroke-width='1.1' stroke-linejoin='round'/%3E%3Cpath d='M9.6 9.3v2.6M12.2 8.2v3.4M14.8 7.8v3.6' stroke='%230b0b0d' stroke-width='.95' stroke-linecap='round' fill='none'/%3E%3C/g%3E%3C/svg%3E") 14 14,grabbing}
 /* fundo vivo (o mesmo do Mapa mental): feixes de luz, poeira e vinheta */
@@ -1927,6 +1929,8 @@
 .ccc-livre input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 </style>
 <script>
+/* tema antes de pintar: dentro do app (?pc=1) o html já nasce com data-tema */
+(function () { try { var q = new URLSearchParams(location.search); if (q.has('pc') && !document.documentElement.dataset.tema) document.documentElement.dataset.tema = q.get('tema') || 'fume'; } catch (e) {} })();
 /* window.FundoVivo.montar(elemento, () => ({x, y})): põe o fundo vivo atrás do conteúdo.
    Turbo/Leve fica em localStorage 'cf-fundo' e vale pros três canvas (mesma origem). */
 (function () {
@@ -2250,6 +2254,19 @@ const deslizarDepois = (antes) => requestAnimationFrame(() => requestAnimationFr
     if (Math.abs(dx) + Math.abs(dy) > 1) el.animate([{ translate: dx + "px " + dy + "px" }, { translate: "0 0" }], { duration: 320, easing: "cubic-bezier(.22,1,.36,1)" });
   });
 }));
+// ícones do app (mesmo traço do Fluxo e do mapa): as formas e as ações que antes eram símbolos de texto
+const ICO_APP = {
+  rect: '<rect x="4" y="6" width="16" height="12" rx="1.2"/>',
+  rounded: '<rect x="4" y="6" width="16" height="12" rx="4"/>',
+  pill: '<rect x="3" y="7" width="18" height="10" rx="5"/>',
+  ellipse: '<ellipse cx="12" cy="12" rx="8.5" ry="6.5"/>',
+  diamond: '<path d="M12 3.5L20.5 12 12 20.5 3.5 12z"/>',
+  hexagon: '<path d="M7.5 4.5h9L21 12l-4.5 7.5h-9L3 12z"/>',
+  bloco: '<rect x="3.5" y="6" width="17" height="12" rx="3.5"/><path d="M8 12h8"/>',
+  desfazer: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/>',
+  refazer: '<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/>',
+};
+const Ico = ({ k, s = 16 }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: s, height: s, display: "block" }} dangerouslySetInnerHTML={{ __html: ICO_APP[k] || ICO_APP.rect }}/>;
 const herdaTipo = (b) => ({ estilo: b.estilo || "card", ...(b.fill ? { fill: b.fill } : {}), ...(b.shape ? { shape: b.shape } : {}), ...(b.fontSize ? { fontSize: b.fontSize } : {}) });
 const CORES_PC = ["#ececf1", "#6ea8ff", "#7fd3e6", "#6fe3a6", "#f3cf62", "#ff9d6b", "#ff8db3", "#b49cff"];
 const PRESET_COLORS = [
@@ -4214,6 +4231,7 @@ function App() {
     document.body.classList.toggle("fume", theme === "fume" || theme === "onix" || theme === "claro");
     document.body.classList.toggle("onix", theme === "onix");
     document.body.classList.toggle("claro", theme === "claro");
+    if (PC) document.documentElement.dataset.tema = theme === "dark" ? "tron" : theme;
     if (!PC) { try { localStorage.setItem("canvas-tron:theme3", theme); } catch {} }
   }, [theme]);
   useEffect(() => {
@@ -6648,7 +6666,7 @@ function App() {
               <svg viewBox="0 0 24 24" className="ic-svg"><path d="M5 3l14 8.5-6.2 1.6L9.5 20z"/></svg>
             </button>
             </>}
-            <button className={`ic ${tool==="block"?"active":""}`} onClick={() => setTool("block")} title="Bloco (B)">▭</button>
+            <button className={`ic ${tool==="block"?"active":""}`} onClick={() => setTool("block")} title="Bloco (B)">{PC ? <Ico k="bloco"/> : "▭"}</button>
             {!PC && <>
             <button className={`ic ${presetOpen?"active":""}`} onClick={() => setPresetOpen(true)} title="Blocos prontos: roteiro, aula, brainstorm e os seus (M)">
               <svg viewBox="0 0 24 24" className="ic-svg"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><path d="M17.25 13.5v7.5 M13.5 17.25h7.5"/></svg>
@@ -6691,8 +6709,8 @@ function App() {
         {/* EDITAR */}
         <div className="tb-group">
           <div className="tb-row">
-            <button className="ic" onClick={undo} title="Desfazer (Ctrl+Z)">↶</button>
-            <button className="ic" onClick={redo} title="Refazer (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
+            <button className="ic" onClick={undo} title="Desfazer (Ctrl+Z)">{PC ? <Ico k="desfazer"/> : "↶"}</button>
+            <button className="ic" onClick={redo} title="Refazer (Ctrl+Shift+Z / Ctrl+Y)">{PC ? <Ico k="refazer"/> : "↷"}</button>
           </div>
           <span className="tb-lbl">Editar</span>
         </div>
@@ -6999,7 +7017,7 @@ function App() {
                   {[["none", "Vazado"], ["soft", "Suave"], ["solid", "Forte"]].map(([k, n]) => <button key={k} className={fundoB === k ? "on" : ""} onClick={() => setBlockFill(k)}>{n}</button>)}
                 </div></section>
                 <section><h4>Forma</h4><div className="pnl-formas">
-                  {SHAPES.map(f => <button key={f.key} className={(b0.shape || "rect") === f.key ? "on" : ""} title={f.title} onClick={() => setBlockShape(f.key)}>{f.glyph}</button>)}
+                  {SHAPES.map(f => <button key={f.key} className={(b0.shape || "rect") === f.key ? "on" : ""} title={f.title} onClick={() => setBlockShape(f.key)}><Ico k={f.key}/></button>)}
                 </div></section>
                 <section><h4>Tamanho do texto</h4><div className="pnl-ops">
                   {[[13, "P"], [15, "M"], [18, "G"], [22, "GG"]].map(([z, n]) => <button key={z} className={(b0.fontSize || 15) === z ? "on" : ""} onClick={() => setBlockFontSize(z)}>{n}</button>)}
@@ -7065,9 +7083,9 @@ function App() {
             <button className={`bbx-b ${fundo === "solid" ? "on" : ""}`} data-tip="Cor forte" onClick={() => setBlockFill("solid")}><svg {...SV}><rect x="4" y="5" width="16" height="14" rx="3.5" fill="currentColor"/></svg></button>
             <i className="bbx-sep"/>
             <span className="bbx-w">
-              <button className={`bbx-b ${pop === "forma" ? "on" : ""}`} data-tip={"Forma: " + forma.title} onClick={() => abre("forma")}><span className="bbx-g">{forma.glyph}</span></button>
+              <button className={`bbx-b ${pop === "forma" ? "on" : ""}`} data-tip={"Forma: " + forma.title} onClick={() => abre("forma")}><Ico k={forma.key}/></button>
               {pop === "forma" && <div className="bbx-pop bbx-formas">
-                {SHAPES.map(f => <button key={f.key} className={`bbx-b ${f.key === forma.key ? "on" : ""}`} title={f.title} onClick={() => { setBlockShape(f.key); setBarraPop(null); }}><span className="bbx-g">{f.glyph}</span></button>)}
+                {SHAPES.map(f => <button key={f.key} className={`bbx-b ${f.key === forma.key ? "on" : ""}`} title={f.title} onClick={() => { setBlockShape(f.key); setBarraPop(null); }}><Ico k={f.key}/></button>)}
               </div>}
             </span>
             <span className="bbx-w">
