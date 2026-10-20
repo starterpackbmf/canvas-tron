@@ -1567,6 +1567,9 @@
 
   /* ---------- conexões: bezier fina que não engrossa com o zoom ---------- */
   body.fume .edges path.edge-line{stroke:var(--edge);stroke-width:1.25;vector-effect:non-scaling-stroke;transition:stroke .2s,opacity .3s}
+  /* estilo de linha do app: largura base e cor do efeito (a cor das linhas do canvas, ou a luz do tema) */
+  html.pc .edges path.cc-l,html.pc .edges path.cc-lx{--cc-lw0:1.25px;color:var(--cc-linha,var(--luz,#ececf1));vector-effect:non-scaling-stroke}
+  html.pc .edges path.cc-lx{stroke:currentColor}
   body.fume .edges path.edge-line.sel{stroke:#fff;stroke-width:1.6;filter:none !important}
   body.fume .edges path.edge-arrow{fill:var(--ink-3) !important}
   body.fume .edges path.stub{stroke:var(--edge);stroke-width:1.25;vector-effect:non-scaling-stroke}
@@ -1888,6 +1891,44 @@
 html.wco .bbx{top:56px}
 @keyframes bbxIn{from{opacity:0;transform:translate(-50%,-4px)}to{opacity:1;transform:translate(-50%,0)}}
 html[data-tema] [contenteditable="true"],html[data-tema] [contenteditable="true"] *,html[data-tema] textarea,html[data-tema] input[type=text],html[data-tema] input[type=search],html[data-tema] input:not([type]){cursor:var(--cc-texto)!important}
+/* ── estilo das linhas (igual nos três): html[data-linha-esp] e html[data-linha-fx]
+   .cc-l = a linha; .cc-lx = a camada de efeito por cima (mesmo caminho); .cc-glow = halo próprio do canvas.
+   Cada canvas diz a largura base em --cc-lw0 e a cor do efeito em color. ── */
+html[data-linha-esp="fina"]{--cc-lw:.55}
+html[data-linha-esp="grossa"]{--cc-lw:2}
+html[data-linha-esp] .cc-l:not(.cc-fill){stroke-width:calc(var(--cc-lw0,2px) * var(--cc-lw,1))!important}
+.cc-lx{display:none;fill:none!important;pointer-events:none;stroke-linecap:round}
+html[data-linha-fx="simples"] .cc-l,html[data-linha-fx="simples"] .cc-l *{filter:none!important}
+html[data-linha-fx="simples"] .cc-glow,html[data-linha-fx="cabo"] .cc-glow,html[data-linha-fx="feixe"] .cc-glow{display:none!important}
+html[data-linha-fx="brilho"] .cc-l{filter:drop-shadow(0 0 2px currentColor) drop-shadow(0 0 7px currentColor)!important}
+html[data-linha-fx="cabo"] .cc-l{opacity:.32!important;filter:none!important}
+html[data-linha-fx="cabo"] .cc-l:not(.cc-fill){stroke-width:calc(var(--cc-lw0,2px) * var(--cc-lw,1) * 2.8)!important;stroke-linecap:round}
+html[data-linha-fx="cabo"] .cc-lx{display:block;stroke-width:calc(var(--cc-lw0,2px) * var(--cc-lw,1) * .8);stroke-dasharray:4 10;animation:ccCabo .8s linear infinite;filter:drop-shadow(0 0 2px currentColor)}
+html[data-linha-fx="feixe"] .cc-l{opacity:.2!important;filter:none!important}
+html[data-linha-fx="feixe"] .cc-lx{display:block;stroke-width:calc(var(--cc-lw0,2px) * var(--cc-lw,1) * 1.4);stroke-dasharray:80 1400;animation:ccFeixe 3.2s cubic-bezier(.45,.05,.55,.95) infinite;filter:drop-shadow(0 0 3px currentColor) drop-shadow(0 0 10px currentColor)}
+@keyframes ccCabo{to{stroke-dashoffset:-14}}
+@keyframes ccFeixe{from{stroke-dashoffset:80}to{stroke-dashoffset:-1400}}
+@media (prefers-reduced-motion:reduce){.cc-lx{animation:none!important}}
+/* seção Linhas do painel */
+.ccl-fx{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ccl-fx button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:8px;border-radius:10px;border:1px solid var(--line);background:rgba(var(--w),.03);color:var(--ink-2);font:500 12px var(--font);cursor:pointer;text-align:left}
+.ccl-fx button.on{border-color:var(--cc-acento,var(--acento,#6ea8ff));color:var(--ink);background:rgba(var(--w),.07)}
+.ccl-fx svg{width:100%;height:22px;color:var(--cc-acento,var(--acento,#6ea8ff));overflow:visible}
+.ccl-fx svg .cc-l{stroke:currentColor;stroke-width:2;fill:none;--cc-lw0:2px}
+.ccl-fx svg .cc-lx{stroke:currentColor}
+.ccl-fx button[data-fx="simples"] svg .cc-l{filter:none!important;opacity:1!important;stroke-width:2px!important}
+.ccl-fx button[data-fx="brilho"] svg .cc-l{filter:drop-shadow(0 0 2px currentColor) drop-shadow(0 0 6px currentColor)!important;opacity:1!important;stroke-width:2px!important}
+.ccl-fx button[data-fx="cabo"] svg .cc-l{opacity:.32!important;stroke-width:5.6px!important;stroke-linecap:round;filter:none!important}
+.ccl-fx button[data-fx="cabo"] svg .cc-lx{display:block;stroke-width:1.6px;stroke-dasharray:4 10;animation:ccCabo .8s linear infinite;filter:drop-shadow(0 0 2px currentColor)}
+.ccl-fx button[data-fx="feixe"] svg .cc-l{opacity:.2!important;stroke-width:2px!important;filter:none!important}
+.ccl-fx button[data-fx="feixe"] svg .cc-lx{display:block;stroke-width:2.8px;stroke-dasharray:40 260;animation:ccFeixeP 2s cubic-bezier(.45,.05,.55,.95) infinite;filter:drop-shadow(0 0 3px currentColor) drop-shadow(0 0 8px currentColor)}
+.ccl-fx button[data-fx="tema"] svg .cc-l{opacity:1!important;filter:none!important;stroke-dasharray:3 4;stroke-width:1.6px!important}
+.ccl-fx button:not([data-fx="cabo"]):not([data-fx="feixe"]) svg .cc-lx{display:none!important}
+@keyframes ccFeixeP{from{stroke-dashoffset:40}to{stroke-dashoffset:-260}}
+.ccl-esp{display:flex;gap:6px;margin-bottom:8px}
+.ccl-esp button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:7px 0;border-radius:9px;border:1px solid var(--line);background:rgba(var(--w),.03);color:var(--ink-2);font:500 12px var(--font);cursor:pointer}
+.ccl-esp button.on{border-color:var(--cc-acento,var(--acento,#6ea8ff));color:var(--ink)}
+.ccl-esp i{display:block;width:18px;border-radius:9px;background:currentColor}
 .bbx-b{position:relative;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--ink-2);display:grid;place-items:center;padding:0;cursor:pointer;font:inherit}
 .bbx-b svg{width:16px;height:16px}
 .bbx-b:hover{background:rgba(var(--w),.07);color:var(--ink)}
@@ -2040,6 +2081,34 @@ window.CanvasAnim = (function () {
   return { nasce, sai, linha, desliza, tela, calmo };
 })();
 
+/* window.CanvasLinhas: estilo das linhas por canvas (espessura e efeito), salvo pelo app em rec.linhas.
+   aplicar(l) põe data-linha-esp e data-linha-fx no html; secao(l, espHtml) monta a seção do painel;
+   mudar(l, el) devolve o estilo novo a partir do botão clicado (ou null). */
+window.CanvasLinhas = (function () {
+  const ESP = [['fina', 'Fina', 1.2], ['normal', 'Normal', 2.2], ['grossa', 'Grossa', 4]];
+  const FX = [['tema', 'Do tema'], ['simples', 'Simples'], ['brilho', 'Brilho'], ['cabo', 'Cabo de transmissão'], ['feixe', 'Feixe de luz']];
+  const limpo = l => { const o = {}; if (l && ESP.some(x => x[0] === l.esp) && l.esp !== 'normal') o.esp = l.esp; if (l && FX.some(x => x[0] === l.fx) && l.fx !== 'tema') o.fx = l.fx; return o; };
+  function ler() { const r = document.documentElement; return limpo({ esp: r.dataset.linhaEsp, fx: r.dataset.linhaFx }); }
+  function aplicar(l) {
+    l = limpo(l); const r = document.documentElement;
+    if (l.esp) r.dataset.linhaEsp = l.esp; else delete r.dataset.linhaEsp;
+    if (l.fx) r.dataset.linhaFx = l.fx; else delete r.dataset.linhaFx;
+  }
+  function secao(l, espHtml) {
+    l = limpo(l); const esp = l.esp || 'normal', fx = l.fx || 'tema';
+    const e = espHtml != null ? espHtml : `<div class="ccl-esp">${ESP.map(([k, n, w]) => `<button data-cl-esp="${k}" class="${k === esp ? 'on' : ''}"><i style="height:${w}px"></i>${n}</button>`).join('')}</div>`;
+    const curva = 'M4 16C30 16 40 5 64 5S100 16 124 12';
+    const f = `<div class="ccl-fx">${FX.map(([k, n]) => `<button data-cl-fx="${k}" data-fx="${k}" class="${k === fx ? 'on' : ''}"><svg viewBox="0 0 128 22"><path class="cc-l" d="${curva}"/><path class="cc-lx" d="${curva}"/></svg>${n}</button>`).join('')}</div>`;
+    return `<div class="ccl">${e}${f}</div>`;
+  }
+  function mudar(l, el) {
+    l = limpo(l);
+    const e = el.closest && el.closest('[data-cl-esp]'); if (e) return limpo({ ...l, esp: e.dataset.clEsp });
+    const f = el.closest && el.closest('[data-cl-fx]'); if (f) return limpo({ ...l, fx: f.dataset.clFx });
+    return null;
+  }
+  return { aplicar, ler, secao, mudar, limpo };
+})();
 /* window.CanvasCores: cores do canvas (linhas, destaque, fundo), salvas por canvas pelo app.
    aplicar(c) põe as variáveis --cc-linha, --cc-acento, --cc-fundo no html; secao(c) monta a seção do painel;
    mudar(c, el) devolve as cores novas a partir do botão clicado. */
@@ -5501,7 +5570,7 @@ function App() {
       setBlocks(p => p.map(b => { const k = String(b.color || DEFAULT_COLOR).toLowerCase(); if (!mapa.has(k)) mapa.set(k, lista[i++ % lista.length]); return { ...b, color: mapa.get(k) }; }));
     };
   }, []);
-  useEffect(() => { const ob = new MutationObserver(() => { setFundoAtual(document.documentElement.dataset.fundo || "pontos"); setCoresVer(v => v + 1); }); ob.observe(document.documentElement, { attributes: true, attributeFilter: ["data-fundo", "data-cores"] }); return () => ob.disconnect(); }, []);
+  useEffect(() => { const ob = new MutationObserver(() => { setFundoAtual(document.documentElement.dataset.fundo || "pontos"); setCoresVer(v => v + 1); }); ob.observe(document.documentElement, { attributes: true, attributeFilter: ["data-fundo", "data-cores", "data-linha-esp", "data-linha-fx"] }); return () => ob.disconnect(); }, []);
   const [vivoPainel, setVivoPainel] = useState(() => !window.FundoVivo || FundoVivo.modo() !== "leve");
   const [barraPop, setBarraPop] = useState(null);
   const selChave = [...selection].join(",");
@@ -7100,6 +7169,10 @@ function App() {
                     onClick={(e) => { if (!window.CanvasCores || !api || !api.cores) return; const n = CanvasCores.mudar(CanvasCores.ler(), e.target); if (n) api.cores(n, !!(e.target.closest && e.target.closest("[data-cc-preset]"))); }}
                     onChange={(e) => { if (!window.CanvasCores || !api || !api.cores) return; const n = CanvasCores.livre(CanvasCores.ler(), e.target); if (n) api.cores(n); }}/>
                 </section>
+                <section><h4>Linhas</h4>
+                  <div key={"l" + coresVer} dangerouslySetInnerHTML={{ __html: window.CanvasLinhas ? CanvasLinhas.secao(CanvasLinhas.ler()) : "" }}
+                    onClick={(e) => { if (!window.CanvasLinhas || !api || !api.linhas) return; const n = CanvasLinhas.mudar(CanvasLinhas.ler(), e.target); if (n) api.linhas(n); }}/>
+                </section>
                 <section><h4>Tela</h4>
                   <label className="pnl-chave"><span>Fundo vivo (luzes e partículas)</span><button className={"chave " + (vivoPainel ? "on" : "")} onClick={() => { if (!window.FundoVivo) return; const v = FundoVivo.modo() === "leve"; FundoVivo.definir(v ? "vivo" : "leve"); setVivoPainel(v); setFundoVivo(v); }}><i/></button></label>
                   <label className="pnl-chave"><span>Energia correndo nas linhas</span><button className={"chave " + (flow ? "on" : "")} onClick={() => setFlow(f => !f)}><i/></button></label>
@@ -7526,12 +7599,14 @@ function App() {
                   {/* Full curve — visible when not collapsed */}
                   <path
                     d={p.curveD}
-                    className={"edge-line " + (p.collapsed ? "gone" : "") + (isSel ? " sel" : "")}
+                    className={"edge-line cc-l " + (p.collapsed ? "gone" : "") + (isSel ? " sel" : "")}
                     stroke={strokeVal}
                     data-stroke={p.color}
                     strokeWidth={isSel ? 4 : 2.2}
                     style={{ filter: isSel ? "drop-shadow(0 0 3px #fff)" : "none" }}
                   />
+                  {/* camada do estilo de linha do app (cabo de transmissão, feixe de luz): segue a mesma curva */}
+                  {PC && !p.collapsed && <path d={p.curveD} className="cc-lx" style={{ animationDelay: `-${(String(p.id).split("").reduce((s, ch) => s + ch.charCodeAt(0), 0) % 32) / 10}s` }}/>}
                   {/* Energy beam running source → target. Two layers, both using
                       the edge's own gradient so even the GLOW follows the degradê:
                       a thick blurred halo + a crisp core, flowing together. */}
