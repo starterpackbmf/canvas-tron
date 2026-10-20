@@ -625,6 +625,8 @@
     text-shadow:none;outline:none;
     text-align:center;
   }
+  /* cor da fonte escolhida na pílula: precisa ganhar das regras de tema (body.onix .block.shp-rounded.estilo-solido .title) */
+  html body .block.tem-cor-txt.tem-cor-txt.tem-cor-txt.tem-cor-txt .title,html body .block.tem-cor-txt.tem-cor-txt.tem-cor-txt.tem-cor-txt .body{color:var(--cor-txt)!important}
   .block .body{color:var(--body-text);outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;text-align:center;font-size:var(--body-size,15px)}
   /* imagem dentro do bloco (entre título e corpo) */
   .block .block-img{display:block;width:100%;max-height:300px;object-fit:contain;border-radius:5px;margin:2px 0 8px;background:rgba(0,0,0,.25);pointer-events:none;user-select:none}
@@ -1890,6 +1892,7 @@ html.wco .bbx{top:56px}
 .bbx-b:hover{background:rgba(var(--w),.07);color:var(--ink)}
 .bbx-b.on{background:rgba(var(--w),.11);color:var(--ink);box-shadow:inset 0 1px 0 rgba(var(--w),.06)}
 .bbx-b[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:38px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--tip);border:1px solid var(--line);color:#f2f2f5;font:400 11px/1.2 var(--font);padding:5px 8px;border-radius:7px;pointer-events:none;z-index:2}
+.bbx-b.on[data-tip]:hover::after{display:none}
 .bbx-sep{width:1px;height:18px;background:rgba(var(--w),.1);margin:0 4px}
 .bbx-n{font:500 11px/1 var(--mono);color:var(--ink-2);padding:0 6px 0 4px}
 .bbx-dot{width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 1.5px rgba(var(--w),.2),0 0 10px -2px currentColor}
@@ -2768,7 +2771,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
     <div
       ref={elRef}
       data-bid={block.id}
-      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} shp-${shapeDef.key} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : block.fill === "none" ? "fill-none" : ""} ${block.estilo === "solido" ? "estilo-solido" : ""}`}
+      className={`block ${selected ? "selected" : ""} ${hidden ? "hidden" : ""} ${focused ? "focused" : ""} ${lit ? "lit" : ""} ${block.emphasis ? "emphasis" : ""} ${block.task ? "has-task" : ""} ${block.task && block.task.done ? "task-done" : ""} shp-${shapeDef.key} ${useSkin ? "shaped-skin shape-"+shapeDef.key : ""} ${block.fill === "soft" ? "fill-soft" : block.fill === "solid" ? "fill-solid" : block.fill === "none" ? "fill-none" : ""} ${block.estilo === "solido" ? "estilo-solido" : ""} ${block.corTexto ? "tem-cor-txt" : ""}`}
       style={{
         left: block.x, top: block.y,
         width: (block.w || 240) + "px",
@@ -2777,6 +2780,7 @@ function Block({ block, selected, hidden, focused, lit, pendingEditRef, onSelect
         // tamanho de fonte do bloco inteiro (corpo); título acompanha um pouco menor
         "--body-size": (block.fontSize || 15) + "px",
         "--title-size": Math.round((block.fontSize || 15) * 0.87) + "px",
+        ...(block.corTexto ? { "--cor-txt": block.corTexto } : {}),
         ...(shapeDef.radius ? { borderRadius: shapeDef.radius } : {}),
       }}
       onMouseDown={(e) => {
@@ -4668,6 +4672,10 @@ function App() {
   }, [selection]);
   // tamanho de fonte do bloco inteiro (título + corpo), aplicado com o bloco só selecionado,
   // sem precisar entrar na edição do texto
+  // cor da fonte do bloco inteiro (pílula do app); trechos pintados na barra de texto mantêm a cor deles
+  const setBlockCorTexto = useCallback((corTexto) => {
+    setBlocks(p => p.map(b => selection.has(b.id) ? { ...b, corTexto: corTexto || undefined } : b));
+  }, [selection]);
   const setBlockFontSize = useCallback((fontSize) => {
     setBlocks(p => p.map(b => selection.has(b.id) ? { ...b, fontSize } : b));
   }, [selection]);
@@ -7135,6 +7143,13 @@ function App() {
               <button className={`bbx-b ${pop === "forma" ? "on" : ""}`} data-tip={"Forma: " + forma.title} onClick={() => abre("forma")}><Ico k={forma.key}/></button>
               {pop === "forma" && <div className="bbx-pop bbx-formas">
                 {SHAPES.map(f => <button key={f.key} className={`bbx-b ${f.key === forma.key ? "on" : ""}`} title={f.title} onClick={() => { setBlockShape(f.key); setBarraPop(null); }}><Ico k={f.key}/></button>)}
+              </div>}
+            </span>
+            <span className="bbx-w">
+              <button className={`bbx-b ${pop === "txt" ? "on" : ""}`} data-tip="Cor da fonte" onClick={() => abre("txt")}><svg {...SV}><path d="M6 18L11 5h2l5 13M8 13h8"/></svg><i style={{ position: "absolute", left: 9, right: 9, bottom: 5, height: 2.5, borderRadius: 2, background: b0.corTexto || "currentColor" }}/></button>
+              {pop === "txt" && <div className="bbx-pop bbx-cores">
+                <button className={`bbx-sw bbx-auto ${b0.corTexto ? "" : "on"}`} onClick={() => { setBlockCorTexto(null); setBarraPop(null); }}>auto</button>
+                {["#f4f4f7", "#a4a4b0", "#f3cf62", "#6ea8ff", "#6fe3a6", "#ff82be", "#ff6b6b", "#2a2a30"].map(c => <button key={c} className={`bbx-sw ${(b0.corTexto || "").toLowerCase() === c ? "on" : ""}`} style={{ background: c }} title={c} onClick={() => { setBlockCorTexto(c); setBarraPop(null); }}/>)}
               </div>}
             </span>
             <span className="bbx-w">
