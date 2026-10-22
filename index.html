@@ -190,6 +190,17 @@
   body.claro .block.selected,body.claro .block.focused,body.claro .block.estilo-solido.selected{border-color:#3b82f6!important;box-shadow:0 0 0 3px rgba(59,130,246,.16),0 16px 36px -16px rgba(20,20,30,.26)!important}
   body.claro .block .title,body.claro .block.estilo-solido .title,body.claro .block.shp-rect.estilo-solido .title,body.claro .block.shp-rounded.estilo-solido .title{color:#1c1c21!important;text-shadow:none!important}
   body.claro .block .body,body.claro .block.shp-rect .body,body.claro .block.shp-rounded .body{color:#4a4a54!important;background:#f4f4f6!important;border-color:rgba(20,20,30,.05)!important}
+  /* Claro e Ônix: sem pontinho; a cor do bloco vira tinta no bloco todo e um brilho suave atrás (pedido dele) */
+  body.onix .block::after,body.claro .block::after{display:none!important}
+  body.claro .block,body.claro .block.estilo-solido{background:linear-gradient(180deg,rgba(var(--bc-rgb),.17),rgba(var(--bc-rgb),.06) 75%),linear-gradient(180deg,#ffffff,#f8f8f9)!important;border-color:rgba(var(--bc-rgb),.32)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(20,20,30,.06),0 16px 34px -14px rgba(var(--bc-rgb),.5)!important}
+  body.claro .block.fill-soft,body.claro .block.estilo-solido.fill-soft{background:linear-gradient(180deg,rgba(var(--bc-rgb),.3),rgba(var(--bc-rgb),.14)),#fff!important}
+  body.claro .block.fill-solid,body.claro .block.estilo-solido.fill-solid{background:linear-gradient(180deg,rgba(var(--bc-rgb),.55),rgba(var(--bc-rgb),.38)),#fff!important;border-color:rgba(var(--bc-rgb),.6)!important}
+  body.claro .block .body,body.claro .block.shp-rect .body,body.claro .block.shp-rounded .body{background:rgba(255,255,255,.62)!important}
+  body.claro .block.selected,body.claro .block.focused,body.claro .block.estilo-solido.selected{border-color:rgb(var(--bc-rgb))!important;box-shadow:0 0 0 3px rgba(var(--bc-rgb),.25),0 16px 36px -14px rgba(var(--bc-rgb),.55)!important}
+  body.onix .block,body.onix .block.estilo-solido,body.onix .block.fill-soft,body.onix .block.estilo-solido.fill-soft{background:linear-gradient(180deg,rgba(var(--bc-rgb),.13),transparent 60%),linear-gradient(180deg,#1c1c20 0%,#121214 45%,#0b0b0c 100%)!important;border-color:rgba(var(--bc-rgb),.3)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 0 30px -10px rgba(var(--bc-rgb),.45),0 26px 48px -22px #000!important}
+  body.onix .block.fill-solid,body.onix .block.estilo-solido.fill-solid{background:linear-gradient(180deg,rgba(var(--bc-rgb),.32),rgba(var(--bc-rgb),.12) 70%),#121214!important}
   html.pc body.claro .block.emphasis{animation:none;box-shadow:0 0 0 2px rgba(var(--bc-rgb),.55),0 0 26px -6px rgba(var(--bc-rgb),.45),0 16px 36px -16px rgba(20,20,30,.24)!important}
   body.claro .edges path.edge-line{stroke:var(--edge)}
   body.claro .edges path.edge-line.sel{stroke:#3b82f6}
@@ -4756,6 +4767,7 @@ function App() {
     document.execCommand("styleWithCSS", false, true);
     document.execCommand(cmd, false, null);
   }, []);
+  const corSalvaRef = useRef(null); // seleção guardada antes de abrir o seletor de cor do Windows
   const selecionarTudoSeVazio = () => {
     const sel = window.getSelection(); const ed = document.activeElement;
     if (sel && ed && ed.isContentEditable && (!sel.rangeCount || sel.getRangeAt(0).collapsed)) { const r = document.createRange(); r.selectNodeContents(ed); sel.removeAllRanges(); sel.addRange(r); }
@@ -6984,7 +6996,7 @@ function App() {
               />
             ))}
             <label className="swatch custom" style={{ width: 20, height: 20 }} title="Cor personalizada">
-              <input type="color" onMouseDown={(e) => e.preventDefault()} onChange={(e) => applyTextColor(e.target.value)} />
+              <input type="color" onMouseDown={() => { const s = window.getSelection(); const ed = document.activeElement; corSalvaRef.current = s && s.rangeCount && ed && ed.isContentEditable ? { r: s.getRangeAt(0).cloneRange(), ed } : null; }} onChange={(e) => { const g = corSalvaRef.current; if (g && g.ed.isConnected) { g.ed.focus(); const s = window.getSelection(); s.removeAllRanges(); s.addRange(g.r); } applyTextColor(e.target.value); }} />
             </label>
           </div>
         </div>
